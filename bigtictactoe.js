@@ -14,3 +14,13 @@
 const GRID_LENGTH = 2;
 //This variable changes the number of players in a game.
 const PLAYER_NUMBER = 2;
+
+
+function setup() {
+    background(0);
+    createCanvas(400, 400);
+  }
+  
+  function draw() {
+  }
+  
