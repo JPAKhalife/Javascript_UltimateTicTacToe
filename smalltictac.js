@@ -32,6 +32,7 @@ smalltictac.prototype.select = function(row,column,user) {
     if (user > PLAYER_NUMBER) {
         throw 'The value cannot be set because this player does not exist.'   
     } else {
+        this.lastmove = [row,column]
         this.grid[row][column] = user;
     }
 }

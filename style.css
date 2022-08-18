@@ -1,0 +1,44 @@
+body {
+ background-color: black;
+
+}
+
+#topbar {
+    background-color: black;
+    border-color: white;
+    border-bottom: 5px solid white;
+    height: 10%;
+}
+
+#title {
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    font-size: large;
+    color: white;
+    text-align: center;
+}
+
+#author {
+    text-align: center;
+    color: grey;
+    font-size: small;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+#game {
+    width: 100%;
+    height: fit-content;
+}
+
+#return {
+    float: left;
+    text-align: center;
+    color: antiquewhite;
+    padding: 12px;
+    text-decoration: none;
+    font-size: 17px;
+}
+
+#return:hover {
+    background-color: white;
+    animation-duration: 0.5s;
+}

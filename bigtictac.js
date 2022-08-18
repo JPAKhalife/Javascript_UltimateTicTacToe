@@ -176,9 +176,9 @@ bigtictac.prototype.whoWon = function () {
 }
 
 
-//This method is meant to select a spot inside a small tic tac
+//This method is meant to select a spot inside a small tic tac.
 bigtictac.prototype.select = function(bigrow, bigcolumn, smallrow, smallcolumn,user) {
-    //no need to check the user input, because the select function does this
+    //no need to check the user input, because the select function does this.
     try {
         this.grid[bigrow,bigcolumn].select(smallrow, smallcolumn,user);
     } catch (err) {
@@ -187,4 +187,28 @@ bigtictac.prototype.select = function(bigrow, bigcolumn, smallrow, smallcolumn,u
     
 }
 
+    //This method will be used to check if the bigtictactow grid is full.
+    bigtictac.prototype.isFull = function() {
+        if (this.isWon() == false) {
+            //starting a  nested for loop to check every single spot in the bigtictac.
+            for (let i = 0 ; i < GRID_LENGTH ; i++) {
+                for (let j = 0 ; j < GRID_LENGTH ; j ++) {   
+                    if (this.grid[i][j].isWon() || this.grid[i][j].isFull()) {
 
+                    } else {
+                        return false;
+                    }
+                }
+
+            }
+            
+            //since all of the spots are full or won, then we can return true
+            return true;
+
+
+        } else {
+            return false;
+        }
+
+
+    }

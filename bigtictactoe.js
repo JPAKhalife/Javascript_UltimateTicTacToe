@@ -8,5 +8,9 @@
 *                                                                                             *
 **********************************************************************************************/
 
+
+//These are the game constants. Modifying them changes the game itself.
+//This variable changes the size of the tictacs
 const GRID_LENGTH = 2;
+//This variable changes the number of players in a game.
 const PLAYER_NUMBER = 2;
