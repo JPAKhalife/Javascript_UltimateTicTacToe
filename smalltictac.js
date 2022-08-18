@@ -16,8 +16,12 @@ function smalltictac() {
 
     //boolean that declares whether or not the grid is full.
     this.full = false;
-    //boolean that declares who the winner of this grid is.
-    this.won = 0;
+    //boolean that declares if the tictac is won and int that holds the winner
+    this.winner = 0;
+    this.won = false;
+
+    //2d array that saves the last move interms of columr and row so that the user can be sent to the next small tictac
+    this.lastmove = null;
 
 
 }
@@ -83,8 +87,14 @@ smalltictac.prototype.isFull = function() {
 
 //this method checks if the game is won
 smalltictac.prototype.isWon = function() {
+    //setting the winner variable to be the output of whowon
+    try {
+        this.winner = this.whoWon();
+    } catch (err) {
+        this.winner = 0;
+    }
     //checking the results of the who won function
-    switch (this.whoWon()) {
+    switch (this.winner) {
         //if no one won return false.
         case 0:
             return false;
@@ -94,7 +104,7 @@ smalltictac.prototype.isWon = function() {
     }
 }
 
-//This method can be used to check if one of the players has won.
+//This method can be used to check if one of the players has won the smalltictac.
 smalltictac.prototype.whoWon = function () {
 
     /*
