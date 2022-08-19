@@ -15,6 +15,7 @@ body {
     font-size: large;
     color: white;
     text-align: center;
+    justify-content: center;
 }
 
 #author {
@@ -22,11 +23,13 @@ body {
     color: grey;
     font-size: small;
     font-family: 'Courier New', Courier, monospace;
+    justify-content: center;
+
 }
 
 #game {
-    width: 100%;
-    height: fit-content;
+    display: block;
+    justify-content: center;
 }
 
 #return {
