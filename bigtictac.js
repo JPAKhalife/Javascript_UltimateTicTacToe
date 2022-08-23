@@ -188,27 +188,61 @@ bigtictac.prototype.select = function(bigrow, bigcolumn, smallrow, smallcolumn,u
 }
 
     //This method will be used to check if the bigtictactow grid is full.
-    bigtictac.prototype.isFull = function() {
-        if (this.isWon() == false) {
-            //starting a  nested for loop to check every single spot in the bigtictac.
-            for (let i = 0 ; i < GRID_LENGTH ; i++) {
-                for (let j = 0 ; j < GRID_LENGTH ; j ++) {   
-                    if (this.grid[i][j].isWon() || this.grid[i][j].isFull()) {
+bigtictac.prototype.isFull = function() {
+    if (this.isWon() == false) {
+        //starting a  nested for loop to check every single spot in the bigtictac.
+        for (let i = 0 ; i < GRID_LENGTH ; i++) {
+            for (let j = 0 ; j < GRID_LENGTH ; j ++) {   
+                if (this.grid[i][j].isWon() || this.grid[i][j].isFull()) {
 
-                    } else {
-                        return false;
-                    }
+                } else {
+                    return false;
                 }
-
             }
-            
-            //since all of the spots are full or won, then we can return true
-            return true;
 
-
-        } else {
-            return false;
         }
+            
+        //since all of the spots are full or won, then we can return true
+        return true;
 
 
+    } else {
+        return false;
     }
+
+
+}
+
+//this method is meant to draw the bigtictac
+bigtictac.prototype.draw = function(x, y) {
+
+    //variable that will hold the width of the grid
+    let boardwidth;
+
+    //getting the smallest dimension of the canvas
+    if (height <= width) {
+        boardwidth = height;
+    } else {
+        boardwidth = width;
+    }
+
+    let linewidth = boardwidth*0.1
+
+    let gridwidth = ((boardwidth - linewidth))/GRID_LENGTH;
+
+    let linenum = (GRID_LENGTH-1)*2;
+
+    //creating a for loop to draw the proper lines versically
+    for (let i = 0 ; i < linenum/2 ; i++) {
+        line(x + gridwidth*i+1,)
+    }
+
+
+
+
+
+
+    
+
+
+}
