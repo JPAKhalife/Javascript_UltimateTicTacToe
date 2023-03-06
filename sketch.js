@@ -26,7 +26,7 @@ var graphicalUserInterface;
 var tictactoe;
 
 //variables for the font
-let fontSquareo, fontAldoApache, fontPointless;
+let fontSquareo, fontmono, fontminecraft, fontAldoApache, fontPointless, fontPixeled, fontRobot, fontommy;
 
 //variables for images
 let whiteTicTac;
@@ -35,7 +35,8 @@ let whiteTicTac;
 //The setup function is run once at the first execution of the script.
 function setup() {
     //creating the canvas at the size of the window, setting the canvas to a variable.
-    var cnv = createCanvas(windowWidth, windowHeight*0.9);
+
+    var cnv = createCanvas(windowWidth, windowHeight);
     //making sure that the canvas does not accidentally make a scroll bar appear on different browsers.
     cnv.style("display", "block");
 
@@ -55,6 +56,11 @@ function preload() {
     fontSquareo = loadFont('assets/Squareo.ttf');
     fontAldoApache = loadFont('assets/AldotheApache.ttf');
     fontPointless = loadFont('assets/Pointless.ttf');
+    fontPixeled = loadFont('assets/Pixeled.ttf');
+    fontRobot = loadFont('assets/Robot Crush.ttf');
+    fontommy = loadFont('assets/tommy.otf')
+    fontmono = loadFont('assets/mono.otf')
+    fontminecraft = loadFont('assets/minecraft.ttf')
     whiteTicTac = loadImage('assets/whitetictac.png')
 }
   
@@ -73,4 +79,19 @@ function windowResized() {
 function draw() {
         graphicalUserInterface.drawScreen();
 }
-  
+
+//this functio will be used to get an integer within a certain range
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+//this function is meant to return the smallest window size.
+function getSmallestWindowSize() {
+    if (windowWidth <= windowHeight) {
+        return windowWidth
+    } else {
+        return windowHeight
+    }
+}
