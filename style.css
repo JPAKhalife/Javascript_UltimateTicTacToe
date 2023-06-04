@@ -1,6 +1,10 @@
 body {
  background-color: black;
 
+   justify-content: center;
+
+   align-items: center;
+
 }
 
 #topbar {
@@ -15,6 +19,7 @@ body {
     font-size: large;
     color: white;
     text-align: center;
+    justify-content: center;
 }
 
 #author {
@@ -22,15 +27,17 @@ body {
     color: grey;
     font-size: small;
     font-family: 'Courier New', Courier, monospace;
+    justify-content: center;
+
 }
 
 #game {
-    width: 100%;
-    height: fit-content;
+
+    justify-content: center;
+    align-items: center;
 }
 
 #return {
-    float: left;
     text-align: center;
     color: antiquewhite;
     padding: 12px;
