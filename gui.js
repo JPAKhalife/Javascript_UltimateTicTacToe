@@ -20,9 +20,12 @@ function gui() {
     //This integer counts the spin of the tictac
     this.spin = 0;
 
+    //This is an object for calling buttons
+    this.drawbutton = new menu_button();
 
     //these booleans control transitions
-    this.transition = false;   
+    this.transition_out = false;   
+    this.transition_in = false;
     this.screen = false;
 
     //This variable is intended to hold the messages displayed in the loading screen 
@@ -45,7 +48,7 @@ gui.prototype.drawScreen = function() {
         //drawing the proper screen that the game should be on
         switch(this.menuNumber) {
             case 0:
-                this.startScreen();
+                this.setupScreen();
                 break;
             case 1:
                 this.setupScreen();
@@ -94,7 +97,7 @@ gui.prototype.startScreen = function() {
 
 
     if (this.transition) {
-        // KEEP THIS IN MIND: THERE ARE TRIG FUNCTIONS 
+        // KEEP THIS IN MIND: TRIG FUNCTIONS EXIST
         //NOTE #2: MILLIS() RETURNS MILLISECONDS PASSED SINCE START AND IS USEFUL FOR ANIMATIONS
         //set setalpha modifies alpha channel
         angleMode(RADIANS)
@@ -151,10 +154,10 @@ gui.prototype.loadingScreen = function() {
         angleMode(RADIANS);
         frameRate(60)
         translate((width / 5)*4, (height / 5)*4);
-        // rotate(this.spin += ( ((6*PI) / (300+(150/PI)))*cos(((1/150)*PI)*(150+this.s)) + ((6*PI) / (300+(150/PI)))));
-        // tint(255, 255*cos(((1/150)*PI)*(150+this.s)) + 255);
-        rotate(this.spin += 0.06);
-        tint(255, 255*cos((1/75)*PI*this.s) + 255);
+        rotate(this.spin += ( ((6*PI) / (300+(150/PI)))*cos(((1/150)*PI)*(150+this.s)) + ((6*PI) / (300+(150/PI)))));
+        tint(255, 255*cos(((1/150)*PI)*(150+this.s)) + 255);
+        // rotate(this.spin += 0.06);
+        // tint(255, 255*cos((1/75)*PI*this.s) + 255);
         image(whiteTicTac,0,0,width*height*0.0001,width*height*0.0001);
         pop();
         rectMode(CENTER);
@@ -184,8 +187,7 @@ gui.prototype.loadingScreen = function() {
 gui.prototype.setupScreen = function() {
     background(0);
 
-    //Displa
-
+    this.drawbutton.standard_button(width/2, height / 2, "Test");
 
 
 }
