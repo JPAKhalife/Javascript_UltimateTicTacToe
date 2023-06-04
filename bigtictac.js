@@ -1,8 +1,19 @@
-// This file is meant to be the home of the class for the larger tic tac that holds all the other small tic tacs.
-
 
 //creating the class for the big tic tac.
 function bigtictac() {
+
+    //represents the current player
+    this.current_player = 1;
+
+    //this represents the timer for the hoverin animation
+    this.hovertime = 0;
+
+    //variable that determines whether the white rectangle to represent the square the player is horvering over will appear or not
+    this.hoveron = true;
+
+    //variable that is responsible for holding input delay
+    this.inputdelay = 0;
+
     //each big tic tac will have a 2d array full of small tic tacs.
     //creating a 1d array.
     this.grid = new Array(GRID_LENGTH)
@@ -21,18 +32,33 @@ function bigtictac() {
     //boolean that declares whether or not the grid is full.
     this.full = false;
 
+    //this boolean determines whether or not the tic tac has been selected
+    this.tictacselect = false;
+
+    //boolean that says whether or not the game is won
+    this.won = false;
+
+    this.cursor_x = 0;
+    this.cursor_y = 0;
+
+
+
 }
 
 //This method is meant to return a true or false value as to whether the game had been won.
 bigtictac.prototype.isWon = function() {
     //setting the result of whoWon to this.winner.
     this.winner = this.whoWon();
+
+    print('winner is : ', this.winner);
     //checking the result of this.winner.
     switch(this.winner) {
         case 0:
             return false;
         default:
+            this.won = true;
             return true;
+            
     }   
 }
 
@@ -43,24 +69,28 @@ bigtictac.prototype.whoWon = function () {
     for (let i = 0 ; i < GRID_LENGTH ; i++) {
         //making another loop to iterate through the colunms.
         for (let j = 0 ; j < GRID_LENGTH ; j++) {
-            
+
             //checking if the grid is won.
-            if (this.grid[i][j].isWon()) {
+            if (this.grid[j][i].won) {
                 
                 //checking if the loop is at the last spot in the array.
-                if (j != GRID_LENGTH - 1) {
-                    if (this.grid[i][j].winner == this.grid[i][j+1].winner) {
+                if (j < GRID_LENGTH - 1) {
+
+                    if (this.grid[j][i].winner == this.grid[j+1][i].winner && this.grid[j][i].winner != -1) {
+
+                        
                         // These spots are owned by the same person, continue going through the loop.
                     } else {
                         // These spots are not owned by the same person, no point in continuoing the loop.
                         j = GRID_LENGTH;
                     }
                 } else {
+
                     //we got this far, so if the last spot in the array is taken by the right player, then the game is won.
                     //there is no next spot in the row, so we check the first spot in the row.
-                    if (this.grid[i][j].winner == this.grid[i][0].winner) {
+                    if (this.grid[j][i].winner == this.grid[0][i].winner && this.grid[j][i].winner != -1) {
                         //hurray! the game is won.
-                        return this.grid[i][j].winner;
+                        return this.grid[j][i].winner;
                     } else {
                         //oof, very last spot is not right. proceed to the next check.
                         //this is the end of the loop.
@@ -79,11 +109,11 @@ bigtictac.prototype.whoWon = function () {
         for (let j = 0 ; j < GRID_LENGTH ; j++) {
             
             //checking if the spot is taken.
-            if (this.grid[j][i].winner) {
+            if (this.grid[i][j].won) {
                 
                 //checking if the loop is at the last spot in the array.
-                if (j != GRID_LENGTH - 1) {
-                    if (this.grid[j][i].winner == this.grid[j][i+1].winner) {
+                if (j < GRID_LENGTH - 1) {
+                    if (this.grid[i][j].winner == this.grid[i][j+1].winner && this.grid[i][j].winner != -1) {
                         // These spots are owned by the same person, continue going through the loop.
                     } else {
                         // These spots are not owned by the same person, no point in continuoing the loop.
@@ -92,9 +122,9 @@ bigtictac.prototype.whoWon = function () {
                 } else {
                     //we got this far, so if the last spot in the array is taken by the right player, then the game is won.
                     //there is no next spot in the row, so we check the first spot in the row.
-                    if (this.grid[j][i].winner == this.grid[0][i].winner) {
+                    if (this.grid[i][j].winner == this.grid[i][0].winner && this.grid[i][j].winner != -1) {
                         //hurray! the game is won.
-                        return this.grid[j][i].winner;
+                        return this.grid[i][j].winner;
                     } else {
                         //oof, very last spot is not right. proceed to the next check.
                         //this is the end of the loop.
@@ -140,10 +170,10 @@ bigtictac.prototype.whoWon = function () {
     //checking diagonally from bottom left to top right. THE WORST DOOZY OF ALL.
     for (let i = 0 ; i < GRID_LENGTH ; i++) {
         //checking if the spot is taken.
-        if (this.grid[GRID_LENGTH-i][i].isWon()) {
+        if (this.grid[GRID_LENGTH-1-i][i].won) {
             //checking if it is at the last spot in the array.
-            if (i != GRID_LENGTH-1) {
-                if (this.grid[GRID_LENGTH-i][i].winner == this.grid[GRID_LENGTH-i-1][i+1].winner) {
+            if (i < GRID_LENGTH-1) {
+                if (this.grid[i][GRID_LENGTH-i-1].winner == this.grid[i+1][GRID_LENGTH-i-2].winner) {
                     //these spots are owned by the same person, keep going!
                 } else {
                     //these spots are not owned by the same person, give up the check.
@@ -152,9 +182,9 @@ bigtictac.prototype.whoWon = function () {
             } else {
                     //we got this far, so if the last spot in the array is taken by the right player, then the game is won.
                     //there is no next spot in the row, so we check the first spot.
-                    if (this.grid[GRID_LENGTH-i][i].winner == this.grid[GRID_LENGTH][0].winner) {
+                    if (this.grid[i][GRID_LENGTH-i-1].winner == this.grid[0][GRID_LENGTH-1].winner) {
                         //hurray! the game is won.
-                        return this.grid[GRID_LENGTH-i][i].winner;
+                        return this.grid[i][GRID_LENGTH-i-1].winner;
                     } else {
                         //oof, very last spot is not right. proceed to the next check.
                         //this is the end of the loop.
@@ -172,7 +202,25 @@ bigtictac.prototype.whoWon = function () {
 
 
     //None of these checks returned. that means that no one has won.
-    return 0;
+            //This checks to see if there are any empty spaces in the tictac
+    let empty = false;
+
+    for (i = 0 ; i < GRID_LENGTH; i ++) {
+        for (j = 0 ; j < GRID_LENGTH; j++) {
+            if (this.grid[i][j].winner == 0 && this.grid[i][j].won == false) {
+                empty = true;
+                j = GRID_LENGTH;
+                i = GRID_LENGTH;
+            }
+        }
+
+    }
+
+    if (empty) {
+        return 0;
+    } else {
+        return -1;
+    }
 }
 
 
@@ -221,24 +269,164 @@ bigtictac.prototype.draw = function(x, y) {
 
     //getting the smallest dimension of the canvas
     if (height <= width) {
-        boardwidth = height;
+        boardwidth = height * (BOARD_PERCENT/100);
     } else {
-        boardwidth = width;
+        boardwidth = width * (BOARD_PERCENT/100);
     }
 
-    let linewidth = boardwidth*0.1
+    let linewidth = boardwidth*LINEWIDTH_TO_BOARDWIDTH_RATIO;
 
     let gridwidth = ((boardwidth - linewidth))/GRID_LENGTH;
 
-    let linenum = (GRID_LENGTH-1)*2;
+    let linenum = (GRID_LENGTH-1);
 
-    //creating a for loop to draw the proper lines versically
-    for (let i = 0 ; i < linenum/2 ; i++) {
-        line(x + gridwidth*i+1,)
+    fill(255);
+    strokeWeight(linewidth);
+    stroke(255);
+    //creating a for loop to draw the proper lines 
+    for (let i = 0 ; i < linenum ; i++) {
+
+        line(x + gridwidth*(i+1),y,x + gridwidth*(i+1),y + boardwidth,);
+        line(x,y+gridwidth*(i+1),x + boardwidth,y + gridwidth * (i+1));
+
+    }
+
+    //drawing the small tic tac inside of each grid of the big tic tac
+    for (i = 0 ; i < GRID_LENGTH ; i++) {
+        for (j = 0; j < GRID_LENGTH ; j++) {
+            if (this.grid[i][j].won) {
+                //draw x
+                if (this.grid[i][j].winner % 2 != 0) {
+                    fill(0);
+                    strokeWeight(boardwidth*LINEWIDTH_TO_BOARDWIDTH_RATIO)
+                    stroke(255);
+                    line(x + gridwidth*i + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,y + gridwidth*j + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,x + gridwidth*i + gridwidth*(SMALL_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,y + gridwidth*j + gridwidth*(SMALL_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2);
+                    line(x + gridwidth*i + gridwidth*(SMALL_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,y + gridwidth*j + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,x + gridwidth*i + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,y + gridwidth*j + gridwidth*(SMALL_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2);
+
+                //draw o
+                } else {
+                    fill(0);
+                    strokeWeight(boardwidth*LINEWIDTH_TO_BOARDWIDTH_RATIO)
+                    stroke(255);
+                    ellipseMode(CENTER)
+                    ellipse(x + gridwidth/2 + gridwidth*i,y + gridwidth/2 + gridwidth*j,gridwidth*(SMALL_BOARD_PERCENT/100),gridwidth*(SMALL_BOARD_PERCENT/100));
+
+                }
+            } else {
+                if (this.grid[i][j].winner == -1) {
+
+                } else {
+                    this.grid[i][j].draw(x + gridwidth*(i) + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,y + gridwidth*(j) + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,gridwidth,this.current_player);
+                }
+                
+            }
+
+        }
+    }
+
+    if (this.inputdelay <= 0 && this.tictacselect == false) {
+
+        //w
+        if (keyIsPressed && keyCode == 87 || keyIsPressed && keyCode == 119) {
+
+            if (this.cursor_y == 0) {
+                this.cursor_y = GRID_LENGTH - 1;
+            } else {
+                this.cursor_y -= 1;
+            }
+            
+            this.inputdelay = INPUT_DELAY;
+            
+        //d
+        } else if (keyIsPressed && keyCode == 68 || keyIsPressed && keyCode == 100) {
+            if (this.cursor_x == GRID_LENGTH - 1) {
+                this.cursor_x = 0;
+            } else {
+                this.cursor_x += 1;
+            }
+        
+            this.inputdelay = INPUT_DELAY;
+
+        //s
+        } else if (keyIsPressed && keyCode == 83 || keyIsPressed && keyCode == 115) {
+            
+            if (this.cursor_y == GRID_LENGTH - 1) {
+                this.cursor_y = 0;
+            } else {
+                this.cursor_y += 1;
+            }
+
+            this.inputdelay = INPUT_DELAY;
+
+        //a
+        } else if (keyIsPressed && keyCode == 65 || keyIsPressed && keyCode == 97) {
+            if (this.cursor_x == 0) {
+                this.cursor_x = GRID_LENGTH - 1;
+            } else {
+                this.cursor_x -= 1;
+            }
+            this.inputdelay = INPUT_DELAY;
+        //space
+        } else if (keyIsPressed && keyCode == 32) {
+
+            if (this.grid[this.cursor_x][this.cursor_y].won) {
+
+            } else {
+                this.tictacselect = true;
+                this.grid[this.cursor_x][this.cursor_y].setselected(true);
+                this.grid[this.cursor_x][this.cursor_y].current_player = this.current_player;
+                this.inputdelay = INPUT_DELAY;
+            }
+
+            this.isWon();
+
+
+        }
+
+    } else {
+        this.inputdelay--;
     }
 
 
 
+    if (this.tictacselect) {
+
+    } else {
+        this.hover(x,y,gridwidth);
+    }
+
+            if (this.grid[this.cursor_x][this.cursor_y].select == true) {
+                current_x = this.grid[this.cursor_x][this.cursor_y].cursor_x;
+                current_y = this.grid[this.cursor_x][this.cursor_y].cursor_y;
+                this.grid[this.cursor_x][this.cursor_y].select = false;
+                
+                if (this.current_player >= PLAYER_NUMBER) {
+                    this.current_player = 1;
+                } else {
+                    this.current_player++;
+                }
+
+                if (this.grid[current_x][current_y].won || this.grid[current_x][current_y].winner == -1) {
+                    this.grid[this.cursor_x][this.cursor_y].setselected(false);
+                    this.tictacselect = false;
+                    this.cursor_x = 0;
+                    this.cursor_y = 0;
+                    this.inputdelay = INPUT_DELAY;
+
+                } else {
+                    this.grid[this.cursor_x][this.cursor_y].setselected(false);
+                    this.cursor_x = current_x;
+                    this.cursor_y = current_y;
+                    this.grid[this.cursor_x][this.cursor_y].setselected(true);
+                    this.grid[this.cursor_x][this.cursor_y].current_player = this.current_player;
+                }
+
+                this.isWon();
+
+            }
+
+        
+            
 
 
 
@@ -246,3 +434,30 @@ bigtictac.prototype.draw = function(x, y) {
 
 
 }
+
+bigtictac.prototype.hover = function(x,y,gridwidth) {
+    
+
+    if (!this.tictacselect) {
+
+
+        if (this.hovertime <= 0) {
+            this.hoveron = true;
+        } else if (this.hovertime >= HOVER_TIME) {
+            this.hoveron = false;
+        }
+
+        if (this.hoveron == true) {
+            fill(255);
+            rect(x + gridwidth*(this.cursor_x) + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,y + gridwidth*(this.cursor_y) + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,gridwidth*(SMALL_BOARD_PERCENT/100),gridwidth*(SMALL_BOARD_PERCENT/100));
+            this.hovertime++;
+        } else {
+            this.hovertime--;
+        } 
+        
+
+    }
+    
+}
+
+

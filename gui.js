@@ -1,5 +1,8 @@
 //this file is meant to hold a class that will be responsible for the drawing of the different screens in the game.
 
+
+
+
 //declaring the gui object type.
 function gui() {
     //This integer is meant to control what screen is being displayed and when.
@@ -17,11 +20,21 @@ function gui() {
     this.s = 0;
     this.t = 0;
 
+    //this will controll how long between each delay input idk what I just said
+    this.inputdelay = 0;
+
     //This integer counts the spin of the tictac
     this.spin = 0;
 
     //This is an object for calling buttons
-    this.drawbutton = new menu_button();
+
+
+    this.multiplayer_menu_button_list = new button_nav([new menu_button(width/2, height / 2, "Test",50,50),new menu_button(width/2, height / 2 - 100, "Test",50,50)
+    ,new menu_button(width/2, height / 2 + 100, "Test",50,50),new menu_button(width/2 - 100, height / 2, "Test",50,50),new menu_button(width/2 + 100, height / 2, "Test",50,50),
+    new menu_button(width/2 + 100, height / 2 - 100, "Test",50,50),new menu_button(width/2 + 100, height / 2 + 100, "Test",50,50),new menu_button(width/2 - 100, height / 2 - 100, "Test",50,50),
+    new menu_button(width/2 - 100, height / 2 + 100, "Test",50,50)]); 
+
+
 
     //these booleans control transitions
     this.transition_out = false;   
@@ -41,6 +54,13 @@ function gui() {
 
     //this variable controls how much time has elapsed
     this.timepassed = round(millis());
+
+    //this is the object that will hold the game
+    this.currentgame = new game();
+
+    //this will be a temprorary bigtictac for drawing
+    this.bigtic = new bigtictac();
+
 }
 
 //This method will draw the screen depending on what the menu number is equal to.
@@ -48,14 +68,18 @@ gui.prototype.drawScreen = function() {
         //drawing the proper screen that the game should be on
         switch(this.menuNumber) {
             case 0:
-                this.setupScreen();
+                
+                this.offlineGameScreen();
                 break;
             case 1:
-                this.setupScreen();
-                break
+                this.loadingScreen();
+
+                break;
             case 2:
-                this.spin = 0;
-                this.gameScreen();
+                //this.spin = 0;
+                
+                break;
+
             default:
                 throw "This screen does not exist";
         }
@@ -186,21 +210,91 @@ gui.prototype.loadingScreen = function() {
 //This method is meant to load the game setup screen
 gui.prototype.setupScreen = function() {
     background(0);
+    this.multiplayer_menu_button_list.drawAll();
 
-    this.drawbutton.standard_button(width/2, height / 2, "Test");
+    if (this.inputdelay == 0) {
+
+   
+
+        //w
+        if (keyIsPressed && keyCode == 87 || keyIsPressed && keyCode == 119) {
+            this.multiplayer_menu_button_list.selectClosest(2);
+            
+            this.inputdelay = INPUT_DELAY;
+            
+        //d
+        } else if (keyIsPressed && keyCode == 68 || keyIsPressed && keyCode == 100) {
+            this.multiplayer_menu_button_list.selectClosest(1);
+            this.inputdelay = INPUT_DELAY;
+
+        //s
+        } else if (keyIsPressed && keyCode == 83 || keyIsPressed && keyCode == 115) {
+            this.multiplayer_menu_button_list.selectClosest(0);
+            this.inputdelay = INPUT_DELAY;
+
+        //a
+        } else if (keyIsPressed && keyCode == 65 || keyIsPressed && keyCode == 97) {
+            this.multiplayer_menu_button_list.selectClosest(3);
+            this.inputdelay = INPUT_DELAY;
+        //space
+        } else if (keyIsPressed && keyCode == 32) {
+            this.multiplayer_menu_button_list.confirm();
+            this.inputdelay = INPUT_DELAY;
+
+        }
+
+        if (this.multiplayer_menu_button_list.currently_selected.isconfirmed()) {
+            for (i = 0 ; i < this.multiplayer_menu_button_list.button_array.length ; i++) {
+                if (this.multiplayer_menu_button_list.button_array[i] == this.multiplayer_menu_button_list.currently_selected) {
+                } else {
+                    this.multiplayer_menu_button_list.button_array[i].fade();
+                }
+
+            }
+        }
+
+
+        //checking if the confirmed animation is done and changing the screen
+        if (this.multiplayer_menu_button_list.currently_selected.isconfirmed_animation_done()) {
+            this.multiplayer_menu_button_list.currently_selected.confirmed_animation = false;
+            this.menuNumber = 1;
+        } 
+
+
+
+    } else {
+        this.inputdelay--;
+    }
+
 
 
 }
 
-//This method is meant to load tha game screen
+//This method is meant to load tha game screen when the game is being played locally
 gui.prototype.offlineGameScreen = function() {
-    background(255);
+    background(0);
+    if (this.bigtic.won == false) {
+        this.bigtic.draw(0,0);
+    } else {
+        this.menuNumber = 1;
+    }
+    
+
+
+            
+
+
+
+
+
+
 }
 
 //This method is meant to load the game screen for online games
 gui.prototype.onlineGameScreen = function() {
     background(255);
 }
+
 
 
 
