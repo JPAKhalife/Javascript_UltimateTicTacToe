@@ -13,6 +13,10 @@
 // this file is meant to hold the class for the small tic tac.
 
 //These are the game constants. Modifying them changes the game itself.
+//controls the framerate of the game
+const FRAMERATE = 60;
+//this variable determines how much less of the smallest windowlength you want the canvas to be (percentage)
+const WINDOW_MARGIN = 10;
 //This variable changes the number of spots in the big tic tac
 const GRID_LENGTH = 3;
 //this variable changes the number of spots in the small tic tac
@@ -52,7 +56,19 @@ const SELECTED_BUTTON_SHADE = 255;
 //This controls the text size
 const TEXT_SIZE_PERCENTAGE = 50;
 //the weight of the stroke around the btton during the confirmed animation
-const STROKEWEIGHT = 5;
+const STROKEWEIGHT = 15;
+//here are a bunch of constants which are meant to hold the title messages
+const START_SCREEN_TITLE = "Ultimate TicTacToe";
+const START_SCREEN_MESSAGE = "Press Space to Start";
+const START_SCREEN_AUTHOR = "Made by John Khalife";
+//this variable holds the width of the border around the menu screen in pixels
+const MENU_BORDER_WIDTH = 10;
+//animation time for the setup screen measured in frames
+const SETUP_SCREEN_ANIMATION_TIME = 120;
+//the outline of the second rect around the utton
+const OUTLINE_WEIGHT = 5;
+//this variable controls the time for the how to play screen and control screen transitions
+const CONTROL_TUTORIAL_ANIMATION_TIME = 120;
 
 
 //it's messy, but I have to declare some undefined variables here to define in the setup function.
@@ -66,27 +82,23 @@ var graphicalUserInterface;
 var tictactoe;
 
 //variables for the font
-let fontSquareo, fontmono, fontminecraft, fontAldoApache, fontPointless, fontPixeled, fontRobot, fontommy;
+let fontSquareo, fontmono, fontminecraft, fontAldoApache, fontPointless, fontPixeled, fontRobot, fontommy,fontOSDMONO;
 
 //variables for images
-let whiteTicTac;
+let whiteTicTac,space,arrows,wasd,tictacboard;
 
 
 //The setup function is run once at the first execution of the script.
 function setup() {
     //creating the canvas at the size of the window, setting the canvas to a variable.
+    var cnv = createCanvas(getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100, getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100);
 
-    if (windowHeight >= windowWidth) {
-        var cnv = createCanvas(windowWidth, windowWidth);
-    } else {
-        var cnv = createCanvas(windowHeight, windowHeight);
-    }
     
     //making sure that the canvas does not accidentally make a scroll bar appear on different browsers.
-    cnv.style("display", "block");
+    //cnv.style("display", "block");
 
     //framerate
-    frameRate(60);
+    frameRate(FRAMERATE);
 
     //This is where the graphical user interface is declared. It is responsible for switching screens and user interctions.
     graphicalUserInterface = new gui();
@@ -94,24 +106,34 @@ function setup() {
     //variable that holds a game
     tictactoe = new game();
 
+    background(255);
+
 }
 
 //This method is run once before the setup function and is used to load images, fonts, and other assets
 function preload() {
+    tictacboard = loadImage('assets/tictacboard.png');
     fontSquareo = loadFont('assets/Squareo.ttf');
     fontAldoApache = loadFont('assets/AldotheApache.ttf');
     fontPointless = loadFont('assets/Pointless.ttf');
     fontPixeled = loadFont('assets/Pixeled.ttf');
     fontRobot = loadFont('assets/Robot Crush.ttf');
-    fontommy = loadFont('assets/tommy.otf')
-    fontmono = loadFont('assets/mono.otf')
-    fontminecraft = loadFont('assets/minecraft.ttf')
-    whiteTicTac = loadImage('assets/whitetictac.png')
+    fontommy = loadFont('assets/tommy.otf');
+    fontmono = loadFont('assets/mono.otf');
+    fontOSDMONO = loadFont('assets/OSDMONO.ttf')
+    fontminecraft = loadFont('assets/minecraft.ttf');
+    whiteTicTac = loadImage('assets/whitetictac.png');
+    fontabsender = loadFont('assets/absender1.ttf');
+    space = loadImage('assets/Sace bar image.jpeg');
+    arrows = loadImage('assets/Arrow Keys.png');
+    wasd = loadImage('assets/wasd.png');
 }
   
 //This method is called whenever the window is resized, and it's job is to resize the canvas back to the size of the window.
 function windowResized() {
-    resizeCanvas(windowWidth, windowHeight);
+    smallest = getSmallestWindowSize();
+    resizeCanvas(smallest - smallest*WINDOW_MARGIN/100, smallest - smallest*WINDOW_MARGIN/100);
+
 }
 
 
@@ -135,8 +157,12 @@ function getRandomInt(min, max) {
 //this function is meant to return the smallest window size.
 function getSmallestWindowSize() {
     if (windowWidth <= windowHeight) {
-        return windowWidth
+        return windowWidth;
     } else {
-        return windowHeight
+        return windowHeight;
     }
+}
+
+function getCanvasSize() {
+    return getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100;;
 }
