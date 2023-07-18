@@ -34,7 +34,14 @@ function gui() {
 
     this.multiplayer_menu_button_list = new button_nav([new menu_button(0.20, 0.85, "Controls",0.05,0.15,50*0.25), new menu_button(0.80,0.85, "How to play",0.05,0.15,50*0.25), new menu_button(0.5,0.4,"Local",0.1,0.1,50*0.25),new menu_button(0.5, 0.6 , "Online",0.1,0.1,50*0.25)]); 
    
-   
+   //this is an array that will hold floaters for the option screen
+   this.floater_array = [new floater(whiteTicTac,50,50),new floater(whiteTicTac,50,50),new floater(whiteTicTac,50,50),new floater(whiteTicTac,50,50)];
+
+
+   for (i  = 0 ; i < this.floater_array.length ; i ++) {
+        this.floater_array[i].start();
+   }
+
     //PUTTING THIS HEre to make all sapes have their centers as cooridnate
     rectMode(CENTER);
 
@@ -464,32 +471,40 @@ gui.prototype.startScreen = function() {
         this.y = height*sin((this.s+(100*asin(3/4) + 200*PI))/100) - height/4*3 
         this.s+=2;
 
-        if (this.y < height*-1) {
 
-            for (let i = 0 ; i < this.multiplayer_menu_button_list.button_array.length ; i++) {
-                this.multiplayer_menu_button_list.button_array[i].set_opacity(0);
-
-            }
-
-            this.menuNumber++;
-            this.y = 0;
-            this.transition_out = false;
-            this.transition_in = true;
-            this.timepassed = round(millis());
-   
-    }
 
     } else {
         // KEEP THIS IN MIND: THERE ARE TRIG FUNCTIONS 
         //NOTE #2: MILLIS() RETURNS MILLISECONDS PASSED SINCE START AND IS USEFUL FOR ANIMATIONS
         //set setalpha modifies alpha channel
         changingAlpha.setAlpha(128 + 128 * sin(millis() / 500));
+
+
     }
+
 
     fill(changingAlpha);
     textAlign(CENTER,CENTER);
     textSize(getCanvasSize()*0.05);
     text(START_SCREEN_MESSAGE,width/2 + this.x, height/2 + this.y);
+
+
+    if (this.y < height*-1 && this.transition_out) {
+
+        for (let i = 0 ; i < this.multiplayer_menu_button_list.button_array.length ; i++) {
+            this.multiplayer_menu_button_list.button_array[i].set_opacity(0);
+
+        }
+
+        this.menuNumber++;
+        this.y = 0;
+        this.transition_out = false;
+        this.transition_in = true;
+        this.timepassed = round(millis());
+        this.opacity = 0;
+
+}
+
 
 
 
@@ -615,13 +630,27 @@ gui.prototype.setupScreen = function() {
 
         if (this.border_pos >= STROKEWEIGHT/2) {
             for (i = 0 ; i < this.multiplayer_menu_button_list.button_array.length ; i++) {
-                if (this.multiplayer_menu_button_list.button_array[i].opacity >= 255) {
-                    this.transition_in = false;
-                }
-                
+                if (this.multiplayer_menu_button_list.button_array[0].opacity <= 255) { 
                 this.multiplayer_menu_button_list.button_array[i].fade_in(SETUP_SCREEN_ANIMATION_TIME/3*2);
-
             }
+            }
+
+            if (this.multiplayer_menu_button_list.button_array[0].opacity <= 255) { 
+                this.opacity += 255/(SETUP_SCREEN_ANIMATION_TIME/3*2);
+            }
+
+            if (this.multiplayer_menu_button_list.button_array[0].opacity >= 255) {
+                for (i = 0 ; i < this.floater_array.length ; i++) {
+                    this.floater_array[i].fade_in(SETUP_SCREEN_ANIMATION_TIME/3);
+                }
+            }
+
+            if (this.floater_array[0].opacity >= 255) {
+                this.transition_in = false;
+                
+            }
+            
+            
 
 
 
@@ -631,13 +660,19 @@ gui.prototype.setupScreen = function() {
         }
 
     }
+
+    //drawing floaters
+    for (i = 0 ; i < this.floater_array.length ; i++) {
+        this.floater_array[i].draw();
+    }
     
     //draging a rectangle with thick stroke in order to add a border to the screen
     if (this.transition_in) {
         fill(255);
     } else {
-        fill(255,255,255,this.multiplayer_menu_button_list.button_array[0].opacity)
+        fill(255,255,255,this.opacity);
     }
+
     
     noStroke();
     strokeWeight(1);
@@ -646,10 +681,12 @@ gui.prototype.setupScreen = function() {
     rect(getCanvasSize()/2,this.border_pos,getCanvasSize(),STROKEWEIGHT);
     rect(getCanvasSize()/2,getCanvasSize() - this.border_pos ,getCanvasSize(),STROKEWEIGHT);
     fill(255,255,255,0)
-    stroke(255,255,255,this.multiplayer_menu_button_list.button_array[0].opacity);
+    stroke(255,255,255,this.opacity);
     textFont(fontPointless);
     textSize(getCanvasSize()*0.05)
     text('Game Options',getCanvasSize()/2,getCanvasSize()/5 );
+
+    
     
     
     this.multiplayer_menu_button_list.drawAll();
@@ -684,6 +721,7 @@ gui.prototype.setupScreen = function() {
             this.inputdelay = INPUT_DELAY;
         //space
         } else if (keyIsPressed && keyCode == 32) {
+            this.opacity = 255;
             this.multiplayer_menu_button_list.confirm();
             this.inputdelay = INPUT_DELAY;
 
@@ -708,13 +746,27 @@ if (this.multiplayer_menu_button_list.currently_selected.isconfirmed()) {
         if (this.multiplayer_menu_button_list.button_array[i] == this.multiplayer_menu_button_list.currently_selected) {
         } else {
             this.multiplayer_menu_button_list.button_array[i].fade();
+            
+
+            
         }
 
+    }
+
+    this.opacity -= 255/(CONFIRMED_ANIMATION_TIME/4);
+    
+    for (i =  0 ; i < this.floater_array.length ; i++) {
+        this.floater_array[i].fade_out(CONFIRMED_ANIMATION_TIME/4);
     }
 }
 
 
+
     if (this.transition_out) {
+
+        
+
+
         //checking if the confirmed animation is done and changing the screen
         if (this.multiplayer_menu_button_list.currently_selected.isconfirmed_animation_done()) {
             this.multiplayer_menu_button_list.currently_selected.confirmed_animation = false;
