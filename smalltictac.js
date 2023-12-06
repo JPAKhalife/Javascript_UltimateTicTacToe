@@ -94,77 +94,7 @@ smalltictac.prototype.draw = function(x,y,gridsize,turn) {
 
 
     }
-   
-    if (this.inputdelay <= 0 && this.isselected == true && this.select == false) {
 
-        //w
-        if (keyIsPressed && keyCode == 87 || keyIsPressed && keyCode == 119) {
-
-            if (this.cursor_y == 0) {
-                this.cursor_y = SMALL_GRID_LENGTH - 1;
-            } else {
-                this.cursor_y -= 1;
-            }
-            
-            this.inputdelay = INPUT_DELAY;
-            
-        //d
-        } else if (keyIsPressed && keyCode == 68 || keyIsPressed && keyCode == 100) {
-            if (this.cursor_x == SMALL_GRID_LENGTH - 1) {
-                this.cursor_x = 0;
-            } else {
-                this.cursor_x += 1;
-            }
-        
-            this.inputdelay = INPUT_DELAY;
-
-        //s
-        } else if (keyIsPressed && keyCode == 83 || keyIsPressed && keyCode == 115) {
-            
-            if (this.cursor_y == SMALL_GRID_LENGTH - 1) {
-                this.cursor_y = 0;
-            } else {
-                this.cursor_y += 1;
-            }
-
-            this.inputdelay = INPUT_DELAY;
-
-        //a
-        } else if (keyIsPressed && keyCode == 65 || keyIsPressed && keyCode == 97) {
-            if (this.cursor_x == 0) {
-                this.cursor_x = SMALL_GRID_LENGTH - 1;
-            } else {
-                this.cursor_x -= 1;
-            }
-            this.inputdelay = INPUT_DELAY;
-        //space
-        } else if (keyIsPressed && keyCode == 32) {
-            
-            if (this.grid[this.cursor_x][this.cursor_y] == 0) {
-                this.select = true;
-
-                //setting the proper player symbol
-                if (this.current_player % 2 == 0 && this.current_player != 0) {
-                    this.grid[this.cursor_x][this.cursor_y] = 1;
-                } else if (this.current_player % 2 != 0 && this.current_player != 0) {
-                    this.grid[this.cursor_x][this.cursor_y] = 2;
-                }
-
-                //checking if the game is won
-                if (this.isWon()) {
-                    this.won = true;
-                    this.winner = this.whoWon();
-                }
-                
-
-                this.inputdelay = INPUT_DELAY;
-            }
-
-        }
-
-    } else {
-        this.inputdelay--;
-    }
 
         //creating a hover animation
         if (this.select) {
@@ -175,6 +105,67 @@ smalltictac.prototype.draw = function(x,y,gridsize,turn) {
         
 
 
+}
+
+
+//this method is intended to input an up action
+smalltictac.prototype.up = function() {
+    if (this.cursor_y == 0) {
+        this.cursor_y = SMALL_GRID_LENGTH - 1;
+    } else {
+        this.cursor_y -= 1;
+    }
+}
+
+//this method is intenteded to input a right action
+smalltictac.prototype.right = function() {
+    if (this.cursor_x == SMALL_GRID_LENGTH - 1) {
+        this.cursor_x = 0;
+    } else {
+        this.cursor_x += 1;
+    }
+
+}
+
+//this method is intended to input a down action
+smalltictac.prototype.down = function() {
+    if (this.cursor_y == SMALL_GRID_LENGTH - 1) {
+        this.cursor_y = 0;
+    } else {
+        this.cursor_y += 1;
+    }
+}
+
+//this method is intended to input a left action
+smalltictac.prototype.left = function() {
+    if (this.cursor_x == 0) {
+        this.cursor_x = SMALL_GRID_LENGTH - 1;
+    } else {
+        this.cursor_x -= 1;
+    }
+}
+
+//this method is intended to input a select action
+smalltictac.prototype.space = function() {
+    if (this.grid[this.cursor_x][this.cursor_y] == 0) {
+        this.select = true;
+
+        //setting the proper player symbol
+        if (this.current_player % 2 == 0 && this.current_player != 0) {
+            this.grid[this.cursor_x][this.cursor_y] = 1;
+        } else if (this.current_player % 2 != 0 && this.current_player != 0) {
+            this.grid[this.cursor_x][this.cursor_y] = 2;
+        }
+
+        //checking if the game is won
+        if (this.isWon()) {
+            this.won = true;
+            this.winner = this.whoWon();
+        }
+        
+
+        this.inputdelay = INPUT_DELAY;
+    }
 }
 
 //This method is given a stop in the array and sets it to true. This will be used when a player makes a play.
@@ -237,6 +228,7 @@ smalltictac.prototype.hover = function(x,y,gridwidth) {
 
         if (this.hoveron == true) {
             fill(255);
+            rectMode(CORNER);
             rect(x + gridwidth*(this.cursor_x) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,y + gridwidth*(this.cursor_y) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,gridwidth*(SMALLEST_BOARD_PERCENT/100),gridwidth*(SMALLEST_BOARD_PERCENT/100));
             this.hovertime++;
         } else {

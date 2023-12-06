@@ -28,7 +28,7 @@ const SMALL_BOARD_PERCENT = 75;
 //this variable determines the size of the small tictac bsed on the size of the gap in the bigtictac it is supposed to fill
 const SMALLEST_BOARD_PERCENT = 75;
 //this variable determines the suze of the big tic tac based on the size of the canvas
-const BOARD_PERCENT = 75;
+const BOARD_PERCENT = 60;
 //this is input delay, measured in frames
 const INPUT_DELAY = 10;
 //Amount of time that the flashing sqaure will be on the screen small tictac
@@ -69,6 +69,10 @@ const SETUP_SCREEN_ANIMATION_TIME = 120;
 const OUTLINE_WEIGHT = 5;
 //this variable controls the time for the how to play screen and control screen transitions
 const CONTROL_TUTORIAL_ANIMATION_TIME = 120;
+//holds the messages for players
+const PLAYER_NAMES = ['PLAYER O','PLAYER X'];
+//quit screen animation time
+const QUIT_SCREEN_ANIMATION_TIME = 60;
 
 
 //it's messy, but I have to declare some undefined variables here to define in the setup function.
@@ -85,7 +89,7 @@ var tictactoe;
 let fontSquareo, fontmono, fontminecraft, fontAldoApache, fontPointless, fontPixeled, fontRobot, fontommy,fontOSDMONO;
 
 //variables for images
-let whiteTicTac,space,arrows,wasd,tictacboard;
+let whiteTicTac,space,arrows,wasd,tictacboard,tictacboard_two,tictacboard_three;
 
 
 //The setup function is run once at the first execution of the script.
@@ -103,6 +107,9 @@ function setup() {
     //This is where the graphical user interface is declared. It is responsible for switching screens and user interctions.
     graphicalUserInterface = new gui();
 
+    //creating a key listener ovect
+    keyListener = new key_listener();
+
     //variable that holds a game
     tictactoe = new game();
 
@@ -113,6 +120,8 @@ function setup() {
 //This method is run once before the setup function and is used to load images, fonts, and other assets
 function preload() {
     tictacboard = loadImage('assets/tictacboard.png');
+    tictacboard_two = loadImage('assets/tictacplay.png');
+    tictacboard_three = loadImage('assets/tictacbigmove.png');
     fontSquareo = loadFont('assets/Squareo.ttf');
     fontAldoApache = loadFont('assets/AldotheApache.ttf');
     fontPointless = loadFont('assets/Pointless.ttf');
@@ -144,7 +153,8 @@ function windowResized() {
 
 //This is the draw function, which is called over and over again. It is the main event loop.
 function draw() {
-        graphicalUserInterface.drawScreen();
+        
+        graphicalUserInterface.drawScreen(keyListener.listen());
 }
 
 //this functio will be used to get an integer within a certain range

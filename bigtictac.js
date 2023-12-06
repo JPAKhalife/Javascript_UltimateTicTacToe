@@ -2,6 +2,14 @@
 //creating the class for the big tic tac.
 function bigtictac() {
 
+    //this determines the current strokeweight of the oiutline
+    this.current_strokeweight = 0;
+
+    this.directional_value = 1;
+
+    //this determines whether or not the bigtictac is selected
+    this.is_selected = true;
+
     //represents the current player
     this.current_player = 1;
 
@@ -268,17 +276,18 @@ bigtictac.prototype.draw = function(x, y) {
     let boardwidth;
 
     //getting the smallest dimension of the canvas
-    if (height <= width) {
-        boardwidth = height * (BOARD_PERCENT/100);
-    } else {
-        boardwidth = width * (BOARD_PERCENT/100);
-    }
+
+    boardwidth = getCanvasSize() * (BOARD_PERCENT/100);
+
 
     let linewidth = boardwidth*LINEWIDTH_TO_BOARDWIDTH_RATIO;
 
     let gridwidth = ((boardwidth - linewidth))/GRID_LENGTH;
 
     let linenum = (GRID_LENGTH-1);
+
+
+    this.hoveredover();
 
     fill(255);
     strokeWeight(linewidth);
@@ -324,68 +333,7 @@ bigtictac.prototype.draw = function(x, y) {
         }
     }
 
-    if (this.inputdelay <= 0 && this.tictacselect == false) {
 
-        //w
-        if (keyIsPressed && keyCode == 87 || keyIsPressed && keyCode == 119) {
-
-            if (this.cursor_y == 0) {
-                this.cursor_y = GRID_LENGTH - 1;
-            } else {
-                this.cursor_y -= 1;
-            }
-            
-            this.inputdelay = INPUT_DELAY;
-            
-        //d
-        } else if (keyIsPressed && keyCode == 68 || keyIsPressed && keyCode == 100) {
-            if (this.cursor_x == GRID_LENGTH - 1) {
-                this.cursor_x = 0;
-            } else {
-                this.cursor_x += 1;
-            }
-        
-            this.inputdelay = INPUT_DELAY;
-
-        //s
-        } else if (keyIsPressed && keyCode == 83 || keyIsPressed && keyCode == 115) {
-            
-            if (this.cursor_y == GRID_LENGTH - 1) {
-                this.cursor_y = 0;
-            } else {
-                this.cursor_y += 1;
-            }
-
-            this.inputdelay = INPUT_DELAY;
-
-        //a
-        } else if (keyIsPressed && keyCode == 65 || keyIsPressed && keyCode == 97) {
-            if (this.cursor_x == 0) {
-                this.cursor_x = GRID_LENGTH - 1;
-            } else {
-                this.cursor_x -= 1;
-            }
-            this.inputdelay = INPUT_DELAY;
-        //space
-        } else if (keyIsPressed && keyCode == 32) {
-
-            if (this.grid[this.cursor_x][this.cursor_y].won) {
-
-            } else {
-                this.tictacselect = true;
-                this.grid[this.cursor_x][this.cursor_y].setselected(true);
-                this.grid[this.cursor_x][this.cursor_y].current_player = this.current_player;
-                this.inputdelay = INPUT_DELAY;
-            }
-
-            this.isWon();
-
-
-        }
-
-    } else {
-        this.inputdelay--;
-    }
 
 
 
@@ -437,6 +385,7 @@ bigtictac.prototype.draw = function(x, y) {
 
 bigtictac.prototype.hover = function(x,y,gridwidth) {
     
+    if (this.is_selected) {
 
     if (!this.tictacselect) {
 
@@ -447,7 +396,10 @@ bigtictac.prototype.hover = function(x,y,gridwidth) {
             this.hoveron = false;
         }
 
+
+
         if (this.hoveron == true) {
+            rectMode(CORNER);
             fill(255);
             rect(x + gridwidth*(this.cursor_x) + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,y + gridwidth*(this.cursor_y) + (gridwidth*((1-(SMALL_BOARD_PERCENT / 100))))/2,gridwidth*(SMALL_BOARD_PERCENT/100),gridwidth*(SMALL_BOARD_PERCENT/100));
             this.hovertime++;
@@ -457,7 +409,127 @@ bigtictac.prototype.hover = function(x,y,gridwidth) {
         
 
     }
+
+}
     
 }
 
+//this method is intended to draw a square around the tictac grid to imply that it is being hovered over
+bigtictac.prototype.hoveredover = function() {
+    
+    if (this.current_strokeweight == 10 && this.is_selected == false) {
+        this.directional_value = -1;
 
+
+    } else if (this.current_strokeweight == 0 && this.is_selected == true) {
+        this.directional_value = 1;
+    }
+
+    if (this.is_selected == false && this.current_strokeweight > 0) {
+        this.current_strokeweight += this.directional_value;
+    } else if (this.is_selected == true && this.current_strokeweight < 10) {
+        this.current_strokeweight += this.directional_value;
+    }
+
+
+
+    //drawing a rectangle around the tictac
+    noFill();
+    console.log(this.current_strokeweight);
+    strokeWeight(this.current_strokeweight);
+    stroke(255);
+    rectMode(CORNER);
+    rect(this.x, this.y,getCanvasSize() * (BOARD_PERCENT/100),getCanvasSize() * (BOARD_PERCENT/100));
+
+}
+
+
+//This function is intended to move the cursor up
+bigtictac.prototype.up = function() {
+
+
+    if (this.tictacselect) {
+        this.grid[this.cursor_x][this.cursor_y].up();
+    } else {
+        if (this.cursor_y == 0) {
+            this.cursor_y = GRID_LENGTH - 1;
+        } else {
+            this.cursor_y -= 1;
+        }
+    }
+
+
+    
+
+
+}
+
+//this function is intented to move the cursor down
+bigtictac.prototype.down = function() {
+
+    if (this.tictacselect) {
+        this.grid[this.cursor_x][this.cursor_y].down();
+    } else {
+        if (this.cursor_y == GRID_LENGTH - 1) {
+            this.cursor_y = 0;
+        } else {
+            this.cursor_y += 1;
+        }
+    }
+
+}
+
+//this function is intended to move the cursor left
+bigtictac.prototype.left = function() {
+
+
+    if (this.tictacselect) {
+        this.grid[this.cursor_x][this.cursor_y].left();
+    } else {
+        if (this.cursor_x == 0) {
+            this.cursor_x = GRID_LENGTH - 1;
+        } else {
+            this.cursor_x -= 1;
+        }
+    }
+    }
+
+
+//this function is intended to move the cursor right
+bigtictac.prototype.right = function() {
+
+
+    if (this.tictacselect) {
+        this.grid[this.cursor_x][this.cursor_y].right();
+    } else {
+        if (this.cursor_x == GRID_LENGTH - 1) {
+            this.cursor_x = 0;
+        } else {
+            this.cursor_x += 1;
+        }
+    }
+
+
+}
+
+//this function is intended to select
+bigtictac.prototype.select = function() {
+
+
+    if (this.tictacselect) {
+        this.grid[this.cursor_x][this.cursor_y].space();
+    } else {
+        if (this.grid[this.cursor_x][this.cursor_y].won) {
+
+        } else {
+            this.tictacselect = true;
+            this.grid[this.cursor_x][this.cursor_y].setselected(true);
+            this.grid[this.cursor_x][this.cursor_y].current_player = this.current_player;
+        }
+    }
+
+
+
+
+    this.isWon();
+}

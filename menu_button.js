@@ -64,6 +64,7 @@ function menu_button(x,y,phrase,length,width,textsize,buttoncode) {
 
     //a code to identify the button and execute functions based on the button's identity
     this.buttoncode = buttoncode;
+ 
 
 }
 
@@ -76,6 +77,7 @@ menu_button.prototype.standard_button = function() {
 
     //checking if the animation time is finished
     if (this.animation_time == 0) {
+        noFill();
 
     } else {
 
@@ -86,6 +88,8 @@ menu_button.prototype.standard_button = function() {
         //changing the button fill to the desired fill
         this.current_button_fill -= (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / SELECTED_ANIMATION_TIME;
         this.current_text_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / SELECTED_ANIMATION_TIME;
+
+        fill(this.current_button_fill,this.opacity);
     
 
         this.animation_time--;
@@ -94,7 +98,7 @@ menu_button.prototype.standard_button = function() {
     strokeWeight(1);
     stroke(255,this.opacity);
     rectMode(CENTER);
-    fill(this.current_button_fill,this.opacity);
+    
     rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());
     textSize(this.current_text_size);
     fill(this.current_text_fill,this.opacity);
@@ -223,6 +227,7 @@ menu_button.prototype.confirmed_button = function() {
 }
 
 menu_button.prototype.fade = function() {
+
     this.opacity -= (255/(CONFIRMED_ANIMATION_TIME/4));
 }
 
