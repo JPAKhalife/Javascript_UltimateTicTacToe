@@ -1,0 +1,15 @@
+{
+  "name": "javascript_ultimatetictactoe",
+  "version": "1.0.0",
+  "description": "This is a javascript version of the bigtactoe game I made in C++. It will hopefully be better coded. After the game is finished, I will work on converting it to online multiplayer game hosted on my webserver.",
+  "main": "bigtictac.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "sql": "^0.78.0"
+  }
+}
