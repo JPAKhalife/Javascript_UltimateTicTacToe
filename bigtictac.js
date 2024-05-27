@@ -4,12 +4,12 @@
  * 
  * @author John Khalife
  * @created 2021-02-10
- * @updated 2021-02-10
+ * P24-05-27
  */
 
 
 
-
+//This is the Bigtictac class. It is intended to represent the big tictac grid that is made up of 9 small tictac grids.
 function Bigtictac() {
 
     //this determines the current strokeweight of the oiutline
