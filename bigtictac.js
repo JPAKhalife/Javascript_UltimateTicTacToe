@@ -9,7 +9,7 @@
 
 
 
-//This is the Bigtictac class. It is intended to represent the big tictac grid that is made up of 9 small tictac grids.
+
 function Bigtictac() {
 
     //this determines the current strokeweight of the oiutline
