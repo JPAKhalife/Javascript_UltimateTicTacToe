@@ -36,6 +36,19 @@ button_nav.prototype.fadeAll = function () {
     }
 }
 
+//this function is responsible for reseting the buttons
+button_nav.prototype.reset = function () {
+
+
+
+    for (i = 0 ; i < this.button_array.length ; i++) {
+        this.button_array[i].reset();
+    }
+
+    this.currently_selected = this.button_array[0];
+    this.currently_selected.setStatus(true);
+}
+
 
 //this function is meant to confriemd a button
 button_nav.prototype.confirm = function() {

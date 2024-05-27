@@ -2,6 +2,6 @@
   "include": [
     "*.js",
     "libraries/*.js",
-    "/Users/johnkhalife/.vscode/extensions/samplavigne.p5-vscode-1.2.13/p5types/global.d.ts"
-  ]
+    "/Users/johnkhalife/.vscode/extensions/samplavigne.p5-vscode-1.2.15/p5types/global.d.ts"
+, "smalltictac.js", "client/sketch.jsent/quit_button.jsent/menu_button.jsent/key_listener.jsent/floater.js", "client/gui_optfloater.js/butgui_options.jsgui_button_nav.jsientgui_information.jsigatgui.jsent/gui_navigation.jsme.jgui_game.jstac.game.jsbigtictac.js
 }

@@ -1,51 +1,23 @@
+html, body {
+
+    height: 100%;
+    width: 100%;
+
+}
+
 body {
- background-color: black;
 
-   justify-content: center;
-
-   align-items: center;
-
-}
-
-#topbar {
     background-color: black;
-    border-color: white;
-    border-bottom: 5px solid white;
-    height: 10%;
-}
 
-#title {
-    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
-    font-size: large;
-    color: white;
-    text-align: center;
+    margin:0;
+
+    display: flex;
+
+  
+    /* This centers our sketch horizontally. */
     justify-content: center;
-}
-
-#author {
-    text-align: center;
-    color: grey;
-    font-size: small;
-    font-family: 'Courier New', Courier, monospace;
-    justify-content: center;
-
-}
-
-#game {
-
-    justify-content: center;
+  
+    /* This centers our sketch vertically. */
     align-items: center;
-}
 
-#return {
-    text-align: center;
-    color: antiquewhite;
-    padding: 12px;
-    text-decoration: none;
-    font-size: 17px;
-}
-
-#return:hover {
-    background-color: white;
-    animation-duration: 0.5s;
 }

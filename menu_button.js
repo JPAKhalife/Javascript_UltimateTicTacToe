@@ -58,14 +58,13 @@ function menu_button(x,y,phrase,length,width,textsize,buttoncode) {
     //this will control the opacity of the ring that occurs when a selection is confirmed
     this.opacity = 255;
 
-    //this checks whether the status of the button is confirmed or not 
-    this.confirmed = false;
 
     //contains the status of the confirmed animation
     this.confirmed_animation = false;
 
     //a code to identify the button and execute functions based on the button's identity
     this.buttoncode = buttoncode;
+ 
 
 }
 
@@ -73,20 +72,24 @@ function menu_button(x,y,phrase,length,width,textsize,buttoncode) {
 
 //This method is intented to draw the standard appearance of the button
 menu_button.prototype.standard_button = function() {
-
+    
+    textFont('Arial');
 
     //checking if the animation time is finished
     if (this.animation_time == 0) {
+        noFill();
 
     } else {
 
         //adding to the length and width
-        this.current_width -= (this.width * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
-        this.current_length -= (this.length * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
+        this.current_width -= ((this.width) * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
+        this.current_length -= ((this.length) * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
 
         //changing the button fill to the desired fill
         this.current_button_fill -= (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / SELECTED_ANIMATION_TIME;
         this.current_text_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / SELECTED_ANIMATION_TIME;
+
+        fill(this.current_button_fill,this.opacity);
     
 
         this.animation_time--;
@@ -94,15 +97,31 @@ menu_button.prototype.standard_button = function() {
 
     strokeWeight(1);
     stroke(255,this.opacity);
-    fill(this.current_button_fill,this.opacity);
     rectMode(CENTER);
-    rect(this.x, this.y,this.current_width,this.current_length);
+    
+    rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());
     textSize(this.current_text_size);
     fill(this.current_text_fill,this.opacity);
     noStroke();
     textAlign(CENTER,CENTER);
-    text(this.phrase,this.x, this.y,this.current_width,this.current_length);    
+    text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());    
     
+}
+
+//this method resets all variables so that the buttons can be pressed again.
+menu_button.prototype.reset = function() {
+    this.cw = 0;
+    this.cl = 0;
+    this.opacity = 255;
+    this.confirmed = false;
+    this.confirmed_animation = false;
+    this.animation_time = 0;
+    this.selected = false;
+    this.current_length = this.length;
+    this.current_width = this.width;
+    this.current_text_fill = 255;
+    this.current_button_fill = 0;
+    this.current_text_size = this.text_size;
 }
 
 //this method returns whether or not the button is selected
@@ -123,6 +142,7 @@ menu_button.prototype.setStatus = function(status) {
 
 //this method draws the button when it has been selected and does the animation for when it is selected
 menu_button.prototype.selected_button = function() {
+    textFont('Arial');
 
     //checking if the animation time is finished
     if (this.animation_time > SELECTED_ANIMATION_TIME) {
@@ -130,8 +150,8 @@ menu_button.prototype.selected_button = function() {
     } else {
 
         //adding to the length and width
-        this.current_width += (this.width * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
-        this.current_length += (this.length * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
+        this.current_width += ((this.width) * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
+        this.current_length += ((this.length) * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
 
         //changing the button fill to the desired fill
         this.current_button_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / SELECTED_ANIMATION_TIME;
@@ -144,20 +164,21 @@ menu_button.prototype.selected_button = function() {
     strokeWeight(1);
     stroke(255,this.opacity);
     fill(this.current_button_fill,this.opacity);
-    rectMode(CENTER);
-    rect(this.x, this.y,this.current_width,this.current_length);
+
+    rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());
     textSize(this.current_text_size);
     fill(this.current_text_fill,this.opacity);
     noStroke()
     textAlign(CENTER,CENTER);
-    text(this.phrase,this.x, this.y,this.current_width,this.current_length);   
+    text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());   
 
 
 }
 
 //this method draws the button when it has been confrmed and does the animation for when it is confirmed
 menu_button.prototype.confirmed_button = function() {
-        first_half = true
+    textFont('Arial');
+    first_half = true
 
     // //checking if the animation time is finished
     if (this.animation_time > CONFIRMED_ANIMATION_TIME) {
@@ -165,9 +186,9 @@ menu_button.prototype.confirmed_button = function() {
         this.confirmed_animation = true;
 
     } else {
-
-        this.cl += ((CONFIRMED_GROWTH_PERCENT / 100) * this.current_length + this.current_length) / CONFIRMED_ANIMATION_TIME;
-        this.cw += ((CONFIRMED_GROWTH_PERCENT / 100) * this.current_width + this.current_width) / CONFIRMED_ANIMATION_TIME;
+        
+        this.cl += ((CONFIRMED_GROWTH_PERCENT / 100) * (this.current_length * getCanvasSize()) + (this.current_length * getCanvasSize())) / CONFIRMED_ANIMATION_TIME;
+        this.cw += ((CONFIRMED_GROWTH_PERCENT / 100) * (this.current_width * getCanvasSize()) + (this.current_width * getCanvasSize())) / CONFIRMED_ANIMATION_TIME;
         this.current_text_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / CONFIRMED_ANIMATION_TIME;
         this.opacity -= (255/CONFIRMED_ANIMATION_TIME)
     
@@ -184,21 +205,21 @@ menu_button.prototype.confirmed_button = function() {
     noStroke()
     fill(255);
     //fill(this.current_button_fill);
-    rectMode(CENTER);
-    rect(this.x, this.y,this.current_width - this.cw ,this.current_length - this.cls);
+
+    rect(this.x * getCanvasSize(), this.y * getCanvasSize(),(this.current_width * getCanvasSize()) - this.cw ,(this.current_length * getCanvasSize()) - this.cls);
     textSize(this.current_text_size);
     fill(this.current_text_fill);
     tint(0,255);
     textAlign(CENTER,CENTER);
-    text(this.phrase,this.x, this.y,this.current_width,this.current_length);  
+    text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());  
 
     //this is the second rectangle that will be acting as the 
 
 
     stroke(255,this.opacity);
     fill(0);
-    strokeWeight(STROKEWEIGHT);
-    rect(this.x, this.y,STROKEWEIGHT + this.cw,this.cl + STROKEWEIGHT);
+    strokeWeight(OUTLINE_WEIGHT);
+    rect(this.x * getCanvasSize(), this.y * getCanvasSize(),OUTLINE_WEIGHT + this.cw,this.cl + OUTLINE_WEIGHT);
     
     
 
@@ -206,6 +227,7 @@ menu_button.prototype.confirmed_button = function() {
 }
 
 menu_button.prototype.fade = function() {
+
     this.opacity -= (255/(CONFIRMED_ANIMATION_TIME/4));
 }
 
@@ -262,5 +284,15 @@ menu_button.prototype.opposite_relevant_value = function(direction) {
     }
 
 
+}
+
+//this function will control the fading in animation of all buttons
+menu_button.prototype.fade_in = function(time) {
+    this.opacity += (255/(time));
+}
+
+//this function will control the fading in animation of all buttons
+menu_button.prototype.set_opacity = function(opacity) {
+    this.opacity = opacity;
 }
 
