@@ -23,7 +23,7 @@ function bigtictac() {
     this.inputdelay = 0;
 
     //each big tic tac will have a 2d array full of small tic tacs.
-    //creating a 1d array.     
+    //creating a 1d array.
     this.grid = new Array(GRID_LENGTH)
     //filling the array with 1d arrays.
     for (let i = 0 ; i < GRID_LENGTH ; i ++) {
