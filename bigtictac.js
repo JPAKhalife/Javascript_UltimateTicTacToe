@@ -1,5 +1,14 @@
+/**
+ * @class This is the BigTicTac class. It is intended to represent the big tictac grid that is made up of 9 small tictac grids.
+ * It has multiple methods that are intended to draw the grid, select a spot, and determine if the game has been won.
+ * 
+ * @author John Khalife
+ * @lastupdated 2020-03-10 
+ */
 
-//creating the class for the big tic tac.
+
+
+
 function bigtictac() {
 
     //this determines the current strokeweight of the oiutline
