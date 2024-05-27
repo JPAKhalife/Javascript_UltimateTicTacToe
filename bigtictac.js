@@ -12,7 +12,7 @@
 
 function Bigtictac() {
 
-    //this determines the current strokeweight of the oiutline
+    //this determines the current strokeweight of the outline
     this.current_strokeweight = 0;
 
     this.directional_value = 1;
