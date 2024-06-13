@@ -4,13 +4,13 @@
  * 
  * @author John Khalife
  * @created 2021-02-10
- * @updated 2024-05-27
+ * @updated 2024-06-13
  */
 
 
 
 
-function Bigtictac() {
+function bigtictac() {
 
     //this determines the current strokeweight of the outline
     this.current_strokeweight = 0;
@@ -64,7 +64,7 @@ function Bigtictac() {
 }
 
 //This method is meant to return a true or false value as to whether the game had been won.
-Bigtictac.prototype.isWon = function() {
+bigtictac.prototype.isWon = function() {
     //setting the result of whoWon to this.winner.
     this.winner = this.whoWon();
 
@@ -81,7 +81,7 @@ Bigtictac.prototype.isWon = function() {
 }
 
 //This method returns a number that indicates who won.
-Bigtictac.prototype.whoWon = function () {
+bigtictac.prototype.whoWon = function () {
 
     //checking all the rows of the grid for a match.
     for (let i = 0 ; i < GRID_LENGTH ; i++) {
@@ -243,7 +243,7 @@ Bigtictac.prototype.whoWon = function () {
 
 
 //This method is meant to select a spot inside a small tic tac.
-Bigtictac.prototype.select = function(bigrow, bigcolumn, smallrow, smallcolumn,user) {
+bigtictac.prototype.select = function(bigrow, bigcolumn, smallrow, smallcolumn,user) {
     //no need to check the user input, because the select function does this.
     try {
         this.grid[bigrow,bigcolumn].select(smallrow, smallcolumn,user);
@@ -254,7 +254,7 @@ Bigtictac.prototype.select = function(bigrow, bigcolumn, smallrow, smallcolumn,u
 }
 
     //This method will be used to check if the Bigtictactow grid is full.
-Bigtictac.prototype.isFull = function() {
+    bigtictac.prototype.isFull = function() {
     if (this.isWon() == false) {
         //starting a  nested for loop to check every single spot in the Bigtictac.
         for (let i = 0 ; i < GRID_LENGTH ; i++) {
@@ -280,7 +280,7 @@ Bigtictac.prototype.isFull = function() {
 }
 
 //this method is meant to draw the Bigtictac
-Bigtictac.prototype.draw = function(x, y) {
+bigtictac.prototype.draw = function(x, y) {
 
     //variable that will hold the width of the grid
     let boardwidth;
@@ -393,7 +393,7 @@ Bigtictac.prototype.draw = function(x, y) {
 
 }
 
-Bigtictac.prototype.hover = function(x,y,gridwidth) {
+bigtictac.prototype.hover = function(x,y,gridwidth) {
     
     if (this.is_selected) {
 
@@ -433,7 +433,7 @@ Bigtictac.prototype.hover = function(x,y,gridwidth) {
 }
 
 //this method is intended to draw a square around the tictac grid to imply that it is being hovered over
-Bigtictac.prototype.hoveredover = function() {
+bigtictac.prototype.hoveredover = function() {
     
     if (this.current_strokeweight == 10 && this.is_selected == false) {
         this.directional_value = -1;
@@ -463,7 +463,7 @@ Bigtictac.prototype.hoveredover = function() {
 
 
 //This function is intended to move the cursor up
-Bigtictac.prototype.up = function() {
+bigtictac.prototype.up = function() {
 
 
     if (this.tictacselect) {
@@ -498,7 +498,7 @@ Bigtictac.prototype.down = function() {
 }
 
 //this function is intended to move the cursor left
-Bigtictac.prototype.left = function() {
+bigtictac.prototype.left = function() {
 
 
     if (this.tictacselect) {
@@ -514,7 +514,7 @@ Bigtictac.prototype.left = function() {
 
 
 //this function is intended to move the cursor right
-Bigtictac.prototype.right = function() {
+bigtictac.prototype.right = function() {
 
 
     if (this.tictacselect) {
@@ -531,7 +531,7 @@ Bigtictac.prototype.right = function() {
 }
 
 //this function is intended to select
-Bigtictac.prototype.select = function() {
+bigtictac.prototype.select = function() {
 
 
     if (this.tictacselect) {
