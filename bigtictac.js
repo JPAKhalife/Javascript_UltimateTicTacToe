@@ -1,5 +1,5 @@
 /**
- * @class This is the Bigtictac class. It is intended to represent the big tictac grid that is made up of 9 small tictac grids.
+ * @class This is the bigtictac class. It is intended to represent the big tictac grid that is made up of 9 small tictac grids.
  * It has multiple methods that are intended to draw the grid, select a spot, and determine if the game has been won.
  * 
  * @author John Khalife
@@ -17,7 +17,7 @@ function bigtictac() {
 
     this.directional_value = 1;
 
-    //this determines whether or not the Bigtictac is selected
+    //this determines whether or not the bigtictac is selected
     this.is_selected = true;
 
     //represents the current player
@@ -253,10 +253,10 @@ bigtictac.prototype.select = function(bigrow, bigcolumn, smallrow, smallcolumn,u
     
 }
 
-    //This method will be used to check if the Bigtictactow grid is full.
+    //This method will be used to check if the bigtictactow grid is full.
     bigtictac.prototype.isFull = function() {
     if (this.isWon() == false) {
-        //starting a  nested for loop to check every single spot in the Bigtictac.
+        //starting a  nested for loop to check every single spot in the bigtictac.
         for (let i = 0 ; i < GRID_LENGTH ; i++) {
             for (let j = 0 ; j < GRID_LENGTH ; j ++) {   
                 if (this.grid[i][j].isWon() || this.grid[i][j].isFull()) {
@@ -279,7 +279,7 @@ bigtictac.prototype.select = function(bigrow, bigcolumn, smallrow, smallcolumn,u
 
 }
 
-//this method is meant to draw the Bigtictac
+//this method is meant to draw the bigtictac
 bigtictac.prototype.draw = function(x, y) {
 
     //variable that will hold the width of the grid
@@ -483,7 +483,7 @@ bigtictac.prototype.up = function() {
 }
 
 //this function is intented to move the cursor down
-Bigtictac.prototype.down = function() {
+bigtictac.prototype.down = function() {
 
     if (this.tictacselect) {
         this.grid[this.cursor_x][this.cursor_y].down();
