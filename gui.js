@@ -40,7 +40,7 @@ function gui() {
     this.multiplayer_menu_button_list = new button_nav([new menu_button(0.5,0.4,"Local",0.1,0.1,50*0.25), new menu_button(0.80,0.85, "How to play",0.05,0.15,50*0.25), new menu_button(0.20, 0.85, "Controls",0.05,0.15,50*0.25),new menu_button(0.5, 0.6 , "Online",0.1,0.1,50*0.25)]); 
    
    //this is an array that will hold floaters for the option screen
-   this.floater_array = [new floater(whiteTicTac,50,50),new floater(whiteTicTac,50,50),new floater(whiteTicTac,50,50),new floater(whiteTicTac,50,50)];
+   this.floater_array = [new Floater(whiteTicTac,50,50),new Floater(whiteTicTac,50,50),new Floater(whiteTicTac,50,50),new Floater(whiteTicTac,50,50)];
 
    //this array will hld the quitting buttons
    this.quit_buttons = new button_nav([new quit_button(getCanvasSize()/2,getCanvasSize/2,'Confirm'),new quit_button(getCanvasSize()/2,getCanvasSize/2,'Cancel')]);

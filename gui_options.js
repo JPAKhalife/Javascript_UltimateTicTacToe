@@ -66,19 +66,10 @@ gui.prototype.setupScreen = function(keylistener) {
     textSize(getCanvasSize()*0.05)
     text('Game Options',getCanvasSize()/2,getCanvasSize()/5 );
 
-    
-    
-    
     this.multiplayer_menu_button_list.drawAll();
 
     if (this.transition_in == false && this.transition_out == false) {
-
-    
     if (this.inputdelay == 0) {
-        
-
-   
-
         //w
         if (keylistener == KEY_EVENTS.UP) {
             this.multiplayer_menu_button_list.selectClosest(2);
@@ -126,9 +117,6 @@ if (this.multiplayer_menu_button_list.currently_selected.isconfirmed()) {
         if (this.multiplayer_menu_button_list.button_array[i] == this.multiplayer_menu_button_list.currently_selected) {
         } else {
             this.multiplayer_menu_button_list.button_array[i].fade();
-            
-
-            
         }
 
     }

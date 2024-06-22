@@ -58,9 +58,13 @@ const TEXT_SIZE_PERCENTAGE = 50;
 //the weight of the stroke around the btton during the confirmed animation
 const STROKEWEIGHT = 15;
 //here are a bunch of constants which are meant to hold the title messages
-const START_SCREEN_TITLE = "Ultimate TicTacToe";
-const START_SCREEN_MESSAGE = "Press Space to Start";
-const START_SCREEN_AUTHOR = "Made by John Khalife";
+const HEADER = {
+    START_SCREEN_TITLE:"Ultimate TicTacToe",
+    START_SCREEN_MESSAGE: "Press Space to Start",
+    START_SCREEN_AUTHOR: "Made by John Khalife",
+    SETUP_SCREEN_TITLE: "Game Options",
+}
+
 //this variable holds the width of the border around the menu screen in pixels
 const MENU_BORDER_WIDTH = 10;
 //animation time for the setup screen measured in frames
@@ -97,21 +101,18 @@ function setup() {
     //creating the canvas at the size of the window, setting the canvas to a variable.
     var cnv = createCanvas(getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100, getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100);
 
-    
+    //Create the screen objects.
+    createScreens();
     //making sure that the canvas does not accidentally make a scroll bar appear on different browsers.
     //cnv.style("display", "block");
 
     //framerate
     frameRate(FRAMERATE);
 
-    //This is where the graphical user interface is declared. It is responsible for switching screens and user interctions.
-    graphicalUserInterface = new gui();
-
-    //creating a key listener ovect
-    keyListener = new key_listener();
-
     //variable that holds a game
     tictactoe = new game();
+
+    GuiManager.changeScreen(Screens.START_SCREEN);
 
     background(255);
 
@@ -142,6 +143,7 @@ function preload() {
 function windowResized() {
     smallest = getSmallestWindowSize();
     resizeCanvas(smallest - smallest*WINDOW_MARGIN/100, smallest - smallest*WINDOW_MARGIN/100);
+    GuiManager.initScreen();
 
 }
 
@@ -153,8 +155,8 @@ function windowResized() {
 
 //This is the draw function, which is called over and over again. It is the main event loop.
 function draw() {
-        
-        graphicalUserInterface.drawScreen(keyListener.listen());
+        GuiManager.drawScreen();
+        //graphicalUserInterface.drawScreen(keyListener.listen());
 }
 
 //this functio will be used to get an integer within a certain range
