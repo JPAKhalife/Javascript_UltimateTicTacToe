@@ -20,6 +20,14 @@ function KeyListener() {
 
 }
 
+KeyListener.prototype.deactivate = function() {
+    this.do_listen = false;
+}
+
+KeyListener.prototype.activate = function() {
+    this.do_listen = true;
+}
+
 KeyListener.prototype.listen = function() {
 
     if (this.inputdelay <= 0) {

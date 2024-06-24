@@ -3,7 +3,7 @@
  * @description This file is intended to house the gui manager class. as well as the gui class.
  * @author John Khalife
  * @created 2024-06-9
- * @updated 2024-06-22
+ * @updated 2024-06-23
  */
 
 
@@ -26,14 +26,14 @@ class GuiManager {
      * @function iniScreen Initializes the current screen.
      */
     static initScreen() {
-        GuiManager.screens[GuiManager.currentScreen].init();
+        GuiManager.currentScreen.init();
     }
 
     /**
      * @function drawScreen Draws the current screen.
      */
     static drawScreen() {
-        GuiManager.screens[GuiManager.currentScreen].draw();
+        GuiManager.currentScreen.draw();
     }
 
     /**
@@ -41,7 +41,11 @@ class GuiManager {
      * @param {number} screen - The index of the screen to be set as the current screen.
      */
     static changeScreen(screen) {
-        GuiManager.currentScreen = screen;
+        GuiManager.currentScreen = new Menu(
+            screen,
+            GuiManager.screens[screen].init,
+            GuiManager.screens[screen].draw,
+            GuiManager.screens[screen].resize);
         GuiManager.initScreen();
     }
 

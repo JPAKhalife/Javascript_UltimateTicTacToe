@@ -3,7 +3,7 @@
  * @description A file containing the definition of every screen in the game.
  * @author John Khalife
  * @created 2024-06-9
- * @updated 2024-06-22
+ * @updated 2024-06-23
  */
 
 /**
@@ -756,12 +756,15 @@ class Img extends ShapeWrapper {
  * @param {string} fill - The fill color of the text in color format.
  */
 class Text extends ShapeWrapper {
-    constructor(text, size, font = 'Arial', x, y, fill = color(0,0,0)) {
+    constructor(text, x, y, fill = color(0,0,0), size, font = 'Arial') {
         super(x, y,fill);
         this.text = text;
         this.size = size;
         this.font = font;
         this.textOrientation = [LEFT, BOTTOM];
+        this.textbox = false;
+        this.txtxt = 0;
+        this.tytxt = 0;
     }
     /**
      * @function draw
@@ -771,7 +774,12 @@ class Text extends ShapeWrapper {
         textFont(this.font);
         textSize(this.size);
         textAlign(this.textOrientation[0],this.textOrientation[1]);
-        text(this.text, this.x, this.y);
+        if (this.textbox) {
+            text(this.text, this.x, this.y,this.txtxt, this.tytxt);
+        } else {
+            text(this.text, this.x, this.y);
+        }
+        
     }
     /**
      * @function setTextOrientation
@@ -790,6 +798,36 @@ class Text extends ShapeWrapper {
      */
     setFont(font) {
         this.font = font;
+    }
+
+    /**
+     * @method setText
+     * @description sets the text of the text object.
+     * @param {*} text 
+     */
+    setText(text) {
+        this.text = text;
+    }
+
+    /**
+     * @method setTextBox
+     * @description Sets the size of the maximum text height and width
+     * @param {*} tx 
+     * @param {*} ty 
+     */
+    setTextBox(tx,ty) {
+        this.textbox = true;
+        this.txtxt = tx;
+        this.tytxt = ty;
+    }
+
+    /**
+     * @method setTextSize
+     * @description Sets the textsize.
+     * @param {*} size 
+     */
+    setTextSize(size) {
+        this.size = size;
     }
 }
 

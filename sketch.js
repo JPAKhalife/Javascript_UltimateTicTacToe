@@ -31,10 +31,6 @@ const SMALLEST_BOARD_PERCENT = 75;
 const BOARD_PERCENT = 60;
 //this is input delay, measured in frames
 const INPUT_DELAY = 10;
-//Amount of time that the flashing sqaure will be on the screen small tictac
-const HOVER_TIME_SMALL = 45;
-//amount of time that the flashing will be on  the screen big tic tac
-const HOVER_TIME = 45;
 //constance used on the creation oc the big tic tac
 //exactly what it says
 const LINEWIDTH_TO_BOARDWIDTH_RATIO = 0.01;
@@ -43,12 +39,6 @@ const SMALL_LINEWIDTH_TO_BOARDWIDTH_RATIO = 0.01;
 //This is the percentage that the button's size will grow when it is selected
 const GROWTH_PERCENT = 25;
 const CONFIRMED_GROWTH_PERCENT = 100;
-//This is the speed at which the button will perform the selected animation, measured in frames
-const SELECTED_ANIMATION_TIME = 5;
-//this is the speed at which the button will perform the unselected animation, measured in frames as well
-const UNSELECTED_ANIMATION_TIME = 5;
-//animation time for the conirmed animation
-const CONFIRMED_ANIMATION_TIME = 60;
 //This is the default shade of gray of the button fill (0-255)
 const DEFAULT_BUTTON_SHADE = 0;
 //this is the desired shade of gray of the button when it is seleceted
@@ -63,20 +53,32 @@ const HEADER = {
     START_SCREEN_MESSAGE: "Press Space to Start",
     START_SCREEN_AUTHOR: "Made by John Khalife",
     SETUP_SCREEN_TITLE: "Game Options",
+    LOADING_SCREEN_MESSAGES: ["Check out this cool loading screen lol.", "To win, you have to get good.", "Ultimate Tictactoe is better than TicTacToe", "Don't forget to touch grass every once in a while.", "Fun Fact: This font doesn't have colons.", "Having trouble? Skill issue.","Help, I can't think of loading messages.","I should probably put some actually helpful tips here.","Try to direct your opponent to a square where they can't do anything.", "Sometimes, you can force your opponent to send you to an advantageous square.", "Try to place your pieces such that there are multiple ways you can score a point."],
+    LOADING_SCREEN_TITLE_MESSAGES: ["Seaching for players","Preparing Game"],
+    DOTS: ["",".","..","..."],
+    PLAYER_NAMES: ['PLAYER O','PLAYER X'],
+}
+//This constant is meant to be used for animation times - measured in frames.
+const ATIME = {
+    SETUP_SCREEN_ANIMATION_TIME: 120,
+    CONTROL_TUTORIAL_ANIMATION_TIME: 120,
+    QUIT_SCREEN_ANIMATION_TIME: 60,
+    SELECTED_ANIMATION_TIME: 5,
+    UNSELECTED_ANIMATION_TIME: 5,
+    HOVER_TIME_SMALL: 45,
+    HOVER_TIME: 45,
+    LOADING_TRANSITION_IN: 180,
+    CONFIRMED_ANIMATION_TIME: 60,
+    INFORMATION_SCREEN_TRANSITION_TIME: 60,
 }
 
 //this variable holds the width of the border around the menu screen in pixels
 const MENU_BORDER_WIDTH = 10;
-//animation time for the setup screen measured in frames
-const SETUP_SCREEN_ANIMATION_TIME = 120;
 //the outline of the second rect around the utton
 const OUTLINE_WEIGHT = 5;
-//this variable controls the time for the how to play screen and control screen transitions
-const CONTROL_TUTORIAL_ANIMATION_TIME = 120;
-//holds the messages for players
-const PLAYER_NAMES = ['PLAYER O','PLAYER X'];
-//quit screen animation time
-const QUIT_SCREEN_ANIMATION_TIME = 60;
+
+
+
 
 
 //it's messy, but I have to declare some undefined variables here to define in the setup function.

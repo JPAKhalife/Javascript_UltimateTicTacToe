@@ -517,12 +517,12 @@ menu_button.prototype.standard_button = function() {
     } else {
 
         //adding to the length and width
-        this.current_width -= ((this.width) * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
-        this.current_length -= ((this.length) * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
+        this.current_width -= ((this.width) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
+        this.current_length -= ((this.length) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
 
         //changing the button fill to the desired fill
-        this.current_button_fill -= (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / SELECTED_ANIMATION_TIME;
-        this.current_text_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / SELECTED_ANIMATION_TIME;
+        this.current_button_fill -= (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
+        this.current_text_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
 
         fill(this.current_button_fill,this.opacity);
     
@@ -580,17 +580,17 @@ menu_button.prototype.selected_button = function() {
     textFont('Arial');
 
     //checking if the animation time is finished
-    if (this.animation_time > SELECTED_ANIMATION_TIME) {
+    if (this.animation_time > ATIME.SELECTED_ANIMATION_TIME) {
 
     } else {
 
         //adding to the length and width
-        this.current_width += ((this.width) * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
-        this.current_length += ((this.length) * (GROWTH_PERCENT / 100)) / SELECTED_ANIMATION_TIME;
+        this.current_width += ((this.width) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
+        this.current_length += ((this.length) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
 
         //changing the button fill to the desired fill
-        this.current_button_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / SELECTED_ANIMATION_TIME;
-        this.current_text_fill -= (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / SELECTED_ANIMATION_TIME;
+        this.current_button_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
+        this.current_text_fill -= (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
     
 
         this.animation_time++;
@@ -616,16 +616,16 @@ menu_button.prototype.confirmed_button = function() {
     first_half = true
 
     // //checking if the animation time is finished
-    if (this.animation_time > CONFIRMED_ANIMATION_TIME) {
+    if (this.animation_time > ATIME.CONFIRMED_ANIMATION_TIME) {
         this.opacity = 0;
         this.confirmed_animation = true;
 
     } else {
         
-        this.cl += ((CONFIRMED_GROWTH_PERCENT / 100) * (this.current_length * getCanvasSize()) + (this.current_length * getCanvasSize())) / CONFIRMED_ANIMATION_TIME;
-        this.cw += ((CONFIRMED_GROWTH_PERCENT / 100) * (this.current_width * getCanvasSize()) + (this.current_width * getCanvasSize())) / CONFIRMED_ANIMATION_TIME;
-        this.current_text_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / CONFIRMED_ANIMATION_TIME;
-        this.opacity -= (255/CONFIRMED_ANIMATION_TIME)
+        this.cl += ((CONFIRMED_GROWTH_PERCENT / 100) * (this.current_length * getCanvasSize()) + (this.current_length * getCanvasSize())) / ATIME.CONFIRMED_ANIMATION_TIME;
+        this.cw += ((CONFIRMED_GROWTH_PERCENT / 100) * (this.current_width * getCanvasSize()) + (this.current_width * getCanvasSize())) / ATIME.CONFIRMED_ANIMATION_TIME;
+        this.current_text_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.CONFIRMED_ANIMATION_TIME;
+        this.opacity -= (255/ATIME.CONFIRMED_ANIMATION_TIME)
     
 
         this.animation_time++;
@@ -657,7 +657,7 @@ menu_button.prototype.confirmed_button = function() {
 
 menu_button.prototype.fade = function() {
 
-    this.opacity -= (255/(CONFIRMED_ANIMATION_TIME/4));
+    this.opacity -= (255/(ATIME.CONFIRMED_ANIMATION_TIME/4));
 }
 
 //returns true or false depending on i the button is confirmed
