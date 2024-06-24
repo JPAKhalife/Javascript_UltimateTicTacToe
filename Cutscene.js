@@ -1,31 +1,31 @@
 /**
- * @file Animation.js
- * @description This file contains the definition of the Animation class.
+ * @file Cutscene.js
+ * @description This file contains the definition of the Cutscene class.
  */
 
 /**
- * @class Animation
+ * @class Cutscene
  * @Description This class is used to create animations in the gui.
  * */
-class Animation {
+class Cutscene {
     //We need a static variable to keep track of whether or not an animation is currently playing
     static isPlaying = false;
 
     /**
      * @constructor
      * @param {*} keylistener
-     * @param {*} doAnimation 
+     * @param {*} doCutscene 
      * @param {*} animation 
      * @param  {...any} shapes 
      */
-    constructor(keylistener = null, animationCondition = {}, animation = {}, ...shapes) {
+    constructor(keylistener = null, ...shapes) {
         this.keylistener = keylistener
         //Each animation needs to have a listen method to check when to start and end an animation
-        this.animationCondition = animationCondition;
+        this.animationCondition = function () {};
         //This keeps track of whether or not the animation is being played
-        this.doAnimation = false;
+        this.doCutscene = false;
         //Each animatino needs to have the animate method to animate the animation
-        this.animate = animation;
+        this.animate = function () {};
         //Any aditional arguments are for shapes
         this.shapes = [];
         for (let i = 0; i < shapes.length; i++) {
@@ -41,8 +41,8 @@ class Animation {
      * */
     listen() {
         this.animationCondition();
-        if (this.doAnimation) {
-            this.animate();
+        if (this.doCutscene) {
+            this.animation();
         }
     }
 
@@ -51,8 +51,8 @@ class Animation {
      * @description This method activates the animation
      */
     activate() {
-        this.doAnimation = true;
-        isPlaying = true;
+        this.doCutscene = true;
+        Cutscene.isPlaying = true;
     }
 
     /**
@@ -61,8 +61,8 @@ class Animation {
      
      */
     deactivate() { 
-        this.doAnimation = false;
-        isPlaying = false;
+        this.doCutscene = false;
+        Cutscene.isPlaying = false;
     }
 
     /**
@@ -79,5 +79,24 @@ class Animation {
      */
     setOnDeactivate(func) {
         this.onDeactivate = func;
+    }
+
+    /**
+     * @method setAnimationCondition
+     * @description Sets the animation method for this cutscene
+     * @param {@} animation 
+     */
+    setAnimation(animation = function() {}) {
+        this.animation = animation;
+
+    }
+
+    /**
+     * @method setcondition
+     * @description Sets the condition method for this cutscene
+     * @param {@} condition 
+     */
+    setCondition(condition = function() {this.activate()}) {
+        this.animationCondition = condition;
     }
 }

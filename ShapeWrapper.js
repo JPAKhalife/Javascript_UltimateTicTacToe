@@ -3,7 +3,7 @@
  * @description A file containing the definition of every screen in the game.
  * @author John Khalife
  * @created 2024-06-9
- * @updated 2024-06-13
+ * @updated 2024-06-23
  */
 
 /**
@@ -52,13 +52,20 @@ class ShapeWrapper {
      * @param {function} customOperation - A custom operation to be performed before drawing the shape.
      * @description Renders the shape on the canvas.
      */
-    render(customOperation = {}) {
+    render(customOperation = function() {}) {
         //Check if we are rotating the shape 
         push();
         rectMode(this.rectOrientation);
+        angleMode(this.anglem);
         noStroke();
         noTint();
         noFill();
+        if (this.dotranslate) {
+            translate(this.tx, this.ty);
+        }
+        if (this.dorotate) {
+            rotate(this.angle);
+        }
         if (this.dotint) {
             tint(255,this.t);
         }
@@ -68,16 +75,9 @@ class ShapeWrapper {
         if (this.dofill) {
             fill(this.fillcolor);
         }
-        if (this.dorotate) {
-            rotate(this.angle);
-        }
-        if (this.dotranslate) {
-            translate(this.x, this.y);
-        }
         strokeWeight(this.strokewidth)
         stroke(this.strokecolor);
         fill(this.fillcolor)
-        translate(this.x, this.y);
         customOperation();
         this.draw();
         pop();
@@ -161,6 +161,15 @@ class ShapeWrapper {
     }
 
     /**
+     * @function setAngleMode
+     * @param {*} anglemMode 
+     * @description Sets the angle mode of the shape.
+     */
+    setAngleMode(angleMode) {
+        this.anglem = angleMode;
+    }
+
+    /**
      * @function rotateExact
      * @param {number} angle - The exact angle to rotate the shape to.
      * @param {number} angleMode - The angle mode to use (default: DEGREES).
@@ -190,6 +199,15 @@ class ShapeWrapper {
     trnslate(dx, dy) {
         this.tx = dx;
         this.ty = dy;
+        this.dotranslate = true;
+    }
+
+    /**
+     * @function setTrnslate
+     * @description Sets the translation of the shape.
+     */
+    unsetTrnslate() {
+        this.dotranslate = false;
     }
 
     /**
@@ -210,7 +228,7 @@ class ShapeWrapper {
      * @param {number} a - The alpha component of the tint color.
      * @description Sets the tint color of the shape.
      */
-    setTint(t) {
+    setTint(t = 0) {
         this.t = t
         this.dotint = true
     }
@@ -230,9 +248,9 @@ class ShapeWrapper {
      * @param {number} b - The blue component of the stroke color.
      * @description Sets the stroke color of the shape.
      */
-    setStroke(r, g, b) {
+    setStroke(r, g, b,o = 255) {
         this.dostroke = true;
-        this.strokecolor = color(r, g, b);
+        this.strokecolor = color(r, g, b,o);
     }
 
     /**
@@ -250,9 +268,9 @@ class ShapeWrapper {
      * @param {number} b - The blue component of the fill color.
      * @description Sets the fill color of the shape.
      */
-    setFill(r, g, b) {
+    setFill(r, g, b, o = 255) {
         this.dofill = true;
-        this.fillcolor = color(r, g, b);
+        this.fillcolor = color(r, g, b, o);
     }
 
     /**
@@ -313,6 +331,24 @@ class ShapeWrapper {
     setRectOrientation(orientation) {
         this.rectOrientation = orientation;
     }
+
+    /**
+     * @function getX
+     * @returns {number} The x-coordinate of the shape.
+     * @description Gets the x-coordinate of the shape.
+     */
+    getX() {
+        return this.x;
+    }
+
+    /**
+     * @function getY
+     * @returns {number} The y-coordinate of the shape.
+     * @description Gets the y-coordinate of the shape.
+     */
+    getY() {
+        return this.y;
+    }
 }
 
 /**
@@ -341,6 +377,24 @@ class Rectangle extends ShapeWrapper {
      */
     draw() {
         rect(this.x, this.y, this.width, this.height);
+    }
+
+    /**
+     * @method setWidth
+     * @description Sets the width of the rectangle
+     * @param {*} width 
+     */
+    setWidth(width) {
+        this.width = width;
+    }
+
+    /**
+     * @method setHeight
+     * @description Sets the height of the rectangle
+     * @param {*} height 
+     */
+    setHeight(height) {
+        this.height = height
     }
 }
 
@@ -661,9 +715,9 @@ class Ellipse extends ShapeWrapper {
  * @param {string} stroke - The stroke color of the image in color format.
  * @param {number} strokeWeight - The stroke weight of the image.
  */
-class Image extends ShapeWrapper {
+class Img extends ShapeWrapper {
     constructor(img, x, y, width, height, fill = color(0,0,0), stroke = color(0,0,0), strokeWeight = 1) {
-        super(x, y, fill, stroke, strokeWeight);
+       super(x, y, fill, stroke, strokeWeight);
         this.img = img;
         this.width = width;
         this.height = height;
@@ -674,7 +728,7 @@ class Image extends ShapeWrapper {
      * @function draw
      * @description Draws the image on the canvas.
      */
-    draw() {
+   draw() {
         imageMode(this.imageOrientation);
         image(this.img, this.x, this.y, this.width, this.height);
     }
@@ -702,12 +756,15 @@ class Image extends ShapeWrapper {
  * @param {string} fill - The fill color of the text in color format.
  */
 class Text extends ShapeWrapper {
-    constructor(text, size, font = 'Arial', x, y, fill = color(0,0,0)) {
+    constructor(text, x, y, fill = color(0,0,0), size, font = 'Arial') {
         super(x, y,fill);
         this.text = text;
         this.size = size;
         this.font = font;
         this.textOrientation = [LEFT, BOTTOM];
+        this.textbox = false;
+        this.txtxt = 0;
+        this.tytxt = 0;
     }
     /**
      * @function draw
@@ -717,7 +774,12 @@ class Text extends ShapeWrapper {
         textFont(this.font);
         textSize(this.size);
         textAlign(this.textOrientation[0],this.textOrientation[1]);
-        text(this.text, this.x, this.y);
+        if (this.textbox) {
+            text(this.text, this.x, this.y,this.txtxt, this.tytxt);
+        } else {
+            text(this.text, this.x, this.y);
+        }
+        
     }
     /**
      * @function setTextOrientation
@@ -737,4 +799,69 @@ class Text extends ShapeWrapper {
     setFont(font) {
         this.font = font;
     }
+
+    /**
+     * @method setText
+     * @description sets the text of the text object.
+     * @param {*} text 
+     */
+    setText(text) {
+        this.text = text;
+    }
+
+    /**
+     * @method setTextBox
+     * @description Sets the size of the maximum text height and width
+     * @param {*} tx 
+     * @param {*} ty 
+     */
+    setTextBox(tx,ty) {
+        this.textbox = true;
+        this.txtxt = tx;
+        this.tytxt = ty;
+    }
+
+    /**
+     * @method setTextSize
+     * @description Sets the textsize.
+     * @param {*} size 
+     */
+    setTextSize(size) {
+        this.size = size;
+    }
+}
+
+/**
+ * @class ShapeGroup
+ * @description This is a class that is intended to hold groups of shapes and call functions on them at the same time.
+ */
+class ShapeGroup {
+    /**
+     * @constructor
+     * @param {*} type 
+     */
+    constructor(type,...args) {
+        this.shapes = [];
+        for (let i = 0; i < args.length; i++) {
+            if (!(args[i] instanceof type)) {
+                throw new Error('All arguments must be of the same type');
+            }
+            this.shapes.push(args[i]);
+        }
+    }
+
+    /**
+     * @method callFunction
+     * @description Calls a function on all the shapes in the group.
+     * @param {*} functname 
+     */
+    callFunction(functname,...args) {
+        for (let i = 0; i < this.shapes.length; i++) {
+            if (typeof this.shapes[i][functname] === 'function') {
+                this.shapes[i][functname](...args);
+            }
+        }
+    }
+
+
 }
