@@ -725,3 +725,389 @@ menu_button.prototype.set_opacity = function(opacity) {
     this.opacity = opacity;
 }
 
+
+
+
+//creating the object type smallltictac.
+class TicTacBoard {
+    constructor(tictac,x,y,gridsize) {
+        //we take the tictac as a pointer to the tictac this tictac is responsible for displaying
+        this.tictac = tictac;
+        this.x = x - gridsize/2;
+        this.y = y - gridsize/2;
+        this.gridsize = gridsize;
+    }
+
+    draw() {
+        let linenum = GRID_SIZE - 1;
+        let linewidth = linenum*boardwidth*SMALL_LINEWIDTH_TO_BOARDWIDTH_RATIO;
+        let gridwidth = ((this.gridsize  - linewidth))/GRID_SIZE;
+
+        fill(255);
+        strokeWeight(linewidth);
+        stroke(255);
+
+        //This loop draws all the proper lines.
+        for (let i = 0 ; i < linenum ; i++) {
+            line(this.x + gridwidth*(i+1),y,x + gridwidth*(i+1),y + this.gridsize);
+            line(x,y+gridwidth*(i+1),x + this.gridsize,y + gridwidth * (i+1));
+        }
+
+        fill(0);
+
+        //Then we need to draw the contents of what is inside the tictac.
+        //Each tictac is either all tictacs or all values. So there 
+        //We only use x and os if the player number is 2. Otherwise, numbers will suffice.
+        
+        
+
+
+        //this loop is intended to draw the x inside of every single spot of the grid
+        for (let i = 0 ; i < SMALL_GRID_LENGTH ; i++) {
+            for (let j = 0 ; j < SMALL_GRID_LENGTH ; j ++) {
+                if (this.tictac.getSlot(i,j) instanceof TicTac) {
+                    //Draw the next tictac
+                } else if (this.tictac.getSlot(i,j) == 0) {
+                    //Do nothing
+                } else if (this.tictac.getSlot(i,j) == 1) {
+                    stroke(255);
+                    line(this.x + gridwidth*i + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.y + gridwidth*j + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.x + gridwidth*i + gridwidth*(SMALLEST_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.y + gridwidth*j + gridwidth*(SMALLEST_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2);
+                    line(this.x + gridwidth*i + gridwidth*(SMALLEST_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.y + gridwidth*j + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.x + gridwidth*i + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.y + gridwidth*j + gridwidth*(SMALLEST_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2);
+                } else  if (this.tictac.getSlot(i,j) == 2) {
+                    stroke(255);
+                    ellipseMode(CENTER)
+                    ellipse(this.x + gridwidth/2 + gridwidth*i,this.y + gridwidth/2 + gridwidth*j,gridwidth*(SMALLEST_BOARD_PERCENT/100),gridwidth*(SMALLEST_BOARD_PERCENT/100));
+                } else {
+                    //Draw the number in the grid instead.
+                    textSize(gridwidth*(SMALLEST_BOARD_PERCENT/100));
+                    text(this.tictac.getSlot(i,j),this.x + gridwidth/2 + gridwidth*i,this.y + gridwidth/2 + gridwidth*j)
+                }
+            }
+
+
+
+        }
+            //creating a hover animation
+            if (this.select) {
+
+            } else {
+                this.hover(x,y,gridwidth);
+            }
+    }
+
+    up() {
+        if (this.cursor_y == 0) {
+            this.cursor_y = SMALL_GRID_LENGTH - 1;
+        } else {
+            this.cursor_y -= 1;
+        }
+    }
+
+    down() {
+        if (this.cursor_y == SMALL_GRID_LENGTH - 1) {
+            this.cursor_y = 0;
+        } else {
+            this.cursor_y += 1;
+        }
+    }
+
+    left() {
+        if (this.cursor_x == 0) {
+            this.cursor_x = SMALL_GRID_LENGTH - 1;
+        } else {
+            this.cursor_x -= 1;
+        }
+    }
+    
+    right() {
+        if (this.cursor_x == SMALL_GRID_LENGTH - 1) {
+            this.cursor_x = 0;
+        } else {
+            this.cursor_x += 1;
+        }
+    
+    }
+
+    space() {
+        if (this.grid[this.cursor_x][this.cursor_y] == 0) {
+            this.select = true;
+
+            //setting the proper player symbol
+            if (this.current_player % 2 == 0 && this.current_player != 0) {
+                this.grid[this.cursor_x][this.cursor_y] = 1;
+            } else if (this.current_player % 2 != 0 && this.current_player != 0) {
+                this.grid[this.cursor_x][this.cursor_y] = 2;
+            }
+
+            //checking if the game is won
+            if (this.isWon()) {
+                this.won = true;
+                this.winner = this.whoWon();
+            }
+            
+
+            this.inputdelay = INPUT_DELAY;
+        }
+    }
+
+
+    select = function(row,column,user) {
+        //doing a little check to make sure the value being set is correct.
+        if (user > PLAYER_NUMBER) {
+            throw 'The value cannot be set because this player does not exist.';
+        } else {
+            this.lastmove = [row,column]
+            this.grid[row][column] = user;
+        }
+    }
+
+    setselected = function(set) {
+        this.isselected = set;
+        this.inputdelay = INPUT_DELAY;
+        this.cursor_x = 0;
+        this.cursor_y = 0;
+    }
+
+    isTaken = function(row,column) {
+        switch (this.owner(row,column)) {
+            case 0:
+                //this spot is not taken, return false.
+                return false;
+            default:
+                // this spot is taken by a user, return true.
+                return true;
+                
+    
+        }
+    }
+    
+    
+    hover = function(x,y,gridwidth) {
+    
+        if (this.isselected) {
+    
+            rectMode(CORNER);
+            noFill();
+            rect(x + gridwidth*(this.cursor_x) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,y + gridwidth*(this.cursor_y) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,gridwidth*(SMALLEST_BOARD_PERCENT/100),gridwidth*(SMALLEST_BOARD_PERCENT/100));
+    
+    
+            // if (this.hovertime <= 0) {
+            //     this.hoveron = true;
+            // } else if (this.hovertime >= HOVER_TIME_SMALL) {
+            //     this.hoveron = false;
+            // }
+    
+            // if (this.hoveron == true) {
+            //     fill(255);
+            //     rectMode(CORNER);
+            //     rect(x + gridwidth*(this.cursor_x) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,y + gridwidth*(this.cursor_y) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,gridwidth*(SMALLEST_BOARD_PERCENT/100),gridwidth*(SMALLEST_BOARD_PERCENT/100));
+            //     this.hovertime++;
+            // } else {
+            //     this.hovertime--;
+            // } 
+            
+    
+        }
+        
+    }
+    
+    isFull = function() {
+        for (let i = 0 ; i < SMALL_GRID_LENGTH ; i++) {
+            for (let j = 0 ; j < SMALL_GRID_LENGTH ; j++) {
+                switch (this.owner(i,j)) {
+                    case 0:
+                        //sets the full status of the object to false and returns false for use in if statements.
+                        this.full = false;
+                        return false;
+                    default:
+                        //don't do anything, because there may be other spots that are not full.
+    
+                }
+            }
+        }
+    
+        //sets the full status of the object to true and returns true for use in if statements.
+        this.full = true;
+        return true;
+    }
+
+    owner(row,column) {
+    
+        // We need to check whether or not the value in the grid is correct or not.
+        // if not, the game is not running properly and there is no point in continuing it.
+        if (this.grid[row][column] > PLAYER_NUMBER) {
+            throw 'The value of this spot in the grid is not correct. This player should not exist.';
+        } else {
+            return this.grid[row][column];
+        }
+    
+    } 
+
+}
+//This method can be used to check if one of the players has won the smalltictac.
+smalltictac.prototype.whoWon = function () {
+
+    /*
+   0 0 0 0
+   0 0 1 2
+   0 3 4 5 
+   0 6 7 8 
+    */
+
+    //checking all the rows of the grid for a match.
+    for (let i = 0 ; i < SMALL_GRID_LENGTH ; i++) {
+        //making another loop to iterate through the colunms.
+        for (let j = 0 ; j < SMALL_GRID_LENGTH; j++) {
+            
+            //checking if the spot is taken.
+            if (this.isTaken(j,i)) {
+                
+                //checking if the loop is at the last spot in the array.
+                if (j != SMALL_GRID_LENGTH - 1) {
+                    if (this.owner(j,i) == this.owner(j+1,i)) {
+                        // These spots are owned by the same person, continue going through the loop.
+                    } else {
+                        // These spots are not owned by the same person, no point in continuoing the loop.
+                        j = SMALL_GRID_LENGTH;
+                    }
+                } else {
+                    //we got this far, so if the last spot in the array is taken by the right player, then the game is won.
+                    //there is no next spot in the row, so we check the first spot in the row.
+                    if (this.owner(j,i) == this.owner(0,i)) {
+                        //hurray! the game is won.
+                        return this.owner(j,i);
+                    } else {
+                        //oof, very last spot is not right. proceed to the next check.
+                        //this is the end of the loop.
+                    }   
+                }
+            } else {
+                //if this spot is not taken, there is no point in continuing the loop.
+                j = SMALL_GRID_LENGTH;
+            }
+        }
+    }
+
+    //checking all the columns of the grid for a match.
+    for (let i = 0 ; i < SMALL_GRID_LENGTH ; i++) {
+        //making another loop to iterate through the colunms.
+        for (let j = 0 ; j < SMALL_GRID_LENGTH ; j++) {
+            
+            //checking if the spot is taken.
+            if (this.isTaken(i,j)) {
+                //checking if the loop is at the last spot in the array.
+                if (j != SMALL_GRID_LENGTH - 1) {
+                    
+                    if (this.owner(i,j) == this.owner(i,j+1)) {
+                        // These spots are owned by the same person, continue going through the loop.
+                    } else {
+                        // These spots are not owned by the same person, no point in continuoing the loop.
+                        j = SMALL_GRID_LENGTH;
+                    }
+                } else {
+                    //we got this far, so if the last spot in the array is taken by the right player, then the game is won.
+                    //there is no next spot in the row, so we check the first spot in the row.
+                    if (this.owner(i,j) == this.owner(i,0)) {
+                        //hurray! the game is won.
+                        return this.owner(i,j);
+                    } else {
+                        //oof, very last spot is not right. proceed to the next check.
+                        //this is the end of the loop.
+                    }   
+                }
+            } else {
+                //if this spot is not taken, there is no point in continuing the loop.
+                j = SMALL_GRID_LENGTH;
+            }
+        }
+    }
+
+    //checking diagonally in the grid from top left to bottom right(this'll be a doozy).
+    for (let i = 0 ; i < SMALL_GRID_LENGTH ; i++) {
+        //checking if the spot is taken.
+        if (this.isTaken(i,i)) {
+            //checking if it is at the last spot in the array.
+            if (i != SMALL_GRID_LENGTH-1) {
+                if (this.owner(i,i) == this.owner(i+1,i+1)) {
+                    //these spots are owned by the same person, keep going!
+                } else {
+                    //these spots are not owned by the same person, give up the check.
+                    i = SMALL_GRID_LENGTH;
+                }
+            } else {
+                    //we got this far, so if the last spot in the array is taken by the right player, then the game is won.
+                    //there is no next spot in the row, so we check the first spot.
+                    if (this.owner(i,i) == this.owner(0,0)) {
+                        //hurray! the game is won.
+                        return this.owner(i,i);
+                    } else {
+                        //oof, very last spot is not right. proceed to the next check.
+                        //this is the end of the loop.
+                    }   
+            }
+
+        } else {
+            // if it is not taken, no point in continuing the loop.
+            i = SMALL_GRID_LENGTH;
+        }
+    }
+
+    //checking diagonally from bottom left to top right. THE WORST DOOZY OF ALL.
+    for (let i = 0 ; i < SMALL_GRID_LENGTH ; i++) {
+        //checking if the spot is taken.
+        if (this.isTaken(i,SMALL_GRID_LENGTH-i-1)) {
+            //checking if it is at the last spot in the array.
+            if (i < SMALL_GRID_LENGTH - 1) {
+                if (this.owner(i,SMALL_GRID_LENGTH-1-i) == this.owner(i+1,SMALL_GRID_LENGTH-i-2)) {
+                    //these spots are owned by the same person, keep going!
+                } else {
+                    //these spots are not owned by the same person, give up the check.
+                    i = SMALL_GRID_LENGTH;
+                }
+            } else {
+                    //we got this far, so if the last spot in the array is taken by the right player, then the game is won.
+                    //there is no next spot in the row, so we check the first spot.
+                    if (this.owner(i,SMALL_GRID_LENGTH-i-1) == this.owner(0,SMALL_GRID_LENGTH-1)) {
+                        //hurray! the game is won.
+                        return this.owner(i,SMALL_GRID_LENGTH-i-1);
+                    } else {
+                        //oof, very last spot is not right. proceed to the next check.
+                        //this is the end of the loop.
+                    }   
+            }
+
+        } else {
+            // if it is not taken, no point in continuing the loop.
+            i = SMALL_GRID_LENGTH;
+        }
+    }
+
+
+
+
+
+    //None of these checks returned. that means that either no one has won yet or there is a deadlock.
+
+    //This checks to see if there are any empty spaces in the tictac
+    let empty = false;
+
+    for (i = 0 ; i < SMALL_GRID_LENGTH; i ++) {
+        for (j = 0 ; j < SMALL_GRID_LENGTH; j++) {
+            if (this.grid[i][j] == 0) {
+                empty = true;
+            }
+        }
+
+    }
+
+    if (empty) {
+        return 0;
+    } else {
+        return -1;
+    }
+    
+}
+
+
+
+
