@@ -3,9 +3,9 @@
 // This class should be responsible for making requests to the database in order to send and get updates.
 
 //This is a constant that holds the types of games that can exist
-GameTypes = {
-    LOCAL,
-    ONLINE
+const GameTypes = {
+    LOCAL: {},
+    ONLINE: {}
 }
 
 //This class activates as soon as a game is started
@@ -40,5 +40,63 @@ class GameManager {
 
     receiveUpdates() {
         //This method only needs to be called when playing online mode. It is intended for interacting with the sql database.
+    }
+
+    //This method is meant to evaluate a tictac for a win.
+    checkWin(tictac, row, col) {
+
+        //To win, there needs to be GRDISIZE of the same value in a row.
+        //This method will be called whenever a tictac is updated, and therefore only needs
+        //to check the row, col, and potentially diagonal that the move was played in.
+
+        for (i = 1 ; i < GRID_SIZE; i ++) {
+            if (tictac.getOwner(i,col) != tictac.getOwner(i-1,col)) {
+                break;
+            }
+            if (i == GRID_SIZE - 1) {
+                tictac.setWinner(tictac.getOwner(i,col));
+                return true;
+            }
+        }
+
+        for (i = 1 ; i < GRID_SIZE ; i++) {
+            if (tictac.getOwner(row,i) != tictac.getOwner(row,i-1)) {
+                break;
+            }
+            if (i == GRID_SIZE - 1) {
+                tictac.setWinner(tictac.getOwner(row,i));
+                return true;
+            }
+        }
+
+        //How to check if diagonal
+        if (row == col) {
+            //Now we need to check for a diagonal
+            for (i = 1 ; i < GRID_SIZE ; i++) {
+                if (tictac.getOwner(i,i) != tictac.getOwner(i-1,i-1)) {
+                    break;
+                }
+                if (i == GRID_SIZE - 1) {
+                    tictac.setWinner(tictac.getOwner(i,i));
+                    return true;
+                }
+            }
+        } else if (row == (GRID_SIZE - 1 - col)) {
+            //Now we need to check for a diagonal in the other direction.
+            for (i = 1 ; i < GRID_SIZE ; i++) {
+                if (tictac.getOwner(i,i) != tictac.getOwner(i-1,GRID_SIZE - 1 - i - 1)) {
+                    break;
+                }
+                if (i == GRID_SIZE - 1) {
+                    tictac.setWinner(tictac.getOwner(i,GRID_SIZE - 1 - i));
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    getBoard() {
+        return this.board;
     }
 }

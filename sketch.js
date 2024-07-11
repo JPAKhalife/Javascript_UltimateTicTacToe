@@ -21,8 +21,6 @@ const WINDOW_MARGIN = 10;
 const GRID_LENGTH = 3;
 //this variable changes the number of spots in the small tic tac
 const SMALL_GRID_LENGTH = 3;
-//This variable changes the number of players in a game.
-const PLAYER_NUMBER = 2;
 //this variable determines the size of the x and o based on the size of the gap in the small tic tac it is meant to fill
 const SMALL_BOARD_PERCENT = 75;
 //this variable determines the size of the small tictac bsed on the size of the gap in the bigtictac it is supposed to fill

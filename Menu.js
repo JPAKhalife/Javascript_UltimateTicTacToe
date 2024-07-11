@@ -3,7 +3,7 @@
  * 
  * @author John Khalife
  * @created 2024-06-9
- * @updated 2024-06-23
+ * @updated 2024-07-11
  */
 
 const Screens = {
@@ -588,18 +588,15 @@ controlScreen.setResize(function() {
 });
 
 
-//Create a game screen for the local
+//Create a game screen for the local - and or online game
 gameScreen = new Menu(Screens.GAME_SCREEN);
 
-gameScreen.setInit(function() {
+gameScreen.setInit(function(gameType, gridSize, gridLevels, lobby = null) {
     this.keylistener = new KeyListener();
 
-    //We first want to create a game.
-    //The code will vary greatly depending on whether or not this is an online or offline game,
-    // as the server will be the one doing the calculations in the case of an online game
-    //Ideally, I want to try and make it look from here as if it doesn't matter whether it is an online or offlinegame
-    //when accessing the game object, I just want to display the current status and send status updates, the tictac can handle the rest.
-
+    //Create a game given the parameters passed to the function.
+    this.game = new GameManager(gameType,gridSize,gridLevels);
+    this.board = new TicTacBoard(this.game);
 
     //Despite that however, I need to display slightly different information depending on whether or not this is an online or offline game.
     //So the tictac will need to have a status attribute which keeps track of whether or not it is online or offline.
@@ -631,6 +628,7 @@ gameScreen.setInit(function() {
 
 gameScreen.setDraw(function() {
     this.info.callFunction('render');
+    this.board.draw();
 });
 
 
