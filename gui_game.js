@@ -86,7 +86,7 @@ gui.prototype.offlineGameScreen = function(keylistener) {
     textFont(fontOSDMONO);
     
     text("Utimate Tictactoe",getCanvasSize()/2 - this.x ,getCanvasSize()/20*1);
-    textSize(getCanvasSize()*0.04);
+    textSize(   );
     text("Local Mode",getCanvasSize()/2 - this.x ,getCanvasSize()/20*2);
     textSize(getCanvasSize()*0.03);
     text('Current Player:',getCanvasSize()/2 + this.x,getCanvasSize()/20*17);

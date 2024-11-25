@@ -1,4 +1,4 @@
-//this class is intented to be used as a way to manage the game.
+    //this class is intented to be used as a way to manage the game.
 
 
 //this is a constant that holds all of the events associated with the game
@@ -85,9 +85,6 @@ game.prototype.play = function() {
 
 
     }
-
-
-
 }
 
 //This method moves the turn to the next player

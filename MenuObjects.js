@@ -725,264 +725,294 @@ menu_button.prototype.set_opacity = function(opacity) {
     this.opacity = opacity;
 }
 
-
-
-
 //creating the object type smallltictac.
 class TicTacBoard {
-    constructor(game,x,y,gridsize) {
-        this.x = x - gridsize/2;
-        this.y = y - gridsize/2;
-        this.gridsize = gridsize;
-            
-        //boolean that declares whether or not the grid is full.
-        this.full = false;
-        //boolean that declares if the tictac is won and int that holds the winner
-        this.winner = 0;
-        this.won = false;
-
-        //2d array that saves the last move interms of columr and row so that the user can be sent to the next small tictac
-        this.lastmove = null;
-
-        //determines if the watchamacallit is selected
-        this.isselected = false;
-
+    constructor(gameManager,tictac,x,y,gridsize) {
+        //Size and location
+        this.gridsize = gridsize*BOARD_SHRINK_CONSTANT; 
+        this.x = x - this.gridsize/2;
+        this.y = y - this.gridsize/2;
+        this.GRID_SIZE = tictac.GRID_SIZE;
+        //These variables help with the line sizing.
+        this.linenum = this.GRID_SIZE - 1;
+        this.linewidth = this.linenum*this.gridsize*SMALL_LINEWIDTH_TO_BOARDWIDTH_RATIO;
+        this.gridwidth = (this.gridsize)/this.GRID_SIZE ;
+        // Is the tictac selected by the player
+        this.isSelected = false;
+        // What section is selected by the player 
+        // Coordinates of the cursor on the tictac
+        this.cursorRow = 0;
+        this.cursorCol = 0;
         //controls the hover animation
-        this.hovertime = 0;
-        this.hoveron = false;
-
-        //checks whether the position is selected or not
-        this.select = false;
-
-        //coordinates of the cursor on the tictac
-        this.cursor_x = 0;
-        this.cursor_y = 0;
-
-        //this is for input delay
-        this.inputdelay = 0;
-
+        this.hvrTime = 0;
+        this.hvrOn = false;
         //we take the tictac as a pointer to the tictac this tictac is responsible for displaying
-        this.game = game;
-        this.tictac = game.getBoard();
-
-        this.board = [];
-        for (let i = 0 ; i < GRID_SIZE ; i ++) {
-            this.board[i] = [];
-            for (let j = 0 ; j < GRID_SIZE ; j++) {
-                let slotItem = this.tictac.getSlot(i,j);
-                if (slotItem instanceof TicTac) {
-                    this.board[i][j] = new TicTacBoard(this.tictac.getSlot(i,j),(this.x + (gridsize/GRID_SIZE)/2) + j*(gridsize/GRID_SIZE),(this.y + (gridsize/GRID_SIZE)/2) + i*(gridsize/GRID_SIZE));
-                } else {
-                    this.board[i][j] = this.tictac.getSlot(i,j);
-                }
-                
-            }
-        }
-
-        //We need to find a way to create 
+        this.game = gameManager;
+        this.tictac = tictac;
+        //This is the board instance that this tictac points to
+        this.selectedBoard = null;
+        //This is the levelSize
+        this.maxLevelSize = this.tictac.maxLevelSize;
     }
 
     draw() {
-        let linenum = GRID_SIZE - 1;
-        let linewidth = linenum*this.gridsize*SMALL_LINEWIDTH_TO_BOARDWIDTH_RATIO;
-        let gridwidth = ((this.gridsize  - linewidth))/GRID_SIZE;
+        background(0);
+        // fill(255);
+        // strokeWeight(this.linewidth);
+        // stroke(255);
 
-        fill(255);
-        strokeWeight(linewidth);
-        stroke(255);
-
-        //This loop draws all the proper lines.
-        for (let i = 0 ; i < linenum ; i++) {
-            line(this.x + gridwidth*(i+1),this.y,this.x + gridwidth*(i+1),this.y + this.gridsize);
-            line(this.x,this.y+gridwidth*(i+1),this.x + this.gridsize,this.y + gridwidth * (i+1));
-        }
-
-        fill(0);
-
-        //Then we need to draw the contents of what is inside the tictac.
-        //Each tictac is either all tictacs or all values. So there 
-        //We only use x and os if the player number is 2. Otherwise, numbers will suffice.
-        //this loop is intended to draw the x inside of every single spot of the grid
-        for (let i = 0 ; i < SMALL_GRID_LENGTH ; i++) {
-            for (let j = 0 ; j < SMALL_GRID_LENGTH ; j ++) {
-                if (this.board[i][j] instanceof TicTac) {
-                    this.board[i][j].draw();
-                } else if (this.board[i][j] == 0) {
-                    //Do nothing
-                } else if (this.board[i][j] == 1) {
+        //NON recursive
+        //Draw the OG tictac
+        //this.drawTicTac(0,0);
+        //Iterate through the whole array
+        for (let i = 0 ; i < this.tictac.getArraySize() ; i++) {
+            /** First check for whether or not a tictac should be drawn at this spot.
+            If the mod of gridsize^2 is zero, then that means that we are at the zero spot of one or more tictacs.
+            This is the best spot to draw a tictac because it allows us to draw the proper number of tictacs in the right locations.
+            Start a loop to iterate up levelsizes in case multiple tictacs are needed i.e at levelSize 2, slot 0 should draw 2 tictacs. */
+            //let j = ((this.tictac.getSlot(i) < 0) ? (this.tictac.getSlot(i)*-1 + 1) : 1);
+            for (let j = 0 ; j < this.maxLevelSize ; j++) {
+                if (i % (this.GRID_SIZE*this.GRID_SIZE)**j == 0) {
+                    //Checking has been done in the for loop condition, will only loop over this if there are
+                    //tictacs to be drawn.
                     stroke(255);
-                    line(this.x + gridwidth*i + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.y + gridwidth*j + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.x + gridwidth*i + gridwidth*(SMALLEST_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.y + gridwidth*j + gridwidth*(SMALLEST_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2);
-                    line(this.x + gridwidth*i + gridwidth*(SMALLEST_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.y + gridwidth*j + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.x + gridwidth*i + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,this.y + gridwidth*j + gridwidth*(SMALLEST_BOARD_PERCENT / 100) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2);
-                } else  if (this.tictac.getSlot(i,j) == 2) {
-                    stroke(255);
-                    ellipseMode(CENTER)
-                    ellipse(this.x + gridwidth/2 + gridwidth*i,this.y + gridwidth/2 + gridwidth*j,gridwidth*(SMALLEST_BOARD_PERCENT/100),gridwidth*(SMALLEST_BOARD_PERCENT/100));
-                } else {
-                    //Draw the number in the grid instead.
-                    textSize(gridwidth*(SMALLEST_BOARD_PERCENT/100));
-                    text(this.tictac.getSlot(i,j),this.x + gridwidth/2 + gridwidth*i,this.y + gridwidth/2 + gridwidth*j);
+                    strokeWeight(1);
+                    this.drawTicTac(j,i);
                 }
             }
-
-
-
-        }
-            //creating a hover animation
-            if (this.select) {
-
-            } else {
-                this.hover(x,y,gridwidth);
-            }
-    }
-
-    up() {
-        if (this.cursor_y == 0) {
-            this.cursor_y = SMALL_GRID_LENGTH - 1;
-        } else {
-            this.cursor_y -= 1;
-        }
-    }
-
-    down() {
-        if (this.cursor_y == SMALL_GRID_LENGTH - 1) {
-            this.cursor_y = 0;
-        } else {
-            this.cursor_y += 1;
-        }
-    }
-
-    left() {
-        if (this.cursor_x == 0) {
-            this.cursor_x = SMALL_GRID_LENGTH - 1;
-        } else {
-            this.cursor_x -= 1;
-        }
-    }
-    
-    right() {
-        if (this.cursor_x == SMALL_GRID_LENGTH - 1) {
-            this.cursor_x = 0;
-        } else {
-            this.cursor_x += 1;
-        }
-    
-    }
-
-    space() {
-        if (this.grid[this.cursor_x][this.cursor_y] == 0) {
-            this.select = true;
-
-            //setting the proper player symbol
-            if (this.current_player % 2 == 0 && this.current_player != 0) {
-                this.grid[this.cursor_x][this.cursor_y] = 1;
-            } else if (this.current_player % 2 != 0 && this.current_player != 0) {
-                this.grid[this.cursor_x][this.cursor_y] = 2;
-            }
-
-            //checking if the game is won
-            if (this.isWon()) {
-                this.won = true;
-                this.winner = this.whoWon();
-            }
-            
-
-            this.inputdelay = INPUT_DELAY;
-        }
-    }
-
-
-    select(row,column,user) {
-        //doing a little check to make sure the value being set is correct.
-        if (user > PLAYER_NUMBER) {
-            throw 'The value cannot be set because this player does not exist.';
-        } else {
-            this.lastmove = [row,column]
-            this.grid[row][column] = user;
-        }
-    }
-
-    setselected(set) {
-        this.isselected = set;
-        this.inputdelay = INPUT_DELAY;
-        this.cursor_x = 0;
-        this.cursor_y = 0;
-    }
-
-    isTaken(row,column) {
-        switch (this.owner(row,column)) {
-            case 0:
-                //this spot is not taken, return false.
-                return false;
-            default:
-                // this spot is taken by a user, return true.
-                return true;
-                
-    
-        }
-    }
-    
-    
-    hover(x,y,gridwidth) {
-    
-        if (this.isselected) {
-    
-            rectMode(CORNER);
-            noFill();
-            rect(x + gridwidth*(this.cursor_x) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,y + gridwidth*(this.cursor_y) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,gridwidth*(SMALLEST_BOARD_PERCENT/100),gridwidth*(SMALLEST_BOARD_PERCENT/100));
-    
-    
-            // if (this.hovertime <= 0) {
-            //     this.hoveron = true;
-            // } else if (this.hovertime >= HOVER_TIME_SMALL) {
-            //     this.hoveron = false;
-            // }
-    
-            // if (this.hoveron == true) {
-            //     fill(255);
-            //     rectMode(CORNER);
-            //     rect(x + gridwidth*(this.cursor_x) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,y + gridwidth*(this.cursor_y) + (gridwidth*((1-(SMALLEST_BOARD_PERCENT / 100))))/2,gridwidth*(SMALLEST_BOARD_PERCENT/100),gridwidth*(SMALLEST_BOARD_PERCENT/100));
-            //     this.hovertime++;
-            // } else {
-            //     this.hovertime--;
-            // } 
-            
-    
-        }
+        }  
+        //fill(255);
         
-    }
+        //line(this.x,this.y,this.x + this.gridsize,this.y + this.gridsize);
+
+        //this.drawTicTac(0,0);
+        
+            //Next we would check the actual slot itself to draw whatever Icon is required.   
+            //There are two cases, smaller than zero (large icon) or => 0 (small Icon)
+            // if (this.tictac.getSlot(i) < 0) {
+            //     this.drawIcon(this.tictac.getSlot(i)*-1,this.tictac.getSlot(i+1)); //Draw the Icon with whatever levelsize was given.
+            // } else {
+            //     this.drawIcon(1,this.tictac.getSlot(i)); //We can just draw the titac with the smallest levelsize
+            // }
+        //}
+
+        //creating a hover animation
+        // if (this.select) {
+        // } else {
+        //     this.hover(x,y,this.calculateSize());
+        // }
+
     
-    isFull = function() {
-        for (let i = 0 ; i < SMALL_GRID_LENGTH ; i++) {
-            for (let j = 0 ; j < SMALL_GRID_LENGTH ; j++) {
-                switch (this.owner(i,j)) {
-                    case 0:
-                        //sets the full status of the object to false and returns false for use in if statements.
-                        this.full = false;
-                        return false;
-                    default:
-                        //don't do anything, because there may be other spots that are not full.
-    
-                }
-            }
-        }
-    
-        //sets the full status of the object to true and returns true for use in if statements.
-        this.full = true;
-        return true;
     }
 
-    owner(row,column) {
-    
-        // We need to check whether or not the value in the grid is correct or not.
-        // if not, the game is not running properly and there is no point in continuing it.
-        if (this.grid[row][column] > PLAYER_NUMBER) {
-            throw 'The value of this spot in the grid is not correct. This player should not exist.';
-        } else {
-            return this.grid[row][column];
+    drawTicTac(levelSize,index) {
+        let tictacSize = this.calculateSize(levelSize);
+        //Set initial coordinates to watchamacallit
+        let x = this.x;
+        let y = this.y;
+        //Iterate through all current levelsizes to get x and y coordinates
+        for (let z = 1 ; z <= levelSize ; z++) {
+            let col =  this.getCol(levelSize - z,index); //Get the relative column
+            let row = this.getRow(levelSize - z,index); //Get the relative row
+            x += col*this.calculateSize(z) + col*this.calculateMarginSize(z) + this.calculateMarginSize(z)/2;
+            y += row*this.calculateSize(z) + row*this.calculateMarginSize(z) + this.calculateMarginSize(z)/2;
         }
+        let size = this.calculateSize(levelSize);
+        strokeWeight(1)
+        stroke(255);
+        for (let i = 0 ; i < this.linenum ; i++) {
+            line(x + (size/this.GRID_SIZE)*(i+1),y,x + (size/this.GRID_SIZE)*(i+1),y + size);
+            line(x,y+(size/this.GRID_SIZE)*(i+1),x + size,y + (size/this.GRID_SIZE) * (i+1));
+        }
+    }
+
+    drawIcon(levelSize, index) {
+        //We need to analyse the levelIndex given to find the size
+        let iconSize = this.calculateSize(levelSize);
+
+        //Now that we have the size, we need the coordinates (initial coordinates are the corner of the main tictac)
+        let x = this.x;
+        let y = this.y;
+        //Iterate through all current levelsizes to get x and y coordinates
+        for (let z = 1 ; z < levelSize + 1; z++) {
+            x += this.getCol(z,index)*this.calculateSize(z) + this.calculateSize(z - 1)/2 + this.calculateSize(z)/2;
+            y += this.getRow(z,index)*this.calculateSize(z) + this.calculateSize(z - 1)/2 + this.calculateSize(z)/2;
+        }
+
+        let size = this.calculateSize(levelSize);
+        strokeWeight(size*0.1);
+        let slot = this.tictac.getSlot(index)
+        switch (slot) {
+            case 0:
+                //Do nothing.
+            break;
+            case 1:
+                //Draw an X
+                stroke(255);
+                line(x + (size*(ICON_SHRINK_CONSTANT))/2,y + (size*(ICON_SHRINK_CONSTANT))/2,x + size*ICON_SHRINK_CONSTANT + (size*(ICON_SHRINK_CONSTANT))/2,y + size*(ICON_SHRINK_CONSTANT) + (size*(ICON_SHRINK_CONSTANT))/2);
+                line(x + size*(ICON_SHRINK_CONSTANT) + (size*(ICON_SHRINK_CONSTANT))/2,y + (size*(ICON_SHRINK_CONSTANT))/2,x + (size*(ICON_SHRINK_CONSTANT))/2,y + size*(ICON_SHRINK_CONSTANT) + (size*(ICON_SHRINK_CONSTANT))/2);
+            break;
+            case 2:
+                //Draw an O
+                stroke(255);
+                ellipseMode(CENTER)
+                ellipse(x + size/2,y + size/2,size*(SMALLEST_BOARD_PERCENT/100),size*(SMALLEST_BOARD_PERCENT/100));
+            break;
+            default:
+                //Draw the number in the grid instead.
+                textSize(size);
+                textAlign(CENTER,CENTER);
+                text(slot,x + size/2, y + size/2);
+            break;
+        }
+
+    }
+
+
     
-    } 
+    calculateSize(levelSize) {
+        return this.gridsize*((BOARD_SHRINK_CONSTANT/(this.GRID_SIZE))**levelSize);
+    }
+
+    calculateMarginSize(levelSize) {
+        return ((this.calculateSize(levelSize)/BOARD_SHRINK_CONSTANT) * (1 - BOARD_SHRINK_CONSTANT));
+    }
+
+    /**
+     * This method is intended to return the column of which tictac that a certain index is in.
+     * @param {*} levelSize - the level of Tictac that should be scanned
+     * @param {*} index 
+     * @returns An integer from 0 - GRIDSIZE - 1
+     */
+    getCol(levelSize,index) {
+        return this.getRelativeIndex(levelSize,index) % this.GRID_SIZE;
+    }
+
+    /**
+     * This method is intended to return the row of which tictac that a certain index is in.
+     * @param {*} levelSize - the level of Tictac that should be scanned
+     * @param {*} index 
+     * @returns An integer from 0 - GRIDSIZE - 1
+     */
+    getRow(levelSize,index) {
+        //The index needs to be reduced to a number out of nine.
+        return Math.floor(this.getRelativeIndex(levelSize,index) / this.GRID_SIZE);
+    }
+
+    /**
+     * This method returns the spot in the tictac we are looking for.
+     * @param {*} levelSize 
+     * @param {*} index 
+     * @returns  returns a number between 0 - GRIDSIZE*GRIDSZE - 1
+     */
+    getRelativeIndex(levelSize,index) {
+        //So the first thing to do is check the levelsize.
+        //We do this to get the number of spots a single tictac of levelSize is supposed to envelop
+        //Legend: Levelsize of 0 would represent the largest tictac, levelsize of say 1 would be smallest tictacs on a standard board
+        //That means the total number of slots envoloped by one tictac of that size would be 
+        let size = (this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - levelSize);
+        //Now we need to find a multiple of size that is the closest value to index - where it must be below index by a max of size.
+        let factor = Math.floor(index/size);
+        //Now to get the tictac, it would be
+        let range = index - factor*size;
+        //Then we need to divide range by this.GRIDSIZE*this.GRIDSIZE, so that we can split it into that many and return a number from 
+        let divisions = Math.floor((size)/(this.GRID_SIZE*this.GRID_SIZE));
+        //Then we find how many times divisions fits into range
+        return Math.floor(range/divisions);
+    }
+
+    cursorUp() {
+        if (this.isSelected) {
+            if (this.cursorRow == 0) {
+                this.cursorRow = this.GRID_SIZE - 1;
+            } else {
+                this.cursorRow -= 1;
+            }
+        } else {
+            //Call the cursor right function of the selectedBoard
+            this.selectedBoard.cursorUp();
+        }
+    }
+
+    cursorDown() {
+        if (this.isSelected) {
+            if (this.cursorRow == this.GRID_SIZE - 1) {
+                this.cursorRow = 0;
+            } else {
+                this.cursorRow += 1;
+            }
+        } else {
+            //Call the cursor right function of the selectedBoard
+            this.selectedBoard.cursorDown();
+        }
+    }
+
+    cursorLeft() {
+        if (this.isSelected) {
+            if (this.cursorCol == 0) {
+                this.cursorCol = this.GRID_SIZE - 1;
+            } else {
+                this.cursorCol -= 1;
+            }
+        } else {
+            //Call the cursor right function of the selectedBoard
+            this.selectedBoard.cursorLeft();
+        }
+    }
+    
+    cursorRight() {
+        //If we are currently selected, move the cursor of this board right.
+        if (this.isSelected) {
+                if (this.cursorCol == this.GRID_SIZE - 1) {
+                    this.cursorCol = 0;
+                } else {
+                    this.cursorCol += 1;
+                }
+        } else {
+            //Call the cursor right function of the selectedBoard
+            this.selectedBoard.cursorRight();
+        }
+    }
+
+    playMove(row,col) {
+        if (this.isSelected) {
+        //You can only really play anything if the board you have clicked on is equal to zero or a tictac.
+            if (this.board[this.cursorRow][this.cursorCol] == 0) {
+                this.game.updateSlot(this.tictac,this.cursorRow,this.cursorCol);
+            } else if (this.board[this.cursorRow][this.cursorCol] instanceof TicTacBoard) {
+                //All that needs to be done is set the tictac to selected
+                // Any tictac that is won will be overwritten with the winner of said tictac
+                // Any tictac that is tied/full will be refused in the setSelected method.
+                this.setSelected();
+                this.board[this.cursorRow][this.cursorCol].setSelected();
+                this.selectedBoard = this.board[this.cursorRow][this.cursorCol];
+            }
+        } else {
+            //Call the cursor right function of the selectedBoard
+            this.selectedBoard.playMove();
+        }
+    }
+    
+    renderHover() {
+            rectMode(CENTER);
+            noFill();
+            strokeWeight(5);
+            rect(this.x + (this.gridwidth)/2 + (this.gridwidth)*this.cursorCol,this.y + (this.gridwidth)/2 + this.cursorRow*(this.gridwidth),this.gridwidth*0.85,this.gridwidth*0.85);
+    }
+
+    setSelected() {
+        if (this.isSelected) {
+            this.isSelected = false;
+        } else {
+            //Make sure that the tictac being selected is not full
+            if (!this.full) {
+                this.isSelected = true;
+                this.selectedBoard = this;
+            }
+        }
+    }
 }
+
 
 
 

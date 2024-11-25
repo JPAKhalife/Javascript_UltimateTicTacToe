@@ -3,7 +3,7 @@
  * 
  * @author John Khalife
  * @created 2024-06-9
- * @updated 2024-07-11
+ * @updated 2024-11-25
  */
 
 const Screens = {
@@ -14,9 +14,41 @@ const Screens = {
     HOW_TO_PLAY_SCREEN: 3,
     CONTROL_SCREEN: 4,
     GAME_SCREEN: 5,
+    TEST_SCREEN: 6,
 };
 
 createScreens = function() {
+
+//This is a temporary test screen.
+testScreen = new Menu(Screens.TEST_SCREEN);
+
+testScreen.setInit(function() {
+    this.game = new GameManager(GameTypes.LOCAL, DEFAULT_GRID_SIZE, 3);
+    this.board = new TicTacBoard(this.game,this.game.getBoard(),getCanvasSize()/2,getCanvasSize()/2,getCanvasSize() - 100);
+    this.board.setSelected();
+    this.keylistener = new KeyListener();
+});
+
+testScreen.setDraw(function() {
+    background(0);
+
+    this.board.draw();
+
+    // //Detect key presses that get put into the tictacboard
+    // let keyEvent = this.keylistener.listen();
+    // if (keyEvent == KEY_EVENTS.UP) {
+    //     this.board.cursorUp();
+    // } else if (keyEvent == KEY_EVENTS.DOWN) {
+    //     this.board.cursorDown();
+    // } else if (keyEvent == KEY_EVENTS.LEFT) {
+    //     this.board.cursorLeft();
+    // } else if (keyEvent == KEY_EVENTS.RIGHT) {
+    //     this.board.cursorRight();
+    // } else if (keyEvent == KEY_EVENTS.SELECT) {
+    //     this.board.playMove();
+    // }
+}); 
+
 //This is the creation of the start screen
 startScreen = new Menu(Screens.START_SCREEN);
 
@@ -591,12 +623,13 @@ controlScreen.setResize(function() {
 //Create a game screen for the local - and or online game
 gameScreen = new Menu(Screens.GAME_SCREEN);
 
-gameScreen.setInit(function(gameType, gridSize, gridLevels, lobby = null) {
+gameScreen.setInit(function(gameType = GameTypes.LOCAL, gridSize = 3, gridLevels = 2, lobby = null) {
     this.keylistener = new KeyListener();
 
     //Create a game given the parameters passed to the function.
     this.game = new GameManager(gameType,gridSize,gridLevels);
-    this.board = new TicTacBoard(this.game);
+    this.board = new TicTacBoard(this.game,this.game.getBoard(),getCanvasSize()/2,getCanvasSize()/2,getCanvasSize());
+    this.board.setSelected();
 
     //Despite that however, I need to display slightly different information depending on whether or not this is an online or offline game.
     //So the tictac will need to have a status attribute which keeps track of whether or not it is online or offline.
@@ -627,8 +660,25 @@ gameScreen.setInit(function(gameType, gridSize, gridLevels, lobby = null) {
 });
 
 gameScreen.setDraw(function() {
+    background(0);
+    //Render the information
     this.info.callFunction('render');
+    //Render our board
     this.board.draw();
+
+    //Detect key presses that get put into the tictacboard
+    let keyEvent = this.keylistener.listen();
+    if (keyEvent == KEY_EVENTS.UP) {
+        this.board.cursorUp();
+    } else if (keyEvent == KEY_EVENTS.DOWN) {
+        this.board.cursorDown();
+    } else if (keyEvent == KEY_EVENTS.LEFT) {
+        this.board.cursorLeft();
+    } else if (keyEvent == KEY_EVENTS.RIGHT) {
+        this.board.cursorRight();
+    } else if (keyEvent == KEY_EVENTS.SELECT) {
+        this.board.playMove();
+    }
 });
 
 
@@ -641,4 +691,5 @@ gameScreen.setDraw(function() {
     GuiManager.addScreen(howToPlayScreen);
     GuiManager.addScreen(controlScreen);
     GuiManager.addScreen(gameScreen);
+    GuiManager.addScreen(testScreen);
 }

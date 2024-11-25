@@ -50,8 +50,7 @@ gui.prototype.controlScreen_navigate = function(keylistener) {
         textFont(fontOSDMONO);
         textSize(getCanvasSize()*0.02);
         fill(255,255,255,this.opacity);
-        text('Use the WASD and/or Arrow keys to navigate through menus and the Ultimate Tictactoe grid.',getCanvasSize()/2, getCanvasSize()/5*2,getCanvasSize()/4*3,getCanvasSize()/4*1);
-        text('Press space to continue',getCanvasSize()/2 , getCanvasSize()/4*2,getCanvasSize()/4*3,getCanvasSize()/4*3);
+
     
     }
     
@@ -118,8 +117,8 @@ gui.prototype.controlScreen_navigate = function(keylistener) {
         textFont(fontOSDMONO);
         textSize(getCanvasSize()*0.02);
         fill(255,255,255,this.opacity);
-        text('Press space to select in the menus or play a spot on the Ultimate Tictactoe Grid.',getCanvasSize()/2, getCanvasSize()/5*2,getCanvasSize()/4*3,getCanvasSize()/4*2);
-        text('Press space to continue',getCanvasSize()/2, getCanvasSize()/5*3,getCanvasSize()/4*3,getCanvasSize()/4*3);
+        text();
+        text();
     
     
     

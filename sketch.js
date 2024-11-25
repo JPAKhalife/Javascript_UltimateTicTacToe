@@ -28,7 +28,7 @@ const SMALLEST_BOARD_PERCENT = 75;
 //this variable determines the suze of the big tic tac based on the size of the canvas
 const BOARD_PERCENT = 60;
 //this is input delay, measured in frames
-const INPUT_DELAY = 10;
+const INPUT_DELAY = 5;
 //constance used on the creation oc the big tic tac
 //exactly what it says
 const LINEWIDTH_TO_BOARDWIDTH_RATIO = 0.01;
@@ -43,6 +43,8 @@ const DEFAULT_BUTTON_SHADE = 0;
 const SELECTED_BUTTON_SHADE = 255;
 //This controls the text size
 const TEXT_SIZE_PERCENTAGE = 50;
+const BOARD_SHRINK_CONSTANT = 0.8
+const ICON_SHRINK_CONSTANT = 0.6
 //the weight of the stroke around the btton during the confirmed animation
 const STROKEWEIGHT = 15;
 //here are a bunch of constants which are meant to hold the title messages
@@ -74,10 +76,6 @@ const ATIME = {
 const MENU_BORDER_WIDTH = 10;
 //the outline of the second rect around the utton
 const OUTLINE_WEIGHT = 5;
-
-
-
-
 
 //it's messy, but I have to declare some undefined variables here to define in the setup function.
 //I need them to be global variables so I can call them in the other script files
@@ -112,7 +110,7 @@ function setup() {
     //variable that holds a game
     tictactoe = new game();
 
-    GuiManager.changeScreen(Screens.START_SCREEN);
+    GuiManager.changeScreen(Screens.TEST_SCREEN);
 
     background(255);
 
@@ -146,12 +144,6 @@ function windowResized() {
     GuiManager.initScreen();
 
 }
-
-
-
-
-
-
 
 //This is the draw function, which is called over and over again. It is the main event loop.
 function draw() {
