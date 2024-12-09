@@ -1,3 +1,6 @@
+/**
+ * This file is intended to house custom objects that are drawn on the GUI
+ */
 
 
 /**
@@ -10,7 +13,6 @@
  */
 class Floater {
     constructor(image, width, length) {
-    
     this.floater = new Img(image,0,0,width,length);
     this.floater.setAngleMode(DEGREES);
     this.floater.setImageOrientation(CENTER);
@@ -34,11 +36,11 @@ class Floater {
      * @description This method initializes the floater
      */
     init() {
-        this.vx = this.random_Velocity();
-        this.vy = this.random_Velocity();
-        this.sv = this.random_Velocity();
-        this.x = this.random_Coord();
-        this.y = this.random_Coord();
+        this.vx = this.randomVelocity();
+        this.vy = this.randomVelocity();
+        this.sv = this.randomVelocity();
+        this.x = this.randomCoord();
+        this.y = this.randomCoord();
     }
 
     /**
@@ -104,38 +106,38 @@ class Floater {
     }
 
     /**
-     * @method fade_in
+     * @method fadeIn
      * @description This method fades in the floater
      * @param {*} time 
      */
-    fade_in(time) {
+    fadeIn(time) {
         this.opacity += 255/time;
     }
 
     /**
-     * @method random_Coord
+     * @method randomCoord
      * @description This method returns a random coordinate
      * @return {number}
      */
-    random_Coord() {
+    randomCoord() {
         return random(0 + this.width/2,getCanvasSize() - this.width/2);
     }
 
     /**
-     * @method random_Velocity
+     * @method randomVelocity
      * @description This method returns a random velocity
      * @returns {number}
      */
-    random_Velocity() {
+    randomVelocity() {
         return random(-3,3);
     }
 
     /**
-     * @method fade_out
+     * @method fadeOut
      * @description This method fades out the floater
      * @param {*} time 
      */
-    fade_out(time) {
+    fadeOut(time) {
         this.opacity -= 255/time;
     }
 }
@@ -149,14 +151,14 @@ class ButtonNav {
 
 /**
  * @constructor
- * @param {*} button_array 
+ * @param {*} buttonArray 
  */
-constructor(button_array) {
+constructor(buttonArray) {
     //this is the array of buttons
-    this.button_array = button_array;
+    this.buttonArray = buttonArray;
     //currently selected button
-    this.currently_selected = button_array[0];
-    this.currently_selected.setStatus(true);
+    this.currentlySelected = buttonArray[0];
+    this.currentlySelected.setStatus(true);
 }
 
 /**
@@ -164,8 +166,8 @@ constructor(button_array) {
  * @description This method is intended to draw all of the buttons
  */
 drawAll() {
-    for (i = 0 ; i < this.button_array.length ; i ++) {
-        this.button_array[i].draw_button();
+    for (i = 0 ; i < this.buttonArray.length ; i ++) {
+        this.buttonArray[i].drawButton();
     }
 }
 
@@ -174,12 +176,12 @@ drawAll() {
  * @description This method resets all of the buttons
  */
 reset() {
-    for (i = 0 ; i < this.button_array.length ; i++) {
-        this.button_array[i].reset();
+    for (i = 0 ; i < this.buttonArray.length ; i++) {
+        this.buttonArray[i].reset();
     }
 
-    this.currently_selected = this.button_array[0];
-    this.currently_selected.setStatus(true);
+    this.currentlySelected = this.buttonArray[0];
+    this.currentlySelected.setStatus(true);
 }
 
 
@@ -190,7 +192,7 @@ reset() {
  */
 confirm() {
 
-    this.currently_selected.confirmed = true;
+    this.currentlySelected.confirmed = true;
 
 }
 
@@ -221,32 +223,32 @@ findClosest(direction) {
    let in_range = [];
 
     //finding all of the watchamacallits in a certain direction
-    for (i = 0 ; i < this.button_array.length ; i++) {
-        if (this.button_array[i].relevant_value(direction) > this.currently_selected.relevant_value(direction) && direction_multiplier == 1) {
+    for (i = 0 ; i < this.buttonArray.length ; i++) {
+        if (this.buttonArray[i].relevantValue(direction) > this.currentlySelected.relevantValue(direction) && direction_multiplier == 1) {
 
-            in_range.push(this.button_array[i]);
+            in_range.push(this.buttonArray[i]);
             foundwithin = true;
         }
 
-        if (this.button_array[i].relevant_value(direction) < this.currently_selected.relevant_value(direction) && direction_multiplier == -1) {
+        if (this.buttonArray[i].relevantValue(direction) < this.currentlySelected.relevantValue(direction) && direction_multiplier == -1) {
 
-            in_range.push(this.button_array[i]);
+            in_range.push(this.buttonArray[i]);
             foundwithin = true;
         }
     }
 
     //findind the cloest in the other coordinate
     for (i = 0 ; i < in_range.length ; i++) {
-        if (Math.abs(this.currently_selected.opposite_relevant_value(direction) - in_range[i].opposite_relevant_value(direction)) < Math.abs(this.currently_selected.opposite_relevant_value(direction) - in_range[closestButton].opposite_relevant_value(direction))) {
+        if (Math.abs(this.currentlySelected.oppositeRelevantValue(direction) - in_range[i].oppositeRelevantValue(direction)) < Math.abs(this.currentlySelected.oppositeRelevantValue(direction) - in_range[closestButton].oppositeRelevantValue(direction))) {
             closestButton = i;
         }
     }
 
     
     if (foundwithin) {
-        return this.button_array.indexOf(in_range[closestButton]);
+        return this.buttonArray.indexOf(in_range[closestButton]);
     } else {
-        return this.button_array.indexOf(this.currently_selected);
+        return this.buttonArray.indexOf(this.currentlySelected);
     }
     
 
@@ -265,10 +267,10 @@ findClosest(direction) {
  */
 selectClosest(button,direction) {
     let closest = this.findClosest(button,direction)
-    if (this.button_array[closest] != this.currently_selected) {
-        this.button_array[closest].setStatus(true);
-        this.currently_selected.setStatus(false);
-        this.currently_selected = this.button_array[closest];
+    if (this.buttonArray[closest] != this.currentlySelected) {
+        this.buttonArray[closest].setStatus(true);
+        this.currentlySelected.setStatus(false);
+        this.currentlySelected = this.buttonArray[closest];
     }
 
 }
@@ -279,7 +281,7 @@ selectClosest(button,direction) {
  * @param {*} button 
  */
 select(button) {
-    this.button_array[button].setStatus(true);
+    this.buttonArray[button].setStatus(true);
 }
 
 /**
@@ -288,7 +290,7 @@ select(button) {
  * @param {*} button 
  */
 unselect(button) {
-    this.button_array[button].setStatus(false);
+    this.buttonArray[button].setStatus(false);
 }
 
 /**
@@ -297,8 +299,8 @@ unselect(button) {
  * @param {*} button 
  */
 changeSelected(button) {
-    unselect(this.button_array.indexOf(this.currently_selected));
-    this.currently_selected = this.button_array[button];
+    unselect(this.buttonArray.indexOf(this.currentlySelected));
+    this.currentlySelected = this.buttonArray[button];
     select(button);
 }
 }
@@ -327,8 +329,8 @@ function QuitButton(x,y,phrase) {
     this.y = y;
 
     //these are the variables that hold the variatinon on x and y
-    this.jar_x = 0;
-    this.jar_y = 0;
+    this.jarX = 0;
+    this.jarY = 0;
 
     //whether or not the button is selected
     this.selected = false;
@@ -337,42 +339,28 @@ function QuitButton(x,y,phrase) {
     this.confirmed = false;
 
     //this contains the current fill of the square around the button
-    this.square_fill = 0;
+    this.squareFill = 0;
 
     //this contains the fill of the text on the button
-    this.text_fill = 255;
+    this.textFill = 255;
 
     //this determines whether or not the jar animation will be played
-    this.do_jar = false;
+    this.doJar = false;
 
     //this contains the opcaity of the button
     this.opacity = 255;
-
-
-
-
-
 }
-
 
 //this is our draw method.
 QuitButton.prototype.draw = function() {
-
     //this will check if the button is being hovered over or not
     if (this.selected) {
-
-
     } else {
-
-
     }
-
-        
-
 }
 
 //this is a mtehtod that sets the opacity of the button
-QuitButton.prototype.set_opacity = function(opacity) {
+QuitButton.prototype.setOpacity = function(opacity) {
     this.opacity = opacity;
 }
 
@@ -382,64 +370,59 @@ QuitButton.prototype.setStatus = function(status) {
 }
 
 //this is responsible for drawing the default appearance
-QuitButton.prototype.draw_default = function() {
+QuitButton.prototype.drawDefault = function() {
 
-    fill(this.square_fill,this.opacity);
+    fill(this.squareFill,this.opacity);
     noStroke();
     rectMode(CENTER);
     rect(this.x,this.y,getCanvasSize()*0.05,getCanvasSize()*0.025);
     textAlign(CENTER);
-    fill(this.text_fill,this.opacity);
+    fill(this.textFill,this.opacity);
     text(phrase,this.x + getCanvasSize()*0.05/2,this.y + getCanvasSize()*0.025/2);
 
 
-    if (this.square_fill > 0) {
-        this.square_fill -= 255/QUIT_SELECTION_ANIMATION_TIME;
+    if (this.squareFill > 0) {
+        this.squareFill -= 255/QUIT_SELECTION_ANIMATION_TIME;
     }
 
 
 }
 
 //this is responsible for drawing the hovered appearance
-QuitButton.prototype.draw_hovered = function() {
+QuitButton.prototype.drawHovered = function() {
 
-    if (this.square_fill < 255) {
-        this.square_fill += 255/QUIT_SELECTION_ANIMATION_TIME;
+    if (this.squareFill < 255) {
+        this.squareFill += 255/QUIT_SELECTION_ANIMATION_TIME;
     }
 
-    fill(this.square_fill,this.opacity);
+    fill(this.squareFill,this.opacity);
     noStroke();
     rectMode(CENTER);
-    rect(this.x + this.jar_x,this.y + this.jar_y,getCanvasSize()*0.05,getCanvasSize()*0.025);
+    rect(this.x + this.jarX,this.y + this.jarY,getCanvasSize()*0.05,getCanvasSize()*0.025);
     textAlign(CENTER);
-    fill(this.text_fill,this.opacity);
+    fill(this.textFill,this.opacity);
     text(phrase,this.x + getCanvasSize()*0.05/2,this.y + getCanvasSize()*0.025/2);
 
-    if (this.do_jar == true) {
+    if (this.doJar == true) {
         
-        if (this.jar_x < PIXEL_MOVEMENT) {
-            this.do_jar = false;
+        if (this.jarX < PIXEL_MOVEMENT) {
+            this.doJar = false;
         } else {
-            this.jar_x += PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
-            this.jar_y += PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
+            this.jarX += PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
+            this.jarY += PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
         }
         
     } else {
-        if (this.jar_x > 0) {
-            this.jar_x -= PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
-            this.jar_y -= PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
+        if (this.jarX > 0) {
+            this.jarX -= PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
+            this.jarY -= PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
         }
     }
-
-
-
-
-
 }
 
 
 /**
- *  This file is intended to create button functionality in ultimate tic tact toe
+ *  This class is intended to create button functionality in ultimate tic tact toe
  *  This game is can only be interacted with through arrows and keys on the keyboard, so the button designs and 
  *  interactions reflect this
  * 
@@ -447,49 +430,36 @@ QuitButton.prototype.draw_hovered = function() {
  * 
  * 
  */
-
-//These are constants that have to do with the button
-//modify these in order to change how the button behaves
-
-
-
-
-// This is the initializor
-function menu_button(x,y,phrase,length,width,textsize,opacity = 255) {
-
+function MenuButton(x,y,phrase,length,width,textsize,opacity = 255) {
     //whether or not the button is selected
     this.selected = false;
-
     //whether or not the button is confirmed
     this.confirmed = false;
-
     //the coordinates on the canvas of the button
     this.x = x;
     this.y = y;
-
     //the word in the button
     this.phrase = phrase;
-
     //the current animation time of the button
-    this.animation_time = 0;
+    this.animationTime = 0;
 
     //length and width of the button
     this.length = length;
     this.width = width;
 
     //current length and width of the button
-    this.current_length = length;
-    this.current_width = width;
+    this.currentLength = length;
+    this.currentWidth = width;
 
     //this is the text size 
-    this.text_size = textsize;
-    this.current_text_size = textsize;
+    this.textSize = textsize;
+    this.currentTextSize = textsize;
 
     //this is the current colour of the button
-    this.current_button_fill = DEFAULT_BUTTON_SHADE;
+    this.currentButtonFill = DEFAULT_BUTTON_SHADE;
     
     //this is the current colour of the text in the button
-    this.current_text_fill = SELECTED_BUTTON_SHADE;
+    this.currentTextFill = SELECTED_BUTTON_SHADE;
 
     //variable that will control the amount the confirmed square grows by
     this.cw = 0;
@@ -500,67 +470,61 @@ function menu_button(x,y,phrase,length,width,textsize,opacity = 255) {
 
 
     //contains the status of the confirmed animation
-    this.confirmed_animation = false;
+    this.confirmedAnimation = false;
 }
 
 
 
 //This method is intented to draw the standard appearance of the button
-menu_button.prototype.standard_button = function() {
-    
+MenuButton.prototype.standardButton = function() {
+
     textFont('Arial');
-
     //checking if the animation time is finished
-    if (this.animation_time == 0) {
+    if (this.animationTime == 0) {
         noFill();
-
     } else {
-
         //adding to the length and width
-        this.current_width -= ((this.width) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
-        this.current_length -= ((this.length) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
+        this.currentWidth -= ((this.width) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
+        this.currentLength -= ((this.length) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
 
         //changing the button fill to the desired fill
-        this.current_button_fill -= (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
-        this.current_text_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
+        this.currentButtonFill -= (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
+        this.currentTextFill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
 
-        fill(this.current_button_fill,this.opacity);
-    
-
-        this.animation_time--;
+        fill(this.currentButtonFill,this.opacity);    
+        this.animationTime--;
     }
 
     strokeWeight(1);
     stroke(255,this.opacity);
     rectMode(CENTER);
-    
-    rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());
-    textSize(this.current_text_size);
-    fill(this.current_text_fill,this.opacity);
+    rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());
+    textSize(this.currentTextSize);
+    fill(this.currentTextFill,this.opacity);
     noStroke();
     textAlign(CENTER,CENTER);
-    text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());    
+    text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());    
     
 }
 
 //this method resets all variables so that the buttons can be pressed again.
-menu_button.prototype.reset = function() {
+MenuButton.prototype.reset = function() {
     this.cw = 0;
     this.cl = 0;
     this.opacity = 255;
     this.confirmed = false;
-    this.confirmed_animation = false;
-    this.animation_time = 0;
+    this.confirmedAnimation = false;
+    this.animationTime = 0;
     this.selected = false;
-    this.current_length = this.length;
-    this.current_width = this.width;
-    this.current_text_fill = 255;
-    this.current_button_fill = 0;
-    this.current_text_size = this.text_size;
+    this.currentLength = this.length;
+    this.currentWidth = this.width;
+    this.currentTextFill = 255;
+    this.currentButtonFill = 0;
+    this.currentTextSize = this.textSize;
 }
 
 //this method returns whether or not the button is selected
-menu_button.prototype.isSelected = function() {
+MenuButton.prototype.isSelected = function() {
 
     if (this.selected == true) {
         return true;
@@ -571,128 +535,104 @@ menu_button.prototype.isSelected = function() {
 
 
 //This method sets the selected status of the button
-menu_button.prototype.setStatus = function(status) {
+MenuButton.prototype.setStatus = function(status) {
     this.selected = status;
 }
 
 //this method draws the button when it has been selected and does the animation for when it is selected
-menu_button.prototype.selected_button = function() {
+MenuButton.prototype.selectedButton = function() {
     textFont('Arial');
-
     //checking if the animation time is finished
-    if (this.animation_time > ATIME.SELECTED_ANIMATION_TIME) {
+    if (this.animationTime > ATIME.SELECTED_ANIMATION_TIME) {
 
     } else {
-
         //adding to the length and width
-        this.current_width += ((this.width) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
-        this.current_length += ((this.length) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
+        this.currentWidth += ((this.width) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
+        this.currentLength += ((this.length) * (GROWTH_PERCENT / 100)) / ATIME.SELECTED_ANIMATION_TIME;
 
         //changing the button fill to the desired fill
-        this.current_button_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
-        this.current_text_fill -= (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
-    
-
-        this.animation_time++;
+        this.currentButtonFill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
+        this.currentTextFill -= (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.SELECTED_ANIMATION_TIME;
+        this.animationTime++;
     }
-
     strokeWeight(1);
     stroke(255,this.opacity);
-    fill(this.current_button_fill,this.opacity);
+    fill(this.currentButtonFill,this.opacity);
 
-    rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());
-    textSize(this.current_text_size);
-    fill(this.current_text_fill,this.opacity);
+    rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());
+    textSize(this.currentTextSize);
+    fill(this.currentTextFill,this.opacity);
     noStroke()
     textAlign(CENTER,CENTER);
-    text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());   
-
-
+    text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());   
 }
 
 //this method draws the button when it has been confrmed and does the animation for when it is confirmed
-menu_button.prototype.confirmed_button = function() {
+MenuButton.prototype.confirmedButton = function() {
     textFont('Arial');
     first_half = true
-
-    // //checking if the animation time is finished
-    if (this.animation_time > ATIME.CONFIRMED_ANIMATION_TIME) {
+    //checking if the animation time is finished
+    if (this.animationTime > ATIME.CONFIRMED_ANIMATION_TIME) {
         this.opacity = 0;
-        this.confirmed_animation = true;
-
+        this.confirmedAnimation = true;
     } else {
-        
-        this.cl += ((CONFIRMED_GROWTH_PERCENT / 100) * (this.current_length * getCanvasSize()) + (this.current_length * getCanvasSize())) / ATIME.CONFIRMED_ANIMATION_TIME;
-        this.cw += ((CONFIRMED_GROWTH_PERCENT / 100) * (this.current_width * getCanvasSize()) + (this.current_width * getCanvasSize())) / ATIME.CONFIRMED_ANIMATION_TIME;
-        this.current_text_fill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.CONFIRMED_ANIMATION_TIME;
+        this.cl += ((CONFIRMED_GROWTH_PERCENT / 100) * (this.currentLength * getCanvasSize()) + (this.currentLength * getCanvasSize())) / ATIME.CONFIRMED_ANIMATION_TIME;
+        this.cw += ((CONFIRMED_GROWTH_PERCENT / 100) * (this.currentWidth * getCanvasSize()) + (this.currentWidth * getCanvasSize())) / ATIME.CONFIRMED_ANIMATION_TIME;
+        this.currentTextFill += (SELECTED_BUTTON_SHADE - DEFAULT_BUTTON_SHADE) / ATIME.CONFIRMED_ANIMATION_TIME;
         this.opacity -= (255/ATIME.CONFIRMED_ANIMATION_TIME)
-    
-
-        this.animation_time++;
+        this.animationTime++;
     }
-    
     noStroke()
     fill(255);
-    //fill(this.current_button_fill);
-
-    rect(this.x * getCanvasSize(), this.y * getCanvasSize(),(this.current_width * getCanvasSize()) - this.cw ,(this.current_length * getCanvasSize()) - this.cls);
-    textSize(this.current_text_size);
-    fill(this.current_text_fill);
+    //fill(this.currentButtonFill);
+    rect(this.x * getCanvasSize(), this.y * getCanvasSize(),(this.currentWidth * getCanvasSize()) - this.cw ,(this.currentLength * getCanvasSize()) - this.cls);
+    textSize(this.currentTextSize);
+    fill(this.currentTextFill);
     tint(0,255);
     textAlign(CENTER,CENTER);
-    text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.current_width * getCanvasSize(),this.current_length * getCanvasSize());  
-
+    text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());  
     //this is the second rectangle that will be acting as the 
-
-
     stroke(255,this.opacity);
     fill(0);
     strokeWeight(OUTLINE_WEIGHT);
     rect(this.x * getCanvasSize(), this.y * getCanvasSize(),OUTLINE_WEIGHT + this.cw,this.cl + OUTLINE_WEIGHT);
-    
-    
-
-
 }
 
-menu_button.prototype.fade = function() {
+MenuButton.prototype.fade = function() {
 
     this.opacity -= (255/(ATIME.CONFIRMED_ANIMATION_TIME/4));
 }
 
 //returns true or false depending on i the button is confirmed
-menu_button.prototype.isconfirmed = function( ) {
+MenuButton.prototype.isConfirmed = function( ) {
     return this.confirmed;
 
 }
 
 //checks if the confirmed animatino is finished or not
-menu_button.prototype.isconfirmed_animation_done = function( ) {
-    return this.confirmed_animation;
+MenuButton.prototype.isConfirmedAnimationDone = function( ) {
+    return this.confirmedAnimation;
 
 }
 
-
-
-
 //This is the function that gets called for the button to be drawn, selected or not, it decides which will be drawn
-menu_button.prototype.draw_button = function() {
+MenuButton.prototype.drawButton = function() {
 
     if (this.confirmed == true) {
-        this.confirmed_button();
+        this.confirmedButton();
         
     } else if (this.isSelected() == false) {
-        this.standard_button();
+        this.standardButton();
     } else 
     if (this.isSelected() == true) {
-        this.selected_button();
+        this.selectedButton();
 
     }
 
 }
 
 //this function will return the relevant value based on the direction it is given
-menu_button.prototype.relevant_value = function(direction) {
+MenuButton.prototype.relevantValue = function(direction) {
 
     if (direction == 0 || direction == 2) {
         return this.y;
@@ -704,144 +644,149 @@ menu_button.prototype.relevant_value = function(direction) {
 }
 
 //this function will return the opposite relevant value based on the direction it is given
-menu_button.prototype.opposite_relevant_value = function(direction) {
-
+MenuButton.prototype.oppositeRelevantValue = function(direction) {
     if (direction == 0 || direction == 2) {
         return this.x;
     } else if (direction == 1 || direction == 3) {
         return this.y;
     }
-
-
 }
 
 //this function will control the fading in animation of all buttons
-menu_button.prototype.fade_in = function(time) {
+MenuButton.prototype.fadeIn = function(time) {
     this.opacity += (255/(time));
 }
 
 //this function will control the fading in animation of all buttons
-menu_button.prototype.set_opacity = function(opacity) {
+MenuButton.prototype.setOpacity = function(opacity) {
     this.opacity = opacity;
 }
 
 //creating the object type smallltictac.
 class TicTacBoard {
-    constructor(gameManager,tictac,x,y,gridsize) {
+    /**
+     * A constructor for the TicTacBoard
+     * @param {*} gameManager
+     * @param {*} tictac 
+     * @param {*} x 
+     * @param {*} y 
+     * @param {*} gridSize 
+     */
+    constructor(gameManager,tictac,x,y,gridSize) {
         //Size and location
-        this.gridsize = gridsize*BOARD_SHRINK_CONSTANT; 
-        this.x = x - this.gridsize/2;
-        this.y = y - this.gridsize/2;
+        this.gridSize = gridSize*BOARD_SHRINK_CONSTANT; 
+        this.x = x - this.gridSize/2;
+        this.y = y - this.gridSize /2;
         this.GRID_SIZE = tictac.GRID_SIZE;
         //These variables help with the line sizing.
-        this.linenum = this.GRID_SIZE - 1;
-        this.linewidth = this.linenum*this.gridsize*SMALL_LINEWIDTH_TO_BOARDWIDTH_RATIO;
-        this.gridwidth = (this.gridsize)/this.GRID_SIZE ;
-        // Is the tictac selected by the player
-        this.isSelected = false;
+        this.lineNum = this.GRID_SIZE - 1;
         // What section is selected by the player 
         // Coordinates of the cursor on the tictac
         this.cursorRow = 0;
         this.cursorCol = 0;
-        //controls the hover animation
-        this.hvrTime = 0;
-        this.hvrOn = false;
+        //This represents what levelsize the selected tictac is
+        this.selectedLevelSize = 1;
+        //This represents the index of the selected tictac
+        this.selectedTicTacIndex = 0;
+        this.cursorOn = true; //Whether or not the cursor should be rendered.
         //we take the tictac as a pointer to the tictac this tictac is responsible for displaying
         this.game = gameManager;
         this.tictac = tictac;
-        //This is the board instance that this tictac points to
-        this.selectedBoard = null;
         //This is the levelSize
         this.maxLevelSize = this.tictac.maxLevelSize;
+        //This is the cache that holds all of the points in the tictac
+        this.cache = Array.from({ length: (this.maxLevelSize + 1) }, () => []);;
+        //Now we need to cache the points
+        this.cachePoints();
     }
 
-    draw() {
-        background(0);
-        // fill(255);
-        // strokeWeight(this.linewidth);
-        // stroke(255);
-
-        //NON recursive
-        //Draw the OG tictac
-        //this.drawTicTac(0,0);
-        //Iterate through the whole array
-        for (let i = 0 ; i < this.tictac.getArraySize() ; i++) {
-            /** First check for whether or not a tictac should be drawn at this spot.
-            If the mod of gridsize^2 is zero, then that means that we are at the zero spot of one or more tictacs.
-            This is the best spot to draw a tictac because it allows us to draw the proper number of tictacs in the right locations.
-            Start a loop to iterate up levelsizes in case multiple tictacs are needed i.e at levelSize 2, slot 0 should draw 2 tictacs. */
-            //let j = ((this.tictac.getSlot(i) < 0) ? (this.tictac.getSlot(i)*-1 + 1) : 1);
-            for (let j = 0 ; j < this.maxLevelSize ; j++) {
-                if (i % (this.GRID_SIZE*this.GRID_SIZE)**j == 0) {
-                    //Checking has been done in the for loop condition, will only loop over this if there are
-                    //tictacs to be drawn.
-                    stroke(255);
-                    strokeWeight(1);
-                    this.drawTicTac(j,i);
+    /**
+     * This method is intended to cache every single point of the tictac.
+     */
+    cachePoints() {
+        for (let i = 0 ; i <= this.maxLevelSize ; i++) {
+            let space = ((this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - i));
+            for (let j = 0 ; j < this.tictac.getArraySize()/space ; j++) {
+                //Set initial coordinates to watchamacallit
+                let x = this.x;
+                let y = this.y;
+                //Iterate through all current levelsizes to get x and y coordinates
+                for (let z = 0 ; z < i ; z++) {
+                    let col =  this.getCol(z,j*space); //Get the relative column
+                    let row = this.getRow(z,j*space); //Get the relative row
+                    x += col*this.calculateSize(z+1) + col*this.calculateMarginSize(z+1) + this.calculateMarginSize(z+1)/2;
+                    y += row*this.calculateSize(z+1) + row*this.calculateMarginSize(z+1) + this.calculateMarginSize(z+1)/2;
                 }
+                this.cache[i].push([x,y]);
             }
-        }  
-        //fill(255);
-        
-        //line(this.x,this.y,this.x + this.gridsize,this.y + this.gridsize);
-
-        //this.drawTicTac(0,0);
-        
-            //Next we would check the actual slot itself to draw whatever Icon is required.   
-            //There are two cases, smaller than zero (large icon) or => 0 (small Icon)
-            // if (this.tictac.getSlot(i) < 0) {
-            //     this.drawIcon(this.tictac.getSlot(i)*-1,this.tictac.getSlot(i+1)); //Draw the Icon with whatever levelsize was given.
-            // } else {
-            //     this.drawIcon(1,this.tictac.getSlot(i)); //We can just draw the titac with the smallest levelsize
-            // }
-        //}
-
-        //creating a hover animation
-        // if (this.select) {
-        // } else {
-        //     this.hover(x,y,this.calculateSize());
-        // }
-
-    
+        }
     }
 
-    drawTicTac(levelSize,index) {
-        let tictacSize = this.calculateSize(levelSize);
-        //Set initial coordinates to watchamacallit
-        let x = this.x;
-        let y = this.y;
-        //Iterate through all current levelsizes to get x and y coordinates
-        for (let z = 1 ; z <= levelSize ; z++) {
-            let col =  this.getCol(levelSize - z,index); //Get the relative column
-            let row = this.getRow(levelSize - z,index); //Get the relative row
-            x += col*this.calculateSize(z) + col*this.calculateMarginSize(z) + this.calculateMarginSize(z)/2;
-            y += row*this.calculateSize(z) + row*this.calculateMarginSize(z) + this.calculateMarginSize(z)/2;
-        }
-        let size = this.calculateSize(levelSize);
-        strokeWeight(1)
+    /**
+     * This method is responsible for rendering the tictac + the cursor on the tictac
+     */
+    draw() {
+        //*The plan: one loop to draw tictacs and larger symbols
+        //*Another loop to draw the smallest symbols
+        //*This avoids a number of if checks
+        //*The reason is for this is that only larger symbols use negative numbers to signal they should be drawn
         stroke(255);
-        for (let i = 0 ; i < this.linenum ; i++) {
+        //Iterate for larger structures - larger that the smallest unit in the array
+        for (let i = 0 ; i < this.maxLevelSize ; i++) {
+            let space = ((this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - i)); //represents the number of slots to skip per iteration
+                for (let j = 0 ; j < this.tictac.getArraySize()/space ; j++) {
+                    let relevantSlot = this.tictac.getSlot(j*space);
+                    if (relevantSlot*-1 == (this.maxLevelSize - i)) {
+                        this.drawIcon(i,j*space + 1,j); //Draw Icon if negative and iterating at equivalent levelsize
+                    } else if (relevantSlot*-1 > (this.maxLevelSize - i)) {
+                        i += (this.GRID_SIZE*this.GRID_SIZE)**(-1*relevantSlot) - 1; //Skip to the next open spot
+                    } else {
+                        //Otherwise draw tictac
+                        this.drawTicTac(i,j);
+                    }
+                }
+        }
+        //Iterate for smaller structures - the smallest unit in the array
+        for (let i = 0 ; i < this.tictac.getArraySize() ; i++) {
+            let relevantSlot = this.tictac.getSlot(i);
+            //Check to see if the tictac has been finished
+            if (relevantSlot < 0) {
+                //Skip to the next open spot
+                i += (this.GRID_SIZE*this.GRID_SIZE)**(-1*relevantSlot) - 1;
+            } else {
+                this.drawIcon(this.maxLevelSize,i,i); //Otherwise try an Icon
+            }
+        } 
+        //Drawing the cursor
+        if (this.cursorOn) {
+            this.renderCursor();
+        }
+    }
+
+    /**
+     * Draws a tictac of any size
+     * @param {*} levelSize - How deep in the Big TicTac we are
+     * @param {*} cacheIndex - the index of the coordinates to draw the tictac
+     */
+    drawTicTac(levelSize,cacheIndex) {
+        let size = this.calculateSize(levelSize);
+        let x = this.cache[levelSize][cacheIndex][0];
+        let y = this.cache[levelSize][cacheIndex][1];
+        strokeWeight(1);
+        for (let i = 0 ; i < this.lineNum ; i++) {
             line(x + (size/this.GRID_SIZE)*(i+1),y,x + (size/this.GRID_SIZE)*(i+1),y + size);
             line(x,y+(size/this.GRID_SIZE)*(i+1),x + size,y + (size/this.GRID_SIZE) * (i+1));
         }
     }
 
-    drawIcon(levelSize, index) {
-        //We need to analyse the levelIndex given to find the size
-        let iconSize = this.calculateSize(levelSize);
-
-        //Now that we have the size, we need the coordinates (initial coordinates are the corner of the main tictac)
-        let x = this.x;
-        let y = this.y;
-        //Iterate through all current levelsizes to get x and y coordinates
-        for (let z = 1 ; z < levelSize + 1; z++) {
-            x += this.getCol(z,index)*this.calculateSize(z) + this.calculateSize(z - 1)/2 + this.calculateSize(z)/2;
-            y += this.getRow(z,index)*this.calculateSize(z) + this.calculateSize(z - 1)/2 + this.calculateSize(z)/2;
-        }
-
+    drawIcon(levelSize, tictacIndex, cacheIndex) {
+        //Get the size
         let size = this.calculateSize(levelSize);
-        strokeWeight(size*0.1);
-        let slot = this.tictac.getSlot(index)
+        //Get the coordinates from the cache
+        let x = this.cache[levelSize][cacheIndex][0];
+        let y = this.cache[levelSize][cacheIndex][1];
+        strokeWeight(1);
+        let slot = this.tictac.getSlot(tictacIndex)
         switch (slot) {
             case 0:
                 //Do nothing.
@@ -849,8 +794,8 @@ class TicTacBoard {
             case 1:
                 //Draw an X
                 stroke(255);
-                line(x + (size*(ICON_SHRINK_CONSTANT))/2,y + (size*(ICON_SHRINK_CONSTANT))/2,x + size*ICON_SHRINK_CONSTANT + (size*(ICON_SHRINK_CONSTANT))/2,y + size*(ICON_SHRINK_CONSTANT) + (size*(ICON_SHRINK_CONSTANT))/2);
-                line(x + size*(ICON_SHRINK_CONSTANT) + (size*(ICON_SHRINK_CONSTANT))/2,y + (size*(ICON_SHRINK_CONSTANT))/2,x + (size*(ICON_SHRINK_CONSTANT))/2,y + size*(ICON_SHRINK_CONSTANT) + (size*(ICON_SHRINK_CONSTANT))/2);
+                line(x,y,x + size,y + size);
+                line(x + size,y,x,y + size);
             break;
             case 2:
                 //Draw an O
@@ -859,7 +804,7 @@ class TicTacBoard {
                 ellipse(x + size/2,y + size/2,size*(SMALLEST_BOARD_PERCENT/100),size*(SMALLEST_BOARD_PERCENT/100));
             break;
             default:
-                //Draw the number in the grid instead.
+                //Draw the number in the grid instead. (used in case of >2 players)
                 textSize(size);
                 textAlign(CENTER,CENTER);
                 text(slot,x + size/2, y + size/2);
@@ -867,13 +812,21 @@ class TicTacBoard {
         }
 
     }
-
-
     
+    /**
+     * Given a levelSize, return the size of a tictac grid inside the big tictac
+     * @param {*} levelSize 
+     * @returns a float containing the size
+     */
     calculateSize(levelSize) {
-        return this.gridsize*((BOARD_SHRINK_CONSTANT/(this.GRID_SIZE))**levelSize);
+        return this.gridSize*((BOARD_SHRINK_CONSTANT/(this.GRID_SIZE))**(levelSize));
     }
 
+    /**
+     * Calculates the margin size between the edge of the an item grid and the tictac it is inside of.
+     * @param {*} levelSize 
+     * @returns margin size (float)
+     */
     calculateMarginSize(levelSize) {
         return ((this.calculateSize(levelSize)/BOARD_SHRINK_CONSTANT) * (1 - BOARD_SHRINK_CONSTANT));
     }
@@ -921,61 +874,58 @@ class TicTacBoard {
         return Math.floor(range/divisions);
     }
 
+    /**
+     * This method moves the cursor up
+     */
     cursorUp() {
-        if (this.isSelected) {
-            if (this.cursorRow == 0) {
-                this.cursorRow = this.GRID_SIZE - 1;
-            } else {
-                this.cursorRow -= 1;
-            }
+        if (this.cursorRow <= 0) {
+            this.cursorRow = this.GRID_SIZE - 1;
         } else {
-            //Call the cursor right function of the selectedBoard
-            this.selectedBoard.cursorUp();
+            this.cursorRow -= 1;
         }
     }
 
+    /**
+     * This method moves the cursor down
+     */
     cursorDown() {
-        if (this.isSelected) {
-            if (this.cursorRow == this.GRID_SIZE - 1) {
-                this.cursorRow = 0;
-            } else {
-                this.cursorRow += 1;
-            }
+        if (this.cursorRow >= this.GRID_SIZE - 1) {
+            this.cursorRow = 0;
         } else {
-            //Call the cursor right function of the selectedBoard
-            this.selectedBoard.cursorDown();
+            this.cursorRow += 1;
         }
     }
 
+    /**
+     * This method moves the cursor left
+     */
     cursorLeft() {
-        if (this.isSelected) {
-            if (this.cursorCol == 0) {
-                this.cursorCol = this.GRID_SIZE - 1;
-            } else {
-                this.cursorCol -= 1;
-            }
+        if (this.cursorCol <= 0) {
+            this.cursorCol = this.GRID_SIZE - 1;
         } else {
-            //Call the cursor right function of the selectedBoard
-            this.selectedBoard.cursorLeft();
+            this.cursorCol -= 1;
         }
     }
     
+    /**
+     * This method moves the cursor right
+     */
     cursorRight() {
-        //If we are currently selected, move the cursor of this board right.
-        if (this.isSelected) {
-                if (this.cursorCol == this.GRID_SIZE - 1) {
-                    this.cursorCol = 0;
-                } else {
-                    this.cursorCol += 1;
-                }
+        if (this.cursorCol >= this.GRID_SIZE - 1) {
+            this.cursorCol = 0;
         } else {
-            //Call the cursor right function of the selectedBoard
-            this.selectedBoard.cursorRight();
+            this.cursorCol += 1;
         }
     }
 
+    /**
+     * This method requests a change to be made to the board
+     * @param {T} row 
+     * @param {*} col 
+     */
     playMove(row,col) {
-        if (this.isSelected) {
+    
+        //This method must be called assuming that the player is on the right tile
         //You can only really play anything if the board you have clicked on is equal to zero or a tictac.
             if (this.board[this.cursorRow][this.cursorCol] == 0) {
                 this.game.updateSlot(this.tictac,this.cursorRow,this.cursorCol);
@@ -987,33 +937,46 @@ class TicTacBoard {
                 this.board[this.cursorRow][this.cursorCol].setSelected();
                 this.selectedBoard = this.board[this.cursorRow][this.cursorCol];
             }
-        } else {
-            //Call the cursor right function of the selectedBoard
-            this.selectedBoard.playMove();
-        }
     }
     
-    renderHover() {
-            rectMode(CENTER);
+    /**
+     * This method renders the cursor on the tictac
+     */
+    renderCursor() {
+            rectMode(CORNER);
             noFill();
             strokeWeight(5);
-            rect(this.x + (this.gridwidth)/2 + (this.gridwidth)*this.cursorCol,this.y + (this.gridwidth)/2 + this.cursorRow*(this.gridwidth),this.gridwidth*0.85,this.gridwidth*0.85);
+            rect(this.cache[this.selectedLevelSize][this.selectedTicTacIndex + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
+                this.cache[this.selectedLevelSize][this.selectedTicTacIndex + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
+                this.calculateSize(this.selectedLevelSize),
+                this.calculateSize(this.selectedLevelSize));
     }
 
-    setSelected() {
-        if (this.isSelected) {
-            this.isSelected = false;
+    /**
+     * This method is responsible for selecting the tictac.
+     */
+    selectTicTac() {
+        if (this.selectedLevelSize == this.maxLevelSize) {
+            this.playMove();
         } else {
-            //Make sure that the tictac being selected is not full
-            if (!this.full) {
-                this.isSelected = true;
-                this.selectedBoard = this;
-            }
+            this.selectedLevelSize++;
         }
+        
+        this.cursorCol = 0;
+        this.cursorRow = 0;
+    }
+
+    /**
+     * This method is responsible for deleselecting the tictac
+     */
+    deselectTicTac() {
+        this.selectedLevelSize--;
+        // if (this.selectedLevelSize == 0) {
+            
+        // }
+        this.cursorCol = 0;
+        this.cursorRow = 0;
     }
 }
-
-
-
 
 

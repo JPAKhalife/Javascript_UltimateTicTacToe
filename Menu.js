@@ -3,7 +3,7 @@
  * 
  * @author John Khalife
  * @created 2024-06-9
- * @updated 2024-11-25
+ * @updated 2024-12-09
  */
 
 const Screens = {
@@ -23,9 +23,8 @@ createScreens = function() {
 testScreen = new Menu(Screens.TEST_SCREEN);
 
 testScreen.setInit(function() {
-    this.game = new GameManager(GameTypes.LOCAL, DEFAULT_GRID_SIZE, 3);
+    this.game = new GameManager(GameTypes.LOCAL, DEFAULT_GRID_SIZE, 2);
     this.board = new TicTacBoard(this.game,this.game.getBoard(),getCanvasSize()/2,getCanvasSize()/2,getCanvasSize() - 100);
-    this.board.setSelected();
     this.keylistener = new KeyListener();
 });
 
@@ -34,20 +33,27 @@ testScreen.setDraw(function() {
 
     this.board.draw();
 
-    // //Detect key presses that get put into the tictacboard
-    // let keyEvent = this.keylistener.listen();
-    // if (keyEvent == KEY_EVENTS.UP) {
-    //     this.board.cursorUp();
-    // } else if (keyEvent == KEY_EVENTS.DOWN) {
-    //     this.board.cursorDown();
-    // } else if (keyEvent == KEY_EVENTS.LEFT) {
-    //     this.board.cursorLeft();
-    // } else if (keyEvent == KEY_EVENTS.RIGHT) {
-    //     this.board.cursorRight();
-    // } else if (keyEvent == KEY_EVENTS.SELECT) {
-    //     this.board.playMove();
-    // }
-}); 
+    //TODO: Work out some way of choosing betwen menu options and entering the tictac toe (might not be neccessary)
+    // Detect key presses that get put into the tictacboard
+    let keyEvent = this.keylistener.listen();
+    if (keyEvent == KEY_EVENTS.UP) {
+        this.board.cursorUp();
+    } else if (keyEvent == KEY_EVENTS.DOWN) {
+        this.board.cursorDown();
+    } else if (keyEvent == KEY_EVENTS.LEFT) {
+        this.board.cursorLeft();
+    } else if (keyEvent == KEY_EVENTS.RIGHT) {
+        this.board.cursorRight();
+    } else if (keyEvent == KEY_EVENTS.SELECT) {
+        this.board.selectTicTac();
+    } else if (keyEvent == KEY_EVENTS.ESCAPE) {
+        this.board.backTicTac();
+    }
+});
+
+testScreen.setResize(function () {
+    this.board.cachePoints(); //recalculate where every point should be on the tictac
+})
 
 //This is the creation of the start screen
 startScreen = new Menu(Screens.START_SCREEN);
@@ -153,13 +159,13 @@ setupScreen.setInit(function() {
     this.title.setFill(255,255,255,0);
 
     //Here are the buttons for the setup screen
-    this.multiplayer_menu_button_list = new ButtonNav([new menu_button(0.5,0.4,"Local",0.1,0.1,50*0.25,0),
-        new menu_button(0.80,0.85, "How to play",0.05,0.15,50*0.25,0),
-        new menu_button(0.20, 0.85, "Controls",0.05,0.15,50*0.25,0),
-        new menu_button(0.5, 0.6 , "Online",0.1,0.1,50*0.25,0)]); 
+    this.multiplayer_MenuButton_list = new ButtonNav([new MenuButton(0.5,0.4,"Local",0.1,0.1,50*0.25,0),
+        new MenuButton(0.80,0.85, "How to play",0.05,0.15,50*0.25,0),
+        new MenuButton(0.20, 0.85, "Controls",0.05,0.15,50*0.25,0),
+        new MenuButton(0.5, 0.6 , "Online",0.1,0.1,50*0.25,0)]); 
 
         //This is the animation intended for transitioning into the setup screen
-    this.transition_in = new Cutscene(this.keylistener, this.multiplayer_menu_button_list, this.floater_array, this.title, this.border, this.border_pos, this.opacity);
+    this.transition_in = new Cutscene(this.keylistener, this.multiplayer_MenuButton_list, this.floater_array, this.title, this.border, this.border_pos, this.opacity);
      
     //set the animation condition
     this.transition_in.setCondition(function () {
@@ -172,9 +178,9 @@ setupScreen.setInit(function() {
     //Set the animation condition
     this.transition_in.setAnimation(function () {
         if (this.shapes[4] >= STROKEWEIGHT*2) {
-            for (i = 0 ; i < this.shapes[0].button_array.length ; i++) {
-                if (this.shapes[0].button_array[i].opacity <= 255) { 
-                this.shapes[0].button_array[i].fade_in(ATIME.SETUP_SCREEN_ANIMATION_TIME/3*2);
+            for (i = 0 ; i < this.shapes[0].buttonArray.length ; i++) {
+                if (this.shapes[0].buttonArray[i].opacity <= 255) { 
+                this.shapes[0].buttonArray[i].fadeIn(ATIME.SETUP_SCREEN_ANIMATION_TIME/3*2);
             }
             }
             if (this.shapes[5] < 255) { 
@@ -183,7 +189,7 @@ setupScreen.setInit(function() {
             }
             if (this.shapes[5] >= 255) {
                 for (i = 0 ; i < this.shapes[1].length ; i++) {
-                    this.shapes[1][i].fade_in(ATIME.SETUP_SCREEN_ANIMATION_TIME/3);
+                    this.shapes[1][i].fadeIn(ATIME.SETUP_SCREEN_ANIMATION_TIME/3);
                 }
             }
             
@@ -199,23 +205,23 @@ setupScreen.setInit(function() {
     
 
     //This is the animation intended for transioning out of the setup screen
-    this.transition_out = new Cutscene(this.keylistener, this.multiplayer_menu_button_list, this.floater_array, this.title, this.border, STROKEWEIGHT*2, 255);
+    this.transition_out = new Cutscene(this.keylistener, this.multiplayer_MenuButton_list, this.floater_array, this.title, this.border, STROKEWEIGHT*2, 255);
     
     this.transition_out.setCondition(function () {
-        if (this.shapes[0].currently_selected.isconfirmed() && !Cutscene.isPlaying) {
+        if (this.shapes[0].currentlySelected.isConfirmed() && !Cutscene.isPlaying) {
             this.activate();
             this.keylistener.deactivate();
-        } else if (this.shapes[0].currently_selected.isconfirmed_animation_done()) {
+        } else if (this.shapes[0].currentlySelected.isConfirmedAnimationDone()) {
             this.deactivate();
             this.keylistener.activate();
             //In the event that the online or local button is pushed, we want to set up the x and y values for a transition
-            if (this.shapes[0].currently_selected.phrase == 'Online') {
+            if (this.shapes[0].currentlySelected.phrase == 'Online') {
                 GuiManager.changeScreen(Screens.LOADING_SCREEN);
-            } else if (this.shapes[0].currently_selected.phrase == 'Local') {
+            } else if (this.shapes[0].currentlySelected.phrase == 'Local') {
                 GuiManager.changeScreen(Screens.GAME_SCREEN);
-            } else if (this.shapes[0].currently_selected.phrase == 'Controls') {
+            } else if (this.shapes[0].currentlySelected.phrase == 'Controls') {
                 GuiManager.changeScreen(Screens.CONTROL_SCREEN)
-            } else if (this.shapes[0].currently_selected.phrase == 'How to play') {
+            } else if (this.shapes[0].currentlySelected.phrase == 'How to play') {
                 GuiManager.changeScreen(Screens.HOW_TO_PLAY_SCREEN);
             } else {
                 GuiManager.changeScreen(Screens.START_SCREEN);
@@ -225,15 +231,15 @@ setupScreen.setInit(function() {
 
     this.transition_out.setAnimation(function() {
         //Fade buttons
-        for (i = 0 ; i < this.shapes[0].button_array.length ; i++) {
-            if (this.shapes[0].button_array[i] == this.shapes[0].currently_selected) {
+        for (i = 0 ; i < this.shapes[0].buttonArray.length ; i++) {
+            if (this.shapes[0].buttonArray[i] == this.shapes[0].currentlySelected) {
             } else {
-                this.shapes[0].button_array[i].fade();
+                this.shapes[0].buttonArray[i].fade();
             }
         }
         //Fade out floaters
         for (i =  0 ; i < this.shapes[1].length ; i++) {
-            this.shapes[1][i].fade_out(ATIME.CONFIRMED_ANIMATION_TIME/4);
+            this.shapes[1][i].fadeOut(ATIME.CONFIRMED_ANIMATION_TIME/4);
         }
         //Fade out border
         this.shapes[4] -= (STROKEWEIGHT*2)/(ATIME.CONFIRMED_ANIMATION_TIME/4);
@@ -253,8 +259,8 @@ setupScreen.setDraw(function() {
     this.border.render();
 
     //Render out buttons
-    for (i = 0; i < this.multiplayer_menu_button_list.button_array.length ; i++) {
-        this.multiplayer_menu_button_list.drawAll();
+    for (i = 0; i < this.multiplayer_MenuButton_list.buttonArray.length ; i++) {
+        this.multiplayer_MenuButton_list.drawAll();
     }
 
     //Render our floaters
@@ -275,20 +281,20 @@ setupScreen.setDraw(function() {
 
     //w
     if (keypress == KEY_EVENTS.UP) {
-        this.multiplayer_menu_button_list.selectClosest(2);   
+        this.multiplayer_MenuButton_list.selectClosest(2);   
     //d
     } else if (keypress == KEY_EVENTS.RIGHT) {
-        this.multiplayer_menu_button_list.selectClosest(1);
+        this.multiplayer_MenuButton_list.selectClosest(1);
     //s
     } else if (keypress == KEY_EVENTS.DOWN) {
-        this.multiplayer_menu_button_list.selectClosest(0);
+        this.multiplayer_MenuButton_list.selectClosest(0);
     //a
     } else if (keypress == KEY_EVENTS.LEFT) {
-        this.multiplayer_menu_button_list.selectClosest(3);
+        this.multiplayer_MenuButton_list.selectClosest(3);
     //space
     } else if (keypress == KEY_EVENTS.SELECT) {
         this.opacity = 255;
-        this.multiplayer_menu_button_list.confirm();
+        this.multiplayer_MenuButton_list.confirm();
     }
 
 });
@@ -629,7 +635,6 @@ gameScreen.setInit(function(gameType = GameTypes.LOCAL, gridSize = 3, gridLevels
     //Create a game given the parameters passed to the function.
     this.game = new GameManager(gameType,gridSize,gridLevels);
     this.board = new TicTacBoard(this.game,this.game.getBoard(),getCanvasSize()/2,getCanvasSize()/2,getCanvasSize());
-    this.board.setSelected();
 
     //Despite that however, I need to display slightly different information depending on whether or not this is an online or offline game.
     //So the tictac will need to have a status attribute which keeps track of whether or not it is online or offline.
