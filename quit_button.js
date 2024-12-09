@@ -22,8 +22,8 @@ function quit_button(x,y,phrase) {
     this.y = y;
 
     //these are the variables that hold the variatinon on x and y
-    this.jar_x = 0;
-    this.jar_y = 0;
+    this.jarX = 0;
+    this.jarY = 0;
 
     //whether or not the button is selected
     this.selected = false;
@@ -32,13 +32,13 @@ function quit_button(x,y,phrase) {
     this.confirmed = false;
 
     //this contains the current fill of the square around the button
-    this.square_fill = 0;
+    this.squareFill = 0;
 
     //this contains the fill of the text on the button
-    this.text_fill = 255;
+    this.textFill = 255;
 
     //this determines whether or not the jar animation will be played
-    this.do_jar = false;
+    this.doJar = false;
 
     //this contains the opcaity of the button
     this.opacity = 255;
@@ -67,7 +67,7 @@ quit_button.prototype.draw = function() {
 }
 
 //this is a mtehtod that sets the opacity of the button
-quit_button.prototype.set_opacity = function(opacity) {
+quit_button.prototype.setOpacity = function(opacity) {
     this.opacity = opacity;
 }
 
@@ -77,52 +77,52 @@ quit_button.prototype.setStatus = function(status) {
 }
 
 //this is responsible for drawing the default appearance
-quit_button.prototype.draw_default = function() {
+quit_button.prototype.drawDefault = function() {
 
-    fill(this.square_fill,this.opacity);
+    fill(this.squareFill,this.opacity);
     noStroke();
     rectMode(CENTER);
     rect(this.x,this.y,getCanvasSize()*0.05,getCanvasSize()*0.025);
     textAlign(CENTER);
-    fill(this.text_fill,this.opacity);
+    fill(this.textFill,this.opacity);
     text(phrase,this.x + getCanvasSize()*0.05/2,this.y + getCanvasSize()*0.025/2);
 
 
-    if (this.square_fill > 0) {
-        this.square_fill -= 255/QUIT_SELECTION_ANIMATION_TIME;
+    if (this.squareFill > 0) {
+        this.squareFill -= 255/QUIT_SELECTION_ANIMATION_TIME;
     }
 
 
 }
 
 //this is responsible for drawing the hovered appearance
-quit_button.prototype.draw_hovered = function() {
+quit_button.prototype.drawHovered = function() {
 
-    if (this.square_fill < 255) {
-        this.square_fill += 255/QUIT_SELECTION_ANIMATION_TIME;
+    if (this.squareFill < 255) {
+        this.squareFill += 255/QUIT_SELECTION_ANIMATION_TIME;
     }
 
-    fill(this.square_fill,this.opacity);
+    fill(this.squareFill,this.opacity);
     noStroke();
     rectMode(CENTER);
-    rect(this.x + this.jar_x,this.y + this.jar_y,getCanvasSize()*0.05,getCanvasSize()*0.025);
+    rect(this.x + this.jarX,this.y + this.jarY,getCanvasSize()*0.05,getCanvasSize()*0.025);
     textAlign(CENTER);
-    fill(this.text_fill,this.opacity);
+    fill(this.textFill,this.opacity);
     text(phrase,this.x + getCanvasSize()*0.05/2,this.y + getCanvasSize()*0.025/2);
 
-    if (this.do_jar == true) {
+    if (this.doJar == true) {
         
-        if (this.jar_x < PIXEL_MOVEMENT) {
-            this.do_jar = false;
+        if (this.jarX < PIXEL_MOVEMENT) {
+            this.doJar = false;
         } else {
-            this.jar_x += PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
-            this.jar_y += PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
+            this.jarX += PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
+            this.jarY += PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
         }
         
     } else {
-        if (this.jar_x > 0) {
-            this.jar_x -= PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
-            this.jar_y -= PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
+        if (this.jarX > 0) {
+            this.jarX -= PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
+            this.jarY -= PIXEL_MOVEMENT/JAR_ANIMATION_TIME/2;
         }
     }
 
