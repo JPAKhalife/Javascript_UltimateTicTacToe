@@ -107,9 +107,6 @@ function setup() {
     //framerate
     frameRate(FRAMERATE);
 
-    //variable that holds a game
-    tictactoe = new game();
-
     GuiManager.changeScreen(Screens.TEST_SCREEN);
 
     background(255);

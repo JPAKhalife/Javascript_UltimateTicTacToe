@@ -1,0 +1,301 @@
+/**
+ * @class A wrapper for the circle class of p5.js
+ * @description A class representing a circle shape.
+ * @extends ShapeWrapper
+ * @constructor
+ * @param {number} x - The x-coordinate of the circle.
+ * @param {number} y - The y-coordinate of the circle.
+ * @param {number} radius - The radius of the circle.
+ * @param {string} fill - The fill color of the circle in color format.
+ * @param {string} stroke - The stroke color of the circle in color format.
+ * @param {number} strokeWeight - The stroke weight of the circle.
+ */
+class Circle extends ShapeWrapper {
+    private radius: number;
+
+    constructor(radius: number, sketch: p5, x: number, y: number, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) {
+        super(sketch, x, y, fill, stroke, strokeWeight);
+        this.radius = radius;
+    }
+
+    /**
+     * @function draw
+     * @description Draws the circle on the canvas.
+     */
+    draw(): void {
+        this.sketch.circle(this.x, this.y, this.radius);
+    }
+}
+
+
+/**
+ * @class Triangle
+ * @description A wrapper for the triangle class of p5.js
+ * @extends ShapeWrapper
+ * @constructor
+ * @param {number} x - The x-coordinate of the triangle.
+ * @param {number} y - The y-coordinate of the triangle.
+ * @param {number} x1 - The x-coordinate of the first vertex of the triangle.
+ * @param {number} y1 - The y-coordinate of the first vertex of the triangle.
+ * @param {number} x2 - The x-coordinate of the second vertex of the triangle.
+ * @param {number} y2 - The y-coordinate of the second vertex of the triangle.
+ * @param {string} fill - The fill color of the triangle in color format.
+ * @param {string} stroke - The stroke color of the triangle in color format.
+ * @param {number} strokeWeight - The stroke weight of the triangle.
+ */
+class Triangle extends ShapeWrapper {
+    constructor(x, y, x1, y1, x2, y2, fill = color(0,0,0), stroke = color(0,0,0), strokeWeight = 1) {
+        super(x, y);
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
+        this.fill = fill;
+        this.stroke = stroke;
+        this.strokeWeight = strokeWeight;
+    }
+
+    /**
+     * @function draw
+     * @description Draws the triangle on the canvas.
+     */
+    draw() {
+        triangle(this.x, this.y, this.x1, this.y1, this.x2, this.y2);
+    }
+
+    /**
+     * @function move
+     * @param {number} dx - The amount to move the triangle in the x-direction.
+     * @param {number} dy - The amount to move the triangle in the y-direction.
+     * @description Moves the triangle by the specified amount.
+     */
+    move(dx, dy) {
+        this.x += dx;
+        this.y += dy;
+        this.x1 += dx;
+        this.y1 += dy;
+        this.x2 += dx;
+        this.y2 += dy;
+    }
+
+    /**
+     * @function moveUp
+     * @param {number} dy - The amount to move the triangle up.
+     * @description Moves the triangle up by the specified amount.
+     */
+    moveUp(dy) {
+        this.y -= dy;
+        this.y1 -= dy;
+        this.y2 -= dy;
+    }
+
+    /**
+     * @function moveDown
+     * @param {number} dy - The amount to move the triangle down.
+     * @description Moves the triangle down by the specified amount.
+     */
+    moveDown(dy) {
+        this.y += dy;
+        this.y1 += dy;
+        this.y2 += dy;
+    }
+
+    /**
+     * @function moveLeft
+     * @param {number} dx - The amount to move the triangle to the left.
+     * @description Moves the triangle to the left by the specified amount.
+     */
+    moveLeft(dx) {
+        this.x -= dx;
+        this.x1 -= dx;
+        this.x2 -= dx;
+    }
+
+    /**
+     * @function moveRight
+     * @param {number} dx - The amount to move the triangle to the right.
+     * @description Moves the triangle to the right by the specified amount.
+     */
+    moveRight(dx) {
+        this.x += dx;
+        this.x1 += dx;
+        this.x2 += dx;
+    }
+
+    /**
+     * @function moveVertex
+     * @param {number} dx - The amount to move the vertex in the x-direction.
+     * @param {number} dy - The amount to move the vertex in the y-direction.
+     * @param {number} vertex - The vertex to move (1, 2, or 3).
+     * @description Moves the specified vertex of the triangle by the specified amount.
+     */
+    moveVertex(dx, dy, vertex) {
+        if (vertex === 1) {
+            this.x += dx;
+            this.y += dy;
+        } else if (vertex === 2) {
+            this.x1 += dx;
+            this.y1 += dy;
+        } else if (vertex === 3) {
+            this.x2 += dx;
+            this.y2 += dy;
+        } else {
+            this.move(dx, dy);
+        }
+    }
+}
+
+/**
+ * @class A wrapper for the line class of p5.js
+ * @description A class representing a line shape.
+ * @extends ShapeWrapper
+ * @constructor
+ * @param {number} x - The x-coordinate of the starting point of the line.
+ * @param {number} y - The y-coordinate of the starting point of the line.
+ * @param {number} x1 - The x-coordinate of the ending point of the line.
+ * @param {number} y1 - The y-coordinate of the ending point of the line.
+ * @param {string} fill - The fill color of the line in color format.
+ * @param {string} stroke - The stroke color of the line in color format.
+ * @param {number} strokeWeight - The stroke weight of the line.
+ */
+class Line extends ShapeWrapper {
+    constructor(x, y, x1, y1, fill = color(0,0,0), stroke = color(0,0,0), strokeWeight = 1) {
+        super(x, y, fill, stroke, strokeWeight);
+        this.x1 = x1;
+        this.y1 = y1;
+    }
+
+    /**
+     * @function draw
+     * @description Draws the line on the canvas.
+     */
+    draw() {
+        line(this.x, this.y, this.x1, this.y1);
+    }
+
+    /**
+     * @function move
+     * @param {number} dx - The amount to move the line in the x-direction.
+     * @param {number} dy - The amount to move the line in the y-direction.
+     * @description Moves the line by the specified amount.
+     */
+    move(dx, dy) {
+        this.x += dx;
+        this.y += dy;
+        this.x1 += dx;
+        this.y1 += dy;
+    }
+
+    /**
+     * @function moveUp
+     * @param {number} dy - The amount to move the line up.
+     * @description Moves the line up by the specified amount.
+     */
+    moveUp(dy) {
+        this.y -= dy;
+        this.y1 -= dy;
+    }
+
+    /**
+     * @function moveDown
+     * @param {number} dy - The amount to move the line down.
+     * @description Moves the line down by the specified amount.
+     */
+    moveDown(dy) {
+        this.y += dy;
+        this.y1 += dy;
+    }
+
+    /**
+     * @function moveLeft
+     * @param {number} dx - The amount to move the line to the left.
+     * @description Moves the line to the left by the specified amount.
+     */
+    moveLeft(dx) {
+        this.x -= dx;
+        this.x1 -= dx;
+    }
+
+    /**
+     * @function moveRight
+     * @param {number} dx - The amount to move the line to the right.
+     * @description Moves the line to the right by the specified amount.
+     */
+    moveRight(dx) {
+        this.x += dx;
+        this.x1 += dx;
+    }
+
+    /**
+     * @function moveVertex
+     * @param {number} dx - The amount to move the vertex in the x-direction.
+     * @param {number} dy - The amount to move the vertex in the y-direction.
+     * @param {number} vertex - The vertex to move (1 or 2).
+     * @description Moves the specified vertex of the line by the specified amount.
+     */
+    moveVertex(dx, dy, vertex) {
+        if (vertex === 1) {
+            this.x += dx;
+            this.y += dy;
+        } else if (vertex === 2) {
+            this.x1 += dx;
+            this.y1 += dy;
+        } else {
+            this.move(dx, dy);
+        }
+    }
+}
+
+/**
+ * @class A wrapper for the point class of p5.js
+ * @description A class representing a point shape.
+ * @extends ShapeWrapper
+ * @constructor
+ * @param {number} x - The x-coordinate of the point.
+ * @param {number} y - The y-coordinate of the point.
+ * @param {string} fill - The fill color of the point in color format.
+ * @param {string} stroke - The stroke color of the point in color format.
+ * @param {number} strokeWeight - The stroke weight of the point.
+ */
+class Point extends ShapeWrapper {
+    constructor(x, y, fill = color(0,0,0), stroke = color(0,0,0), strokeWeight = 1) {
+        super(x, y, fill, stroke, strokeWeight);
+    }
+
+    /**
+     * @function draw
+     * @description Draws the point on the canvas.
+     */
+    draw() {
+        point(this.x, this.y);
+    }
+}
+
+/**
+ * @class Ellipse
+ * @description A wrapper for the ellipse class of p5.js
+ * @extends ShapeWrapper
+ * @constructor
+ * @param {number} x - The x-coordinate of the ellipse.
+ * @param {number} y - The y-coordinate of the ellipse.
+ * @param {number} width - The width of the ellipse.
+ * @param {number} height - The height of the ellipse.
+ * @param {string} fill - The fill color of the ellipse in color format.
+ * @param {string} stroke - The stroke color of the ellipse in color format.
+ * @param {number} strokeWeight - The stroke weight of the ellipse.
+ */
+class Ellipse extends ShapeWrapper {
+    constructor(x, y, width, height, fill = color(0,0,0), stroke = color(0,0,0), strokeWeight = 1) {
+        super(x, y, fill, stroke, strokeWeight);
+        this.width = width;
+        this.height = height;
+    }
+
+    /**
+     * @function draw
+     * @description Draws the ellipse on the canvas.
+     */
+    draw() {
+        ellipse(this.x, this.y, this.width, this.height);
+    }
+}

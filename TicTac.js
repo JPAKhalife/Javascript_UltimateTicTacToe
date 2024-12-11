@@ -52,4 +52,12 @@ class TicTac {
         }
         return 0;
     } 
+
+    /**
+     * This method calculates the next spot for the player's cursor to move.
+     * This should also be synced with the server to avoid client side cheating.
+     */
+    sendCursor() {
+
+    }
 }
