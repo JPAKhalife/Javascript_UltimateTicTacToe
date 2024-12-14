@@ -24,7 +24,7 @@ const SMALL_GRID_LENGTH = 3;
 //this variable determines the size of the x and o based on the size of the gap in the small tic tac it is meant to fill
 const SMALL_BOARD_PERCENT = 75;
 //this variable determines the size of the small tictac bsed on the size of the gap in the bigtictac it is supposed to fill
-const SMALLEST_BOARD_PERCENT = 75;
+
 //this variable determines the suze of the big tic tac based on the size of the canvas
 const BOARD_PERCENT = 60;
 //this is input delay, measured in frames
@@ -33,18 +33,8 @@ const INPUT_DELAY = 5;
 //exactly what it says
 const LINEWIDTH_TO_BOARDWIDTH_RATIO = 0.01;
 const SMALL_LINEWIDTH_TO_BOARDWIDTH_RATIO = 0.01;
-//percent of the length or width of the convas that the board will take up
-//This is the percentage that the button's size will grow when it is selected
-const GROWTH_PERCENT = 25;
-const CONFIRMED_GROWTH_PERCENT = 100;
-//This is the default shade of gray of the button fill (0-255)
-const DEFAULT_BUTTON_SHADE = 0;
-//this is the desired shade of gray of the button when it is seleceted
-const SELECTED_BUTTON_SHADE = 255;
 //This controls the text size
 const TEXT_SIZE_PERCENTAGE = 50;
-const BOARD_SHRINK_CONSTANT = 0.8
-const ICON_SHRINK_CONSTANT = 0.6
 //the weight of the stroke around the btton during the confirmed animation
 const STROKEWEIGHT = 15;
 //here are a bunch of constants which are meant to hold the title messages
@@ -63,19 +53,17 @@ const ATIME = {
     SETUP_SCREEN_ANIMATION_TIME: 120,
     CONTROL_TUTORIAL_ANIMATION_TIME: 120,
     QUIT_SCREEN_ANIMATION_TIME: 60,
-    SELECTED_ANIMATION_TIME: 5,
+    
     UNSELECTED_ANIMATION_TIME: 5,
     HOVER_TIME_SMALL: 45,
     HOVER_TIME: 45,
     LOADING_TRANSITION_IN: 180,
-    CONFIRMED_ANIMATION_TIME: 60,
+    
     INFORMATION_SCREEN_TRANSITION_TIME: 60,
 }
 
 //this variable holds the width of the border around the menu screen in pixels
 const MENU_BORDER_WIDTH = 10;
-//the outline of the second rect around the utton
-const OUTLINE_WEIGHT = 5;
 
 //it's messy, but I have to declare some undefined variables here to define in the setup function.
 //I need them to be global variables so I can call them in the other script files
@@ -149,14 +137,14 @@ function draw() {
 }
 
 //this functio will be used to get an integer within a certain range
-function getRandomInt(min, max) {
+export function getRandomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 //this function is meant to return the smallest window size.
-function getSmallestWindowSize() {
+export function getSmallestWindowSize() {
     if (windowWidth <= windowHeight) {
         return windowWidth;
     } else {
@@ -164,6 +152,6 @@ function getSmallestWindowSize() {
     }
 }
 
-function getCanvasSize() {
+export function getCanvasSize() {
     return getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100;;
 }

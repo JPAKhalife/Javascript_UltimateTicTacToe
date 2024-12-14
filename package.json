@@ -21,6 +21,7 @@
     "sql": "^0.78.0"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "@types/p5": "^1.7.6"
   }
 }

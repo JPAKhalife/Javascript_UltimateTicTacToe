@@ -1,13 +1,17 @@
 /**
- * @description: This is the primary file for the server. It uses the express framework to create a server that listens on port 3000.
+ * @file server.ts
+ * @description  This is the primary file for the server. It uses the express framework to create a server that listens on port 3000.
  * It starts out with http, then transitions to a websocket connection.
+ * @author John Khalife
+ * @created 2024-06-9
+ * @updated 2024-06-23
  */
 
 //Dependencies
 const express = require('express'); // This is the express framework
 const expressWs = require('express-ws'); // This is the express websocket framework
 const mysql = require('mysql'); // This is the mysql database framework
-require('dotenv').config(); // This is the dotenv framework - used for loading .env files
+//require('dotenv').config(); // This is the dotenv framework - used for loading .env files
 const helmet = require('helmet'); // This is the helmet framework - used for security of http headers
 const rateLimit = require('express-rate-limit'); // This is the express-rate-limit framework - used for limiting the number of requests a client can make
 const cors = require('cors'); // The cors framework allows for resources (assets like fonts, ect) to be shared across different domains

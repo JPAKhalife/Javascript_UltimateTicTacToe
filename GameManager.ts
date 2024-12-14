@@ -1,28 +1,44 @@
-//This file is responsible for keeping track of the game state
-// It should be able to do this regardless of whether or not this is an online or an offline game
-// This class should be responsible for making requests to the database in order to send and get updates.
+/**
+ * @file GameManager.ts
+ * @description //This file is responsible for keeping track of the game state
+ * @author John Khalife
+ * @created 2024-06-9
+ * @updated 2024-06-23
+ */
+
+import TicTac from "./TicTac";
+import {DEFAULT_GRID_SIZE} from "./TicTac";
 
 //This is a constant that holds the types of games that can exist
-const GameTypes = {
-    LOCAL: {},
-    ONLINE: {}
+enum GameType {
+    LOCAL,
+    ONLINE
 }
 
 //This class activates as soon as a game is started
-class GameManager {
-    constructor(gameType = GameTypes.LOCAL, gridSize = DEFAULT_GRID_SIZE, gridLevels = 2) {
+export default class GameManager {
+
+    private gameType: GameType;
+    private gridSize: number;
+    private board: TicTac;
+    private turn: number;
+    private isWon: boolean;
+
+
+    constructor(gameType: GameType = GameType.LOCAL, gridSize: number = DEFAULT_GRID_SIZE, gridLevels: number = 2) {
         //The game manager should have a variable that keeps track of whether or not it is playing online or offline
-        this.GAMETYPE = gameType;
-        this.GRID_SIZE = gridSize;
+        this.gameType = gameType;
+        this.gridSize = gridSize;
         //The game manager will own a single tictac - which will hold all of the other tictacs and the lowest level slots
         //This is initialized with recursion
-        this.board = new TicTac(gridLevels,gridSize); //TODO: Create a constant for the number of tictacs inside tictacs u
+        this.board = new TicTac(gridLevels); //TODO: Create a constant for the number of tictacs inside tictacs u
         //This is used to keep track of the current player's turn
         this.turn = 0;
         this.isWon = false;
     }
 
-    updateSlot(tictac, row,col) {
+    updateSlot(tictac: TicTac, row: number,col: number): void 
+    {
         //TODO: Add A check for whether or not the game is online and do an update.
         //Local side update
         if (tictac.getSlot(row,col) == 0) {
@@ -31,7 +47,7 @@ class GameManager {
             //Then a win check on that tictac is neccessary.
             if (this.checkWinOrFull(tictac,row,col)) {
                 //*This condition may be important for later, we'll see
-                if (this.tictac == tictac) {
+                if (this.board == tictac) {
                     //Win!
                     this.isWon = true;
                 }
@@ -42,12 +58,14 @@ class GameManager {
         }
     }
 
-    receiveUpdates() {
+    receiveUpdates(): void 
+    {
         //This method only needs to be called when playing online mode. It is intended for interacting with the sql database.
     }
 
     //This method is meant to evaluate a tictac for a win.
-    checkWinOrFull(tictac, row, col) {
+    checkWinOrFull(tictac: TicTac, row: number, col: number): boolean 
+    {
         //To win, there needs to be GRDISIZE of the same value in a row.
         //This method will be called whenever a tictac is updated, and therefore only needs
         //to check the row, col, and potentially diagonal that the move was played in.
@@ -121,14 +139,16 @@ class GameManager {
         return true;
     }
 
-    checkParentWinOrFull(tictac,row,col) {
+    checkParentWinOrFull(tictac: TicTac,row: number,col: number): void
+     {
         //I could put this in checkWinOrFull, but the code would be repetitive as it is called everytime we return with a win or full.
         if (tictac.parent) {
             this.checkWinOrFull(tictac.parent,row,col)
         }
     }
 
-    getBoard() {
+    getBoard(): TicTac 
+    {
         return this.board;
     }
 }

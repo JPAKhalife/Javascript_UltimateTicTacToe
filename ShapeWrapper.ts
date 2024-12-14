@@ -14,7 +14,7 @@ import * as p5 from 'p5';
  * @class ShapeWrapper
  * @description A class representing a shape wrapper.
  */
-abstract class ShapeWrapper {
+export default abstract class ShapeWrapper {
     protected sketch: p5;
     protected x: number;
     protected y: number;
@@ -63,13 +63,13 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function draw
+     * @method draw
      * @description Abstract method for drawing the shape.
      */
     abstract draw(): void;
 
     /**
-     * @function render
+     * @method render
      * @param {function} customOperation - A custom operation to be performed before drawing the shape.
      * @description Renders the shape on the canvas.
      */
@@ -106,7 +106,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function setX
+     * @method setX
      * @param {number} x - The new x-coordinate of the shape.
      * @description Sets the x-coordinate of the shape.
      */
@@ -116,7 +116,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function setY
+     * @method setY
      * @param {number} y - The new y-coordinate of the shape.
      * @description Sets the y-coordinate of the shape.
      */
@@ -126,7 +126,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function move
+     * @method move
      * @param {number} dx - The amount to move the shape in the x-direction.
      * @param {number} dy - The amount to move the shape in the y-direction.
      * @description Moves the shape by the specified amount.
@@ -138,7 +138,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function roll
+     * @method roll
      * @param {number} angle - The angle to rotate the shape by.
      * @description Rotates the shape by the specified angle.
      */
@@ -148,7 +148,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function setAngleMode
+     * @method setAngleMode
      * @param {*} anglemMode 
      * @description Sets the angle mode of the shape.
      */
@@ -158,7 +158,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function setOrientation
+     * @method setOrientation
      * @param {number} angle - The exact angle to rotate the shape to.
      * @description Rotates the shape to the exact specified angle.
      */
@@ -169,7 +169,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function resetRotation
+     * @method resetRotation
      * @description Resets the rotation of the shape.
      */
     resetRotation(): void 
@@ -179,7 +179,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function translate
+     * @method translate
      * @param {number} dx - The amount to translate the shape in the x-direction.
      * @param {number} dy - The amount to translate the shape in the y-direction.
      * @description Translates the shape by the specified amount.
@@ -192,7 +192,18 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function resetTranslation
+     * @method
+     * @param dx The amount to change the x translation by
+     * @param dy The amount to change the y translation by
+     */
+    changeTranslation(dx: number, dy: number): void {
+        this.tx += dx;
+        this.ty += dy;
+        this.doTranslate = true;
+    }
+
+    /**
+     * @method resetTranslation
      * @description Resets the translation of the shape.
      */
     resetTranslation(): void
@@ -203,7 +214,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function setTint
+     * @method setTint
      * @param {p5.Color} t - The tint component of the tint color.
      * @description Sets the tint color of the shape.
      */
@@ -214,7 +225,25 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function unsetTint
+     * @method setTint
+     * @param {number} r - The red component of the tint color.
+     * @param {number} g - The green component of the tint color.
+     * @param {number} b - The blue component of the tint color.
+     * @param {number} a - The alpha component of the tint color.
+     * @description Sets the tint color of the shape.
+     */
+    changeTint(r: number, g: number, b: number, a: number): void 
+    {
+        let colorSettings: string[] =  this.tint.toString('rgba').split(',');
+        this.doTint = true;
+        this.tint.setAlpha(parseFloat(colorSettings[3]) + a);
+        this.tint.setRed(parseFloat(colorSettings[0]) + r);
+        this.tint.setGreen(parseFloat(colorSettings[1]) + g);
+        this.tint.setBlue(parseFloat(colorSettings[2]) + b);
+    }
+
+    /**
+     * @method unsetTint
      * @description Unsets the tint color of the shape.
      */
     unsetTint(): void 
@@ -223,7 +252,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function setStroke
+     * @method setStroke
      * @param {p5.Color} color - the color of the stroke
      * @description Sets the stroke color of the shape.
      */
@@ -234,7 +263,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function resetStroke
+     * @method resetStroke
      * @description Unsets the stroke color of the shape.
      */
     resetStroke(): void 
@@ -244,7 +273,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function setFill
+     * @method setFill
      * @param {p5.Color} color - The fill color of the shape.
      * @description Sets the fill color of the shape.
      */
@@ -255,7 +284,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function unsetFill
+     * @method unsetFill
      * @description Unsets the fill color of the shape.
      */
     resetFill(): void 
@@ -265,7 +294,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function setFillAlpha
+     * @method setFillAlpha
      * @description Sets the alpha component of the fill color.
      * @param {number} a 
      */
@@ -275,7 +304,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function setStrokeWeight
+     * @method setStrokeWeight
      * @param {number} weight - The stroke weight of the shape.
      * @description Sets the stroke weight of the shape.
      */
@@ -285,7 +314,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function incrementFill
+     * @method incrementFill
      * @param {number} r - The amount to increment the red component of the fill color.
      * @param {number} g - The amount to increment the green component of the fill color.
      * @param {number} b - The amount to increment the blue component of the fill color.
@@ -303,7 +332,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function incrementStroke
+     * @method incrementStroke
      * @param {number} r - The amount to increment the red component of the stroke color.
      * @param {number} g - The amount to increment the green component of the stroke color.
      * @param {number} b - The amount to increment the blue component of the stroke color.
@@ -321,7 +350,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function setRectOrientation
+     * @method setRectOrientation
      * @param {p5.RECT_MODE} orientation - The orientation of the rectangle (default: CORNER).
      * @description Sets the orientation of the rectangle.
      */
@@ -331,7 +360,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function getX
+     * @method getX
      * @returns {number} The x-coordinate of the shape.
      * @description Gets the x-coordinate of the shape.
      */
@@ -341,7 +370,7 @@ abstract class ShapeWrapper {
     }
 
     /**
-     * @function getY
+     * @method getY
      * @returns {number} The y-coordinate of the shape.
      * @description Gets the y-coordinate of the shape.
      */
@@ -349,12 +378,32 @@ abstract class ShapeWrapper {
     {
         return this.y;
     }
+
+    /**
+     * @method getTX
+     * @description Gets the x-translation of the shape.
+     * @returns {number} The x-translation of the shape.
+     */
+    getTX(): number 
+    {
+        return this.tx;
+    }
+
+    /**
+     * @method getTY
+     * @description Gets the y-translation of the shape.
+     * @returns {number} The y-translation of the shape.
+     */
+    getTY(): number 
+    {
+        return this.ty;
+    }
 }
 
 /**
  * @class A wrapper for the rectangle class of p5.js
  */
-class Rectangle extends ShapeWrapper {
+export class Rectangle extends ShapeWrapper {
 
     protected width: number;
     protected height: number;
@@ -376,7 +425,7 @@ class Rectangle extends ShapeWrapper {
     }
 
     /**
-     * @function draw
+     * @method draw
      * @description Draws the rectangle on the canvas.
      */
     draw(): void 
@@ -437,7 +486,7 @@ class Rectangle extends ShapeWrapper {
  * @param {string} stroke - The stroke color of the image in color format.
  * @param {number} strokeWeight - The stroke weight of the image.
  */
-class Img extends Rectangle {
+export class Img extends Rectangle {
 
     private img: p5.Image;
     private imageOrientation: p5.IMAGE_MODE;
@@ -487,7 +536,7 @@ class Img extends Rectangle {
  * @param {string} stroke - The stroke color of the text in color format.
  * @param {number} strokeWeight - The stroke weight of the text.
  */
-class Text extends ShapeWrapper {
+export class Text extends ShapeWrapper {
     private text: string;
     private size: number;
     private font: p5.Font;
@@ -510,7 +559,7 @@ class Text extends ShapeWrapper {
     }
 
     /**
-     * @function draw
+     * @method draw
      * @description Draws the text on the canvas.
      */
     draw(): void
@@ -526,7 +575,7 @@ class Text extends ShapeWrapper {
     }
 
     /**
-     * @function setTextOrientation
+     * @method setTextOrientation
      * @param {p5.HORIZ_ALIGN} horizontal - The horizontal alignment of the text (default: LEFT).
      * @param {p5.VERT_ALIGN} vertical - The vertical alignment of the text (default: BOTTOM).
      * @description Sets the orientation of the text.
@@ -536,7 +585,7 @@ class Text extends ShapeWrapper {
         this.textOrientation[1] = vertical;
     }
     /**
-     * @function setFont
+     * @method setFont
      * @param {p5.Font} font - The font family of the text.
      * @description Sets the font of the text.
      */
@@ -583,17 +632,18 @@ class Text extends ShapeWrapper {
  * @class ShapeGroup
  * @description This is a class that is intended to hold groups of shapes and call functions on them at the same time.
  */
-class ShapeGroup {
+export class ShapeGroup 
+{
     private shapes: ShapeWrapper[];
 
     /**
      * @constructor
-     * @param {*} type 
+     * @param {...ShapeWrapper} args - The shapes to add to the group.
      */
-    constructor(type,...args) {
+    constructor(...args: ShapeWrapper[]) {
         this.shapes = [];
-        for (let i = 0; i < args.length; i++) {
-            if (!(args[i] instanceof type)) {
+        for (let i = 1; i < args.length; i++) {
+            if (typeof(args[i]) != typeof(args[i-1])) {
                 throw new Error('All arguments must be of the same type');
             }
             this.shapes.push(args[i]);
@@ -603,15 +653,13 @@ class ShapeGroup {
     /**
      * @method callFunction
      * @description Calls a function on all the shapes in the group.
-     * @param {*} functname 
+     * @param {string} functionName 
      */
-    callFunction(functname,...args) {
+    callFunction(functionName: string, ...args: any): void {
         for (let i = 0; i < this.shapes.length; i++) {
-            if (typeof this.shapes[i][functname] === 'function') {
-                this.shapes[i][functname](...args);
+            if (typeof this.shapes[i][functionName] === 'function') {
+                this.shapes[i][functionName](...args);
             }
         }
     }
-
-
 }
