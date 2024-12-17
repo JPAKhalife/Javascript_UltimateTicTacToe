@@ -9,8 +9,7 @@
 import * as p5 from 'p5';
 import { getCanvasSize } from '../sketch';
 
-
-export default class MenuButton 
+export default class MenuButton implements Button
 {
     
     private selected: boolean;
@@ -117,12 +116,12 @@ export default class MenuButton
         this.sketch.strokeWeight(1);
         this.sketch.stroke(255,this.opacity);
         this.sketch.rectMode(this.sketch.CENTER);
-        this.sketch.rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());
+        this.sketch.rect(this.x * getCanvasSize(this.sketch), this.y * getCanvasSize(this.sketch),this.currentWidth * getCanvasSize(this.sketch),this.currentLength * getCanvasSize(this.sketch));
         this.sketch.textSize(this.currentTextSize);
         this.sketch.fill(this.currentTextFill,this.opacity);
         this.sketch.noStroke();
         this.sketch.textAlign(this.sketch.CENTER,this.sketch.CENTER);
-        this.sketch.text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());    
+        this.sketch.text(this.phrase,this.x * getCanvasSize(this.sketch), this.y * getCanvasSize(this.sketch),this.currentWidth * getCanvasSize(this.sketch),this.currentLength * getCanvasSize(this.sketch));    
         
     }
 
@@ -195,12 +194,12 @@ export default class MenuButton
         this.sketch.stroke(255,this.opacity);
         this.sketch.fill(this.currentButtonFill,this.opacity);
 
-        this.sketch.rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());
+        this.sketch.rect(this.x * getCanvasSize(this.sketch), this.y * getCanvasSize(this.sketch),this.currentWidth * getCanvasSize(this.sketch),this.currentLength * getCanvasSize(this.sketch));
         this.sketch.textSize(this.currentTextSize);
         this.sketch.fill(this.currentTextFill,this.opacity);
         this.sketch.noStroke()
         this.sketch.textAlign(this.sketch.CENTER,this.sketch.CENTER);
-        this.sketch.text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());   
+        this.sketch.text(this.phrase,this.x * getCanvasSize(this.sketch), this.y * getCanvasSize(this.sketch),this.currentWidth * getCanvasSize(this.sketch),this.currentLength * getCanvasSize(this.sketch));   
     }
 
     /**
@@ -216,8 +215,8 @@ export default class MenuButton
             this.opacity = 0;
             this.confirmedAnimation = true;
         } else {
-            this.cl += ((MenuButton.GROWTH_PERCENT / 100) * (this.currentLength * getCanvasSize()) + (this.currentLength * getCanvasSize())) / MenuButton.CONFIRMED_ANIMATION_TIME;
-            this.cw += ((MenuButton.GROWTH_PERCENT / 100) * (this.currentWidth * getCanvasSize()) + (this.currentWidth * getCanvasSize())) / MenuButton.CONFIRMED_ANIMATION_TIME;
+            this.cl += ((MenuButton.GROWTH_PERCENT / 100) * (this.currentLength * getCanvasSize(this.sketch)) + (this.currentLength * getCanvasSize(this.sketch))) / MenuButton.CONFIRMED_ANIMATION_TIME;
+            this.cw += ((MenuButton.GROWTH_PERCENT / 100) * (this.currentWidth * getCanvasSize(this.sketch)) + (this.currentWidth * getCanvasSize(this.sketch))) / MenuButton.CONFIRMED_ANIMATION_TIME;
             this.currentTextFill += (MenuButton.SELECTED_BUTTON_SHADE - MenuButton.DEFAULT_BUTTON_SHADE) / MenuButton.CONFIRMED_ANIMATION_TIME;
             this.opacity -= (255/MenuButton.CONFIRMED_ANIMATION_TIME)
             this.animationTime++;
@@ -225,17 +224,17 @@ export default class MenuButton
         this.sketch.noStroke()
         this.sketch.fill(255);
         //fill(this.currentButtonFill);
-        this.sketch.rect(this.x * getCanvasSize(), this.y * getCanvasSize(),(this.currentWidth * getCanvasSize()) - this.cw ,(this.currentLength * getCanvasSize()) - this.cl);
+        this.sketch.rect(this.x * getCanvasSize(this.sketch), this.y * getCanvasSize(this.sketch),(this.currentWidth * getCanvasSize(this.sketch)) - this.cw ,(this.currentLength * getCanvasSize(this.sketch)) - this.cl);
         this.sketch.textSize(this.currentTextSize);
         this.sketch.fill(this.currentTextFill);
         this.sketch.tint(0,255);
         this.sketch.textAlign(this.sketch.CENTER,this.sketch.CENTER);
-        this.sketch.text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());  
+        this.sketch.text(this.phrase,this.x * getCanvasSize(this.sketch), this.y * getCanvasSize(this.sketch),this.currentWidth * getCanvasSize(this.sketch),this.currentLength * getCanvasSize(this.sketch));  
         //this is the second rectangle that will be acting as the 
         this.sketch.stroke(255,this.opacity);
         this.sketch.fill(0);
         this.sketch.strokeWeight(MenuButton.OUTLINE_WEIGHT);
-        this.sketch.rect(this.x * getCanvasSize(), this.y * getCanvasSize(),MenuButton.OUTLINE_WEIGHT + this.cw,this.cl + MenuButton.OUTLINE_WEIGHT);
+        this.sketch.rect(this.x * getCanvasSize(this.sketch), this.y * getCanvasSize(this.sketch),MenuButton.OUTLINE_WEIGHT + this.cw,this.cl + MenuButton.OUTLINE_WEIGHT);
     }
 
     /**
@@ -265,6 +264,15 @@ export default class MenuButton
     public isConfirmedAnimationDone(): boolean 
     {
         return this.confirmedAnimation;
+    }
+
+    /**
+     * @method confirm
+     * @description This method confirms the button
+     */
+    public confirm(): void 
+    {
+        this.confirmed = true;
     }
 
     /**

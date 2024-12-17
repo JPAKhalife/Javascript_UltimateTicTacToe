@@ -8,6 +8,9 @@
 *                                                                                             *
 **********************************************************************************************/
 
+import p5 from 'p5';
+import GuiManager from './GuiManager.js';
+import {Screens} from './Menu.js';
 
 // This file is meant to be the home of the class for the larger tic tac that holds all the other small tic tacs.
 // this file is meant to hold the class for the small tic tac.
@@ -27,18 +30,15 @@ const SMALL_BOARD_PERCENT = 75;
 
 //this variable determines the suze of the big tic tac based on the size of the canvas
 const BOARD_PERCENT = 60;
-//this is input delay, measured in frames
-const INPUT_DELAY = 5;
+
 //constance used on the creation oc the big tic tac
 //exactly what it says
 const LINEWIDTH_TO_BOARDWIDTH_RATIO = 0.01;
 const SMALL_LINEWIDTH_TO_BOARDWIDTH_RATIO = 0.01;
 //This controls the text size
 const TEXT_SIZE_PERCENTAGE = 50;
-//the weight of the stroke around the btton during the confirmed animation
-const STROKEWEIGHT = 15;
 //here are a bunch of constants which are meant to hold the title messages
-const HEADER = {
+export const HEADER = {
     START_SCREEN_TITLE:"Ultimate TicTacToe",
     START_SCREEN_MESSAGE: "Press Space to Start",
     START_SCREEN_AUTHOR: "Made by John Khalife",
@@ -50,16 +50,16 @@ const HEADER = {
 }
 //This constant is meant to be used for animation times - measured in frames.
 const ATIME = {
-    SETUP_SCREEN_ANIMATION_TIME: 120,
+    
     CONTROL_TUTORIAL_ANIMATION_TIME: 120,
     QUIT_SCREEN_ANIMATION_TIME: 60,
     
     UNSELECTED_ANIMATION_TIME: 5,
     HOVER_TIME_SMALL: 45,
     HOVER_TIME: 45,
-    LOADING_TRANSITION_IN: 180,
     
-    INFORMATION_SCREEN_TRANSITION_TIME: 60,
+    
+    
 }
 
 //this variable holds the width of the border around the menu screen in pixels
@@ -76,82 +76,81 @@ var graphicalUserInterface;
 var tictactoe;
 
 //variables for the font
-let fontSquareo, fontmono, fontminecraft, fontAldoApache, fontPointless, fontPixeled, fontRobot, fontommy,fontOSDMONO;
+export let fontSquareo, fontmono, fontminecraft, fontAldoApache, fontPointless, fontPixeled, fontRobot, fontommy,fontOSDMONO;
 
 //variables for images
-let whiteTicTac,space,arrows,wasd,tictacboard,tictacboard_two,tictacboard_three;
+export let whiteTicTac,space,arrows,wasd,tictacboard,tictacboard_two,tictacboard_three;
 
 
 //The setup function is run once at the first execution of the script.
 function setup() {
     //creating the canvas at the size of the window, setting the canvas to a variable.
-    var cnv = createCanvas(getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100, getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100);
-
+    var cnv = this.createCanvas(getSmallestWindowSize(this) - getSmallestWindowSize(this)*WINDOW_MARGIN/100, getSmallestWindowSize(this) - getSmallestWindowSize(this)*WINDOW_MARGIN/100);
+    
     //Create the screen objects.
-    createScreens();
+    this.createScreens(this);
     //making sure that the canvas does not accidentally make a scroll bar appear on different browsers.
     //cnv.style("display", "block");
 
     //framerate
-    frameRate(FRAMERATE);
+    this.frameRate(FRAMERATE);
 
     GuiManager.changeScreen(Screens.TEST_SCREEN);
 
-    background(255);
+    this.background(255);
 
 }
 
 //This method is run once before the setup function and is used to load images, fonts, and other assets
 function preload() {
-    tictacboard = loadImage('assets/tictacboard.png');
-    tictacboard_two = loadImage('assets/tictacplay.png');
-    tictacboard_three = loadImage('assets/tictacbigmove.png');
-    fontSquareo = loadFont('assets/Squareo.ttf');
-    fontAldoApache = loadFont('assets/AldotheApache.ttf');
-    fontPointless = loadFont('assets/Pointless.ttf');
-    fontPixeled = loadFont('assets/Pixeled.ttf');
-    fontRobot = loadFont('assets/Robot Crush.ttf');
-    fontommy = loadFont('assets/tommy.otf');
-    fontmono = loadFont('assets/mono.otf');
-    fontOSDMONO = loadFont('assets/OSDMONO.ttf')
-    fontminecraft = loadFont('assets/minecraft.ttf');
-    whiteTicTac = loadImage('assets/whitetictac.png');
-    fontabsender = loadFont('assets/absender1.ttf');
-    space = loadImage('assets/Sace bar image.jpeg');
-    arrows = loadImage('assets/Arrow Keys.png');
-    wasd = loadImage('assets/wasd.png');
+    tictacboard = this.loadImage('assets/tictacboard.png');
+    tictacboard_two = this.loadImage('assets/tictacplay.png');
+    tictacboard_three = this.loadImage('assets/tictacbigmove.png');
+    fontSquareo = this.loadFont('assets/Squareo.ttf');
+    fontAldoApache = this.loadFont('assets/AldotheApache.ttf');
+    fontPointless = this.loadFont('assets/Pointless.ttf');
+    fontPixeled = this.loadFont('assets/Pixeled.ttf');
+    fontRobot = this.loadFont('assets/Robot Crush.ttf');
+    fontommy = this.loadFont('assets/tommy.otf');
+    fontmono = this.loadFont('assets/mono.otf');
+    fontOSDMONO = this.loadFont('assets/OSDMONO.ttf')
+    fontminecraft = this.loadFont('assets/minecraft.ttf');
+    whiteTicTac = this.loadImage('assets/whitetictac.png');
+    space = this.loadImage('assets/Sace bar image.jpeg');
+    arrows = this.loadImage('assets/Arrow Keys.png');
+    wasd = this.loadImage('assets/wasd.png');
 }
   
 //This method is called whenever the window is resized, and it's job is to resize the canvas back to the size of the window.
-function windowResized() {
-    smallest = getSmallestWindowSize();
-    resizeCanvas(smallest - smallest*WINDOW_MARGIN/100, smallest - smallest*WINDOW_MARGIN/100);
+function windowResized(): void {
+    let smallest = getSmallestWindowSize(this);
+    this.resizeCanvas(smallest - smallest*WINDOW_MARGIN/100, smallest - smallest*WINDOW_MARGIN/100);
     GuiManager.initScreen();
 
 }
 
 //This is the draw function, which is called over and over again. It is the main event loop.
-function draw() {
+function draw(): void {
         GuiManager.drawScreen();
         //graphicalUserInterface.drawScreen(keyListener.listen());
 }
 
 //this functio will be used to get an integer within a certain range
-export function getRandomInt(min, max) {
+export function getRandomInt(min, max): number {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 //this function is meant to return the smallest window size.
-export function getSmallestWindowSize() {
-    if (windowWidth <= windowHeight) {
-        return windowWidth;
+export function getSmallestWindowSize(sketch:p5): number {
+    if (sketch.windowWidth <= sketch.windowHeight) {
+        return sketch.windowWidth;
     } else {
-        return windowHeight;
+        return sketch.windowHeight;
     }
 }
 
-export function getCanvasSize() {
-    return getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100;;
+export function getCanvasSize(sketch: p5): number {
+    return getSmallestWindowSize(sketch) - getSmallestWindowSize(sketch)*WINDOW_MARGIN/100;
 }

@@ -8,7 +8,7 @@
 
 interface Button {
     //All buttons need to know if they are selected or not (cursor is on them)
-    selected: boolean;
+    isSelected(): boolean;
     //All buttons need a setStatus method
     setStatus(status: boolean): void;
     //All buttons need a drawButton method

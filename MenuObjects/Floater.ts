@@ -80,7 +80,7 @@ export default class Floater
      */
     doBounce(): boolean 
     {
-        if (this.floater.getTX() + this.width/2 > getCanvasSize() || this.floater.getTX() - this.floater.getWidth()/2 < 0 || this.floater.getTY() + this.floater.getHeight()/2 > getCanvasSize() || (this.floater.getTY()) - this.floater.getHeight()/2 < 0) {
+        if (this.floater.getTX() + this.width/2 > getCanvasSize(this.sketch) || this.floater.getTX() - this.floater.getWidth()/2 < 0 || this.floater.getTY() + this.floater.getHeight()/2 > getCanvasSize(this.sketch) || (this.floater.getTY()) - this.floater.getHeight()/2 < 0) {
             return true;
         }
         return false;
@@ -91,10 +91,10 @@ export default class Floater
      * @description This method bounces the floater
      */
     bounce() {
-        if (this.floater.getTX() + this.floater.getWidth()/2 > getCanvasSize() || this.floater.getTX() - this.width/2 < 0) {
+        if (this.floater.getTX() + this.floater.getWidth()/2 > getCanvasSize(this.sketch) || this.floater.getTX() - this.width/2 < 0) {
             this.vx = this.vx*-1;
         }
-        if (this.floater.getTY()  + this.floater.getHeight()/2 > getCanvasSize() || this.floater.getTY() - this.floater.getHeight()/2 < 0) {
+        if (this.floater.getTY()  + this.floater.getHeight()/2 > getCanvasSize(this.sketch) || this.floater.getTY() - this.floater.getHeight()/2 < 0) {
             this.vy = this.vy*-1;
         }
         this.sv = this.sv*-1;
@@ -127,7 +127,7 @@ export default class Floater
      */
     randomCoord() 
     {
-        return getRandomInt(0 + this.width/2,getCanvasSize() - this.width/2);
+        return getRandomInt(0 + this.width/2,getCanvasSize(this.sketch) - this.width/2);
     }
 
     /**

@@ -62,7 +62,7 @@ export default class TicTacBoard {
         this.game = gameManager;
         this.tictac = tictac;
         //This is the levelSize
-        this.maxLevelSize = this.tictac.maxLevelSize;
+        this.maxLevelSize = this.tictac.getLevelSize();
         //This is the cache that holds all of the points in the tictac
         this.cache = Array.from({ length: (this.maxLevelSize + 1) }, () => []);;
         //Now we need to cache the points
@@ -294,7 +294,7 @@ export default class TicTacBoard {
     playMove() {
         //modify the tictac. at the spot that is currently selected 
         //*This method must be called assuming that the player is on the right tile
-        this.tictac.setSlot(this.selectedTicTacIndex,this.game.turn);
+        this.tictac.setSlot(this.selectedTicTacIndex,this.game.getTurn());
         this.game.changeTurn(); //Now we change the turn.
         //Next we need to set the cursor to the proper tictac.
         

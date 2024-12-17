@@ -10,15 +10,15 @@
 /**
  * @class Represents a GUI Manager that manages screens in a game.
  */
-class GuiManager {
-    static screens = [];
-    static currentScreen = null;
+export default class GuiManager {
+    static screens: Menu[] = [];
+    static currentScreen: Menu;
 
     /**
      * @function addScreen Adds a screen to the GUI manager.
      * @param {Screen} screen - The screen to be added.
      */
-    static addScreen(screen) {
+    static addScreen(screen: Menu) {
         GuiManager.screens.push(screen);
     }
 
@@ -61,14 +61,20 @@ class GuiManager {
 /**
  * @Class A class that contains all the attributes a screen should have.
  * */
-class Menu {
+export class Menu {
+    public init: Function;
+    public draw: Function;
+    public resize: Function;
+    public id: number;
+
     /**
      * @constructor Initializes the Menu class.
      * @param {*} init 
      * @param {*} draw 
      * @param {*} id 
      */
-    constructor(id,init = function() {},draw = function() {}, resize = function() {}) {
+    constructor(id: number ,init: Function = function() {},draw: Function = function() {}, resize: Function = function() {}) 
+    {
         this.id = id;
         this.init = init;
         this.draw = draw;
@@ -80,7 +86,8 @@ class Menu {
      * @description Sets the init function 
      * @param {} init 
      */
-    setInit(init = function() {}) {
+    setInit(init = function() {}): void 
+    {
         this.init = init;
     }
 
@@ -89,7 +96,8 @@ class Menu {
      * @description Sets the draw function 
      * @param {} draw 
      */
-    setDraw(draw = function() {}) {
+    setDraw(draw = function() {}): void 
+    {
         this.draw = draw;
     }
 
@@ -98,7 +106,8 @@ class Menu {
      * @description Sets the resize function 
      * @param {} resize 
      */
-    setResize(resize = function() {}) {
+    setResize(resize = function() {}): void 
+    {
         this.resize = resize;
     }
 }

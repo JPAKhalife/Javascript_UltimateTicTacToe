@@ -1,5 +1,5 @@
 /**
- * @file ShapeWrapper.js
+ * @file ShapeWrapper.ts
  * @description A file containing the definition of every shape in the game. It is intended to 
  * reduce interaction with p5js shape functions, and create persistence of shapes between frames.
  * @author John Khalife
@@ -8,6 +8,7 @@
  */
 
 import * as p5 from 'p5';
+import { fontmono } from './sketch';
 
 
 /**
@@ -546,12 +547,12 @@ export class Text extends ShapeWrapper {
     private txtxt: number;
     private tytxt: number;
 
-    constructor(text: string, size: number, font: p5.Font, sketch: p5, x: number, y: number, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) 
+    constructor(text: string, x: number, y: number, sketch: p5, size?: number, font?: p5.Font, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) 
     {
         super(sketch, x, y, fill, stroke, strokeWeight);
         this.text = text;
-        this.size = size;
-        this.font = font;
+        this.size = size ?? 10;
+        this.font = font ?? fontmono;
         this.textOrientation = [sketch.LEFT, sketch.BOTTOM];
         this.textbox = false;
         this.txtxt = 0;

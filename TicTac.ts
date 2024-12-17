@@ -87,6 +87,15 @@ export default class TicTac {
     } 
 
     /**
+     * @method getLevelSize
+     * @description This method returns the levelsize of the tictac (number of tictacs inside tictacs)
+     * @returns {number}
+     */
+    public getLevelSize(): number {
+        return this.maxLevelSize;
+    }
+
+    /**
      * @method sendCursor
      * @description This method calculates the next spot for the player's cursor to move.
      * This should also be synced with the server to avoid client side cheating.
