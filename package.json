@@ -2,10 +2,11 @@
   "name": "javascript_ultimatetictactoe",
   "version": "1.0.0",
   "description": "This is a javascript version of the bigtactoe game I made in C++. It will hopefully be better coded. After the game is finished, I will work on converting it to online multiplayer game hosted on my webserver.",
-  "main": "bigtictac.js",
+  "main": "sketch.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.ts"
+    "start": "node server.js"
   },
   "author": "",
   "license": "ISC",
@@ -18,10 +19,15 @@
     "helmet": "^7.1.0",
     "mysql": "^2.18.1",
     "p5": "^1.11.2",
-    "sql": "^0.78.0"
+    "sql": "^0.78.0",
+    "typescript": "^5.7.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "@types/p5": "^1.7.6"
+    "@types/p5": "^1.7.6",
+    "ts-loader": "^9.5.1",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.0"
   }
 }

@@ -13,7 +13,7 @@ RUN npm install
 RUN npm audit fix
 
 # Copy the rest of the application code to the working directory
-COPY . .
+COPY "./out/*" /app/
 
 # Expose the port on which the server will run
 EXPOSE 3000
