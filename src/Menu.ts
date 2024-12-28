@@ -6,50 +6,25 @@
  * @updated 2024-12-09
  */
 
-export const Screens = {
-    SCREEN_NUM: 8,
-    START_SCREEN: 0,
-    SETUP_SCREEN: 1,
-    LOADING_SCREEN:2,
-    HOW_TO_PLAY_SCREEN: 3,
-    CONTROL_SCREEN: 4,
-    GAME_SCREEN: 5,
-    TEST_SCREEN: 6,
+export enum Screens {
+    SCREEN_NUM,
+    START_SCREEN,
+    SETUP_SCREEN,
+    LOADING_SCREEN,
+    HOW_TO_PLAY_SCREEN,
+    CONTROL_SCREEN,
+    GAME_SCREEN,
+    TEST_SCREEN,
 };
 
 /**
  * @Interface A class that contains all the attributes a screen should have.
  * */
 export default interface Menu {
+    //Each Menu will need an ID.
+    getID(): Screens;
     //Each Menu will need a draw funciton
     draw(): void;
     //Each Menu will need a resize function
     resize(): void;
-}
-
-
-
-
-//the weight of the stroke around the btton during the confirmed animation
-
-
-export let createScreens = function(sketch: p5) {
-
-
-
-
-
-
-
-
-
-
-    //Add all of these methods to the GuiManager in their own objects
-    GuiManager.addScreen(startScreen);
-    GuiManager.addScreen(setupScreen);
-    GuiManager.addScreen(loadingScreen);
-    GuiManager.addScreen(howToPlayScreen);
-    GuiManager.addScreen(controlScreen);
-    GuiManager.addScreen(gameScreen);
-    GuiManager.addScreen(testScreen);
 }

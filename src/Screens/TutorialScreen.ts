@@ -24,6 +24,7 @@ export default class TutorialScreen implements Menu {
     private changeScreen: Cutscene;
     private tutorialImages: Img[];
     private paragraphs: ShapeGroup[];
+    private static id: Screens = Screens.HOW_TO_PLAY_SCREEN;
 
 
 
@@ -133,5 +134,9 @@ export default class TutorialScreen implements Menu {
 
     public resize(): void {
 
+    }
+
+    public getID(): Screens {
+        return TutorialScreen.id;
     }
 }

@@ -25,6 +25,7 @@ export default class ControlScreen implements Menu {
     private tutorialImages: ShapeGroup[];
     private paragraphs: ShapeGroup[];
     private changeScreen: Cutscene;
+    private static id: Screens = Screens.CONTROL_SCREEN;
 
     constructor(sketch: p5) {
         this.sketch = sketch;
@@ -126,6 +127,9 @@ export default class ControlScreen implements Menu {
     }
 
     public resize(): void {
+    }
 
+    public getID(): Screens {
+        return ControlScreen.id;
     }
 }

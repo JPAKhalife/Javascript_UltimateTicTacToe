@@ -34,6 +34,7 @@ export default class SetupScreen implements Menu {
     private multiplayer_MenuButton_list: ButtonNav;
     private transition_in: Cutscene;
     private transition_out: Cutscene;
+    private static id: Screens = Screens.SETUP_SCREEN;
 
     constructor(sketch: p5) {
         this.sketch = sketch;
@@ -205,6 +206,10 @@ export default class SetupScreen implements Menu {
 
     public resize(): void {
 
+    }
+
+    public getID(): Screens {
+        return SetupScreen.id;
     }
 }
 

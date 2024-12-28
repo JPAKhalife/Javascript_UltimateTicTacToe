@@ -1,6 +1,4 @@
 #bin/bash
-#Compile typescript
-tsc -v
 #Copy files to dist
 cp ./src/*.html ./out
 cp ./src/*.css ./out

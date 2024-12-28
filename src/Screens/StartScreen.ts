@@ -24,6 +24,7 @@ export default class StartScreen implements Menu {
     private startMessage: Text;
     private s: number;
     private startCutscene: Cutscene;
+    private static id: Screens = Screens.START_SCREEN;
 
 
     constructor(sketch: p5) {
@@ -92,5 +93,9 @@ export default class StartScreen implements Menu {
 
     public resize(): void {
 
+    }
+
+    public getID(): Screens {
+        return StartScreen.id;
     }
 }

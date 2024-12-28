@@ -17,8 +17,7 @@ export const KEY_EVENTS = {
     LEFT: [65,97,37],
     SELECT: [32],
     ESCAPE: [27],
-    NONE: []
-    
+    NONE: [-1]
 }
 
 //this is input delay, measured in frames

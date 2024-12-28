@@ -10,7 +10,7 @@
 import p5 from "p5";
 import GameManager, { GameType } from "../GameManager";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
-import Menu from "../Menu"
+import Menu, { Screens } from "../Menu"
 import TicTacBoard from "../MenuObjects/TicTacBoard";
 import {Text, ShapeGroup } from "../ShapeWrapper";
 import { getCanvasSize, fontmono, HEADER, fontOSDMONO } from "../sketch";
@@ -27,8 +27,9 @@ export default class GameScreen implements Menu {
     private currentPlayerTitle: Text;
     private currentPlayer: Text;
     private info: ShapeGroup;
+    private static id: Screens = Screens.GAME_SCREEN;
 
-    constructor(sketch: p5 ,gameType = GameType.LOCAL, gridSize = 3, gridLevels = 2, lobby = null) {
+    constructor(sketch: p5 ,gameType = GameType.LOCAL, gridSize = 3, gridLevels = 2) {
         this.keylistener = new KeyListener(sketch);
         this.sketch = sketch;
         //Create a game given the parameters passed to the function.
@@ -83,5 +84,9 @@ export default class GameScreen implements Menu {
 
     public resize(): void {
 
+    }
+
+    public getID(): Screens {
+        return GameScreen.id;
     }
 }
