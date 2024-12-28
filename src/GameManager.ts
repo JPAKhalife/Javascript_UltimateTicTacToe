@@ -6,8 +6,8 @@
  * @updated 2024-06-23
  */
 
-import TicTac from "./TicTac.js";
-import {DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER} from "./TicTac.js";
+import TicTac from "./TicTac";
+import {DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER} from "./TicTac";
 
 //This is a constant that holds the types of games that can exist
 export enum GameType {

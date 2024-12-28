@@ -24,8 +24,6 @@ export default class StartScreen implements Menu {
     private startMessage: Text;
     private s: number;
     private startCutscene: Cutscene;
-    private static id: Screens = Screens.START_SCREEN;
-
 
     constructor(sketch: p5) {
         this.sketch = sketch;
@@ -53,27 +51,27 @@ export default class StartScreen implements Menu {
         this.startCutscene = new Cutscene(this.keylistener, this.title,this.author,this.startMessage,this.s);
         
         //Set the animation condition
-        this.startCutscene.setCondition(function() {
+        this.startCutscene.setCondition(() => {
             if ((this.keylistener.listen() == KEY_EVENTS.SELECT) && (!Cutscene.isPlaying)) {
-                this.activate();
+                this.startCutscene.activate();
                 this.keylistener.deactivate();
-            } else if (this.shapes[2].getY() < getCanvasSize()*-1){
-                this.deactivate();
-                GuiManager.changeScreen(Screens.SETUP_SCREEN);
+            } else if (this.startCutscene.getShape(2).getY() < getCanvasSize()*-1){
+                this.startCutscene.deactivate();
+                GuiManager.changeScreen(Screens.SETUP_SCREEN,this.sketch);
             } else {
-                this.shapes[2].setFillAlpha(128 + 128 * this.sketch.sin(this.sketch.millis() / 500));
+                this.startCutscene.getShape(2).setFillAlpha(128 + 128 * this.sketch.sin(this.sketch.millis() / 500));
             }
         });
 
         //Set the animation
-        this.startCutscene.setAnimation(function () {
+        this.startCutscene.setAnimation(() => {
             //Set the y of all three titles - they all move at the same speed
-            this.shapes[0].setY(getCanvasSize()/5 + getCanvasSize()*this.sketch.sin((this.shapes[3]+(100*this.sketch.asin(3/4) + 200*this.sketch.PI))/100) - getCanvasSize()/4*3);
-            this.shapes[1].setY(getCanvasSize()/10*3 + getCanvasSize()*this.sketch.sin((this.shapes[3]+(100*this.sketch.asin(3/4) + 200*this.sketch.PI))/100) - getCanvasSize()/4*3);
-            this.shapes[2].setY(getCanvasSize()/2 + getCanvasSize()*this.sketch.sin((this.shapes[3]+(100*this.sketch.asin(3/4) + 200*this.sketch.PI))/100) - getCanvasSize()/4*3);
-            this.shapes[3]+=2;
+            this.startCutscene.getShape(0).setY(getCanvasSize()/5 + getCanvasSize()*this.sketch.sin((this.startCutscene.getShape(3)+(100*this.sketch.asin(3/4) + 200*this.sketch.PI))/100) - getCanvasSize()/4*3);
+            this.startCutscene.getShape(1).setY(getCanvasSize()/10*3 + getCanvasSize()*this.sketch.sin((this.startCutscene.getShape(3)+(100*this.sketch.asin(3/4) + 200*this.sketch.PI))/100) - getCanvasSize()/4*3);
+            this.startCutscene.getShape(2).setY(getCanvasSize()/2 + getCanvasSize()*this.sketch.sin((this.startCutscene.getShape(3)+(100*this.sketch.asin(3/4) + 200*this.sketch.PI))/100) - getCanvasSize()/4*3);
+            this.startCutscene.setShape(3,this.startCutscene.getShape(3) + 2);
             //Increase the flashing of the bottom titles
-            this.shapes[2].setFillAlpha(128 * this.sketch.sin(this.sketch.millis() / 50));
+            this.startCutscene.getShape(2).setFillAlpha(128 * this.sketch.sin(this.sketch.millis() / 50));
 
         });
 
@@ -93,9 +91,5 @@ export default class StartScreen implements Menu {
 
     public resize(): void {
 
-    }
-
-    public getID(): Screens {
-        return StartScreen.id;
     }
 }

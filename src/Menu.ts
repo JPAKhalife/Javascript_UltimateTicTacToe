@@ -11,7 +11,7 @@ export enum Screens {
     START_SCREEN,
     SETUP_SCREEN,
     LOADING_SCREEN,
-    HOW_TO_PLAY_SCREEN,
+    TUTORIAL_SCREEN,
     CONTROL_SCREEN,
     GAME_SCREEN,
     TEST_SCREEN,
@@ -21,8 +21,6 @@ export enum Screens {
  * @Interface A class that contains all the attributes a screen should have.
  * */
 export default interface Menu {
-    //Each Menu will need an ID.
-    getID(): Screens;
     //Each Menu will need a draw funciton
     draw(): void;
     //Each Menu will need a resize function

@@ -6,7 +6,7 @@
  * @updated 2024-06-23
  */
 
-import KeyListener from "./KeyListener.js";
+import KeyListener from "./KeyListener";
 
 /**
  * @class Cutscene

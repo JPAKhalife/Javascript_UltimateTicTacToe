@@ -8,8 +8,8 @@
 
 import p5 from "p5";
 
-import GameManager from "../GameManager.js";
-import TicTac from "../TicTac.js";
+import GameManager from "../GameManager";
+import TicTac from "../TicTac";
 
 //creating the object type smalltictac.
 export default class TicTacBoard {
@@ -64,7 +64,7 @@ export default class TicTacBoard {
         //This is the levelSize
         this.maxLevelSize = this.tictac.getLevelSize();
         //This is the cache that holds all of the points in the tictac
-        this.cache = Array.from({ length: (this.maxLevelSize + 1) }, () => []);;
+        this.cache = Array.from({ length: this.maxLevelSize + 1 },() => [] as any[]);
         //Now we need to cache the points
         this.cachePoints();
         this.sketch = sketch;

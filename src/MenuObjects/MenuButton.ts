@@ -7,8 +7,8 @@
  */
 
 import * as p5 from 'p5';
-import { getCanvasSize } from '../sketch.js';
-import Button from './Button.js';
+import { getCanvasSize } from '../sketch';
+import Button from './Button';
 
 export default class MenuButton implements Button
 {

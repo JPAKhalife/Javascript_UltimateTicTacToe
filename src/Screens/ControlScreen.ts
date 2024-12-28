@@ -25,7 +25,6 @@ export default class ControlScreen implements Menu {
     private tutorialImages: ShapeGroup[];
     private paragraphs: ShapeGroup[];
     private changeScreen: Cutscene;
-    private static id: Screens = Screens.CONTROL_SCREEN;
 
     constructor(sketch: p5) {
         this.sketch = sketch;
@@ -97,7 +96,7 @@ export default class ControlScreen implements Menu {
                         //If we are at the end, change the screen
                         this.changeScreen.deactivate();
                         this.keylistener.activate();
-                        GuiManager.changeScreen(Screens.SETUP_SCREEN);
+                        GuiManager.changeScreen(Screens.SETUP_SCREEN,this.sketch);
                     } else {
                         this.changeScreen.getShape(2).opacity = 0;
                         this.changeScreen.getShape(0)[this.changeScreen.getShape(2).value].callFunction('setTint',0);
@@ -127,9 +126,5 @@ export default class ControlScreen implements Menu {
     }
 
     public resize(): void {
-    }
-
-    public getID(): Screens {
-        return ControlScreen.id;
     }
 }

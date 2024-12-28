@@ -27,7 +27,6 @@ export default class GameScreen implements Menu {
     private currentPlayerTitle: Text;
     private currentPlayer: Text;
     private info: ShapeGroup;
-    private static id: Screens = Screens.GAME_SCREEN;
 
     constructor(sketch: p5 ,gameType = GameType.LOCAL, gridSize = 3, gridLevels = 2) {
         this.keylistener = new KeyListener(sketch);
@@ -84,9 +83,5 @@ export default class GameScreen implements Menu {
 
     public resize(): void {
 
-    }
-
-    public getID(): Screens {
-        return GameScreen.id;
     }
 }

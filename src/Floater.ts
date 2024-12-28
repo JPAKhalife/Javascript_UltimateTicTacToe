@@ -7,8 +7,8 @@
  */
 
 import * as p5 from 'p5';
-import { Img } from './ShapeWrapper.js';
-import { getCanvasSize, getRandomInt } from './sketch.js';
+import { Img } from './ShapeWrapper';
+import { getCanvasSize, getRandomInt } from './sketch';
 
 
 /**

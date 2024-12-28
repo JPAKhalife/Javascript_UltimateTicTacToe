@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",          // Compile to CommonJS
+    "target": "es6",               // Set target to ES6 (or higher)
+    "moduleResolution": "node",    // Helps TypeScript understand Node.js module resolution
+    "esModuleInterop": true,       // Ensures compatibility with CommonJS modules
+    "outDir": "./dist",            // Output directory
+    "rootDir": "./src",            // Source directory
+    "strict": true,                // Optional, for strict type checking
+    "resolveJsonModule": true      // If you need to import JSON files
+  },
+  "include": ["src/server.ts"],      // Include all TypeScript files
+  "exclude": ["node_modules"]      // Exclude node_modules
+}

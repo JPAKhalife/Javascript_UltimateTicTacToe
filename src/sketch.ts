@@ -8,9 +8,17 @@
 *                                                                                             *
 **********************************************************************************************/
 
+
 import P5, { Image, Font } from 'p5';
-import GuiManager from './GuiManager.js';
-import {createScreens, Screens} from './Menu.js';
+import GuiManager from './GuiManager';
+import {Screens} from './Menu';
+import ControlScreen from './Screens/ControlScreen';
+import GameScreen from './Screens/GameScreen';
+import LoadingScreen from './Screens/LoadingScreen';
+import SetupScreen from './Screens/SetupScreen';
+import StartScreen from './Screens/StartScreen';
+import TestScreen from './Screens/TestScreen';
+import TutorialScreen from './Screens/TutorialScreen';
 
 // This file is meant to be the home of the class for the larger tic tac that holds all the other small tic tacs.
 // this file is meant to hold the class for the small tic tac.
@@ -74,20 +82,23 @@ const sketch = (p5: P5) => {
         {
             //creating the canvas at the size of the window, setting the canvas to a variable.
             const canvas = p5.createCanvas(getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100, getSmallestWindowSize() - getSmallestWindowSize()*WINDOW_MARGIN/100);
-            canvas.parent("app");
-    
-            //Create the screen objects.
-            createScreens(p5);
-            //making sure that the canvas does not accidentally make a scroll bar appear on different browsers.
-            //cnv.style("display", "block");
-        
-            //framerate
+            let container = document.getElementById('canvas');
+            canvas.parent("canvas");
+
+            //framerate (should ideally be 60)
             p5.frameRate(FRAMERATE);
         
-            GuiManager.changeScreen(Screens.TEST_SCREEN);
-        
+            //Add all screen types to the gui manager
+            GuiManager.addScreen(ControlScreen,Screens.CONTROL_SCREEN);
+            GuiManager.addScreen(GameScreen,Screens.GAME_SCREEN);
+            GuiManager.addScreen(LoadingScreen,Screens.LOADING_SCREEN);
+            GuiManager.addScreen(SetupScreen,Screens.SETUP_SCREEN);
+            GuiManager.addScreen(StartScreen,Screens.START_SCREEN);
+            GuiManager.addScreen(TestScreen,Screens.TEST_SCREEN);
+            GuiManager.addScreen(TutorialScreen,Screens.TUTORIAL_SCREEN);
+            //Change the screen to the default
+            GuiManager.changeScreen(Screens.TEST_SCREEN,p5);
             p5.background(255);
-        
         }
 
         //This method gets called over and over by the p5 library in a loop

@@ -34,7 +34,6 @@ export default class SetupScreen implements Menu {
     private multiplayer_MenuButton_list: ButtonNav;
     private transition_in: Cutscene;
     private transition_out: Cutscene;
-    private static id: Screens = Screens.SETUP_SCREEN;
 
     constructor(sketch: p5) {
         this.sketch = sketch;
@@ -122,15 +121,15 @@ export default class SetupScreen implements Menu {
                 this.keylistener.activate();
                 //In the event that the online or local button is pushed, we want to set up the x and y values for a transition
                 if (this.transition_out.getShape(0).currentlySelected.phrase == 'Online') {
-                    GuiManager.changeScreen(Screens.LOADING_SCREEN);
+                    GuiManager.changeScreen(Screens.LOADING_SCREEN,this.sketch);
                 } else if (this.transition_out.getShape(0).currentlySelected.phrase == 'Local') {
-                    GuiManager.changeScreen(Screens.GAME_SCREEN);
+                    GuiManager.changeScreen(Screens.GAME_SCREEN,this.sketch);
                 } else if (this.transition_out.getShape(0).currentlySelected.phrase == 'Controls') {
-                    GuiManager.changeScreen(Screens.CONTROL_SCREEN)
+                    GuiManager.changeScreen(Screens.CONTROL_SCREEN,this.sketch)
                 } else if (this.transition_out.getShape(0).currentlySelected.phrase == 'How to play') {
-                    GuiManager.changeScreen(Screens.HOW_TO_PLAY_SCREEN);
+                    GuiManager.changeScreen(Screens.TUTORIAL_SCREEN,this.sketch);
                 } else {
-                    GuiManager.changeScreen(Screens.START_SCREEN);
+                    GuiManager.changeScreen(Screens.START_SCREEN,this.sketch);
                 }
             }
         });
@@ -206,10 +205,6 @@ export default class SetupScreen implements Menu {
 
     public resize(): void {
 
-    }
-
-    public getID(): Screens {
-        return SetupScreen.id;
     }
 }
 

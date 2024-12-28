@@ -23,7 +23,6 @@ export default class TestScreen implements Menu {
     private board: TicTacBoard;
     private keylistener: KeyListener;
     private sketch: p5
-    private static id: Screens = Screens.TEST_SCREEN;
     
     constructor(sketch: p5) {
         this.sketch = sketch
@@ -58,9 +57,5 @@ export default class TestScreen implements Menu {
 
     public resize(): void {
         this.board.cachePoints();
-    }
-
-    public getID(): Screens {
-        return TestScreen.id;
     }
 }

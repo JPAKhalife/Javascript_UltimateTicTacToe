@@ -1,0 +1,15 @@
+
+  {
+    "compilerOptions": {
+      "module": "esnext",            // Compile to ES Modules
+      "target": "es6",               // Set target to ES6 (or higher)
+      "moduleResolution": "node",    // Helps TypeScript understand module resolution
+      "esModuleInterop": true,       // Ensures compatibility with CommonJS modules if needed
+      "outDir": "./dist",            // Output directory
+      "rootDir": "./src",            // Source directory
+      "strict": true                 // Optional, for strict type checking
+    },
+    "include": ["src/**/*.ts"],      // Include all TypeScript files in the 'src' directory
+    "exclude": ["node_modules"]      // Exclude node_modules
+  }
+  

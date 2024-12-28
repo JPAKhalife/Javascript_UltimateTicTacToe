@@ -1,9 +1,10 @@
 #bin/bash
 #Copy files to dist
-cp ./src/*.html ./out
-cp ./src/*.css ./out
+cp ./src/*.html ./dist/
+cp ./src/*.css ./dist/
 #Bundle files
-npx webpack
+npx webpack --config webpack-back.config.js 
+npx webpack --config webpack-front.config.js 
 #Erase old containerz
 docker-compose down
 docker container prune -f

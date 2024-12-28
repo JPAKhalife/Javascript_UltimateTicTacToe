@@ -25,9 +25,6 @@ export default class LoadingScreen implements Menu {
     private loadingMessage: Text;
     private transition_in: Cutscene;
     private loadCutscene: Cutscene;
-    private static id: Screens = Screens.LOADING_SCREEN;
-
-    
 
     constructor(sketch: p5) {
         this.sketch = sketch;
@@ -122,9 +119,5 @@ export default class LoadingScreen implements Menu {
     }
 
     public resize(): void {
-    }
-
-    public getID(): Screens {
-        return LoadingScreen.id;
     }
 }

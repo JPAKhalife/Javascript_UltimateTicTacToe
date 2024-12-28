@@ -24,9 +24,6 @@ export default class TutorialScreen implements Menu {
     private changeScreen: Cutscene;
     private tutorialImages: Img[];
     private paragraphs: ShapeGroup[];
-    private static id: Screens = Screens.HOW_TO_PLAY_SCREEN;
-
-
 
     constructor(sketch: p5) {
         this.sketch = sketch;
@@ -82,42 +79,42 @@ export default class TutorialScreen implements Menu {
             }
         });
     
-        this.changeScreen.setAnimation(function () {
+        this.changeScreen.setAnimation(() => {
             //Check if we are transitioning in
-            if (this.shapes[3]) {
+            if (this.changeScreen.getShape(3)) {
                 //If we are, fade in
-                if (this.shapes[2].opacity < 255) {
-                    this.shapes[2].opacity += 255/TUTORIAL_SCREEN_TRANSITION_TIME;
+                if (this.changeScreen.getShape(2).opacity < 255) {
+                    this.changeScreen.getShape(2).opacity += 255/TUTORIAL_SCREEN_TRANSITION_TIME;
                 } else {
                     //Once we have completely faded in, set the transition in to false,
                     //And end the animation.
-                    this.shapes[3] = false;
-                    this.deactivate();
+                    this.changeScreen.setShape(3,false);
+                    this.changeScreen.deactivate();
                     this.keylistener.activate();
                 }
             } else {
                 //We are transitioning out
-                if (this.shapes[2].opacity > 0) {
-                    this.shapes[2].opacity -= 255/TUTORIAL_SCREEN_TRANSITION_TIME;
+                if (this.changeScreen.getShape(2).opacity > 0) {
+                    this.changeScreen.getShape(2).opacity -= 255/TUTORIAL_SCREEN_TRANSITION_TIME;
                 } else {
                     //Once we have faded out, it is time to fade in.
-                    this.shapes[3] = true;
-                    if (this.shapes[2].value >= this.shapes[0].length - 1) {
+                    this.changeScreen.setShape(3,true);
+                    if (this.changeScreen.getShape(2).value >= this.changeScreen.getShape(0).length - 1) {
                         //If we are at the end, change the screen
-                        this.deactivate();
+                        this.changeScreen.deactivate();
                         this.keylistener.activate();
-                        GuiManager.changeScreen(Screens.SETUP_SCREEN);
+                        GuiManager.changeScreen(Screens.SETUP_SCREEN,this.sketch);
                     } else {
-                        this.shapes[2].opacity = 0;
-                        this.shapes[0][this.shapes[2].value].setTint(0);
-                        this.shapes[1][this.shapes[2].value].callFunction('setFill',255,255,255,0);
-                        this.shapes[2].value++;
+                        this.changeScreen.getShape(2).opacity = 0;
+                        this.changeScreen.getShape(0)[this.changeScreen.getShape(2).value].setTint(0);
+                        this.changeScreen.getShape(1)[this.changeScreen.getShape(2).value].callFunction('setFill',255,255,255,0);
+                        this.changeScreen.getShape(2).value++;
                     }
                 }
             }
             //While the animation is going, set the tint no matter what
-            this.shapes[0][this.shapes[2].value].setTint(this.shapes[2].opacity);
-            this.shapes[1][this.shapes[2].value].callFunction('setFill',255,255,255,this.shapes[2].opacity);
+            this.changeScreen.getShape(0)[this.changeScreen.getShape(2).value].setTint(this.changeScreen.getShape(2).opacity);
+            this.changeScreen.getShape(1)[this.changeScreen.getShape(2).value].callFunction('setFill',255,255,255,this.changeScreen.getShape(2).opacity);
         });
     
         this.changeScreen.activate();
@@ -134,9 +131,5 @@ export default class TutorialScreen implements Menu {
 
     public resize(): void {
 
-    }
-
-    public getID(): Screens {
-        return TutorialScreen.id;
     }
 }

@@ -8,7 +8,7 @@
  */
 
 import * as p5 from 'p5';
-import { fontmono } from './sketch.js';
+import { fontmono } from './sketch';
 
 
 /**
@@ -403,7 +403,7 @@ export default abstract class ShapeWrapper {
 }
 
 /**
- * @class A wrapper for the rectangle class of p5.js
+ * @class A wrapper for the rectangle class of p5
  */
 export class Rectangle extends ShapeWrapper {
 
@@ -476,7 +476,7 @@ export class Rectangle extends ShapeWrapper {
 
 /**
  * @class Image
- * @description A wrapper for the image class of p5.js
+ * @description A wrapper for the image class of p5
  * @extends ShapeWrapper
  * @constructor
  * @param {p5.Image} img - The image to display.
@@ -523,7 +523,7 @@ export class Img extends Rectangle {
 }
 
 /**
- * @class A wrapper for the text class of p5.js
+ * @class A wrapper for the text class of p5
  * @description A class representing a text shape.
  * @extends ShapeWrapper
  * @constructor
