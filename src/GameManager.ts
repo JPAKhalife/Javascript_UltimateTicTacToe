@@ -34,9 +34,25 @@ export default class GameManager {
         //This is initialized with recursion
         this.board = new TicTac(gridLevels); //TODO: Create a constant for the number of tictacs inside tictacs u
         //This is used to keep track of the current player's turn
-        this.turn = 0;
+        this.turn = 1;
         this.isWon = false;
         this.playerNumber = DEFAULT_PLAYER_NUMBER;
+    }
+
+    /**
+     * @method playMove
+     * @description This method is used whenever the player makes a move on the grid.
+     * @returns A boolean representing whether or not a move was played
+     */
+    public playMove(cursorCol: number, cursorRow: number): boolean 
+    {
+        //Step one: Make the move on the tictac
+        if (this.board.updateSlot(this.turn,cursorCol,cursorRow)) {
+            this.changeTurn(); //change the turn, step two
+            //TODO: Step three: I don't know yet
+            return true;
+        }
+        return false; 
     }
 
     // updateSlot(tictac: TicTac, row: number,col: number): void 
@@ -175,6 +191,6 @@ export default class GameManager {
      */
     changeTurn(): void
     {
-        this.turn = (this.turn + 1) % this.playerNumber;
+        this.turn = (this.turn % this.playerNumber) + 1;
     }
 }

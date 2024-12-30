@@ -33,7 +33,7 @@ export default class GameScreen implements Menu {
         this.sketch = sketch;
         //Create a game given the parameters passed to the function.
         this.game = new GameManager(gameType,gridSize,gridLevels);
-        this.board = new TicTacBoard(this.sketch,this.game,this.game.getBoard(),getCanvasSize()/2,getCanvasSize()/2,getCanvasSize());
+        this.board = new TicTacBoard(this.sketch,this.game,getCanvasSize()/2,getCanvasSize()/2,getCanvasSize());
 
         //Despite that however, I need to display slightly different information depending on whether or not this is an online or offline game.
         //So the tictac will need to have a status attribute which keeps track of whether or not it is online or offline.
@@ -77,7 +77,7 @@ export default class GameScreen implements Menu {
         } else if (keyEvent == KEY_EVENTS.RIGHT) {
             this.board.cursorRight();
         } else if (keyEvent == KEY_EVENTS.SELECT) {
-            this.board.playMove();
+            this.board.selectTicTac();
         }
     }
 

@@ -20,8 +20,6 @@ export default class TicTacBoard {
     private lineNum: number;
     private cursorRow: number;
     private cursorCol: number;
-    private selectedLevelSize: number;
-    private selectedTicTacIndex: number;
     private cursorOn: boolean;
     private game: GameManager;
     private tictac: TicTac;
@@ -166,6 +164,7 @@ export default class TicTacBoard {
             case 2:
                 //Draw an O
                 this.sketch.stroke(255);
+                this.sketch.noFill();
                 this.sketch.ellipseMode(this.sketch.CENTER)
                 this.sketch.ellipse(x + size/2,y + size/2,size*(TicTacBoard.SMALLEST_BOARD_PERCENT/100),size*(TicTacBoard.SMALLEST_BOARD_PERCENT/100));
             break;
@@ -204,7 +203,7 @@ export default class TicTacBoard {
      * @returns An integer from 0 - GRIDSIZE - 1
      */
     private getCol(levelSize: number,index: number) {
-        return this.getRelativeIndex(levelSize,index) % this.GRID_SIZE;
+        return this.tictac.getRelativeIndex(levelSize,index) % this.GRID_SIZE;
     }
 
     /**
@@ -215,7 +214,7 @@ export default class TicTacBoard {
      */
     private getRow(levelSize: number,index: number) {
         //The index needs to be reduced to a number out of nine.
-        return Math.floor(this.getRelativeIndex(levelSize,index) / this.GRID_SIZE);
+        return Math.floor(this.tictac.getRelativeIndex(levelSize,index) / this.GRID_SIZE);
     }
 
     /**
@@ -224,29 +223,7 @@ export default class TicTacBoard {
      * This is done because the selectedIndex stored in tictac is absolute.
      */
     private getCacheIndex(): number {
-        return this.tictac.getSelectedIndex()/(this.tictac.getSelectedLevel());
-    }
-
-    /**
-     * This method returns the spot in the tictac we are looking for.
-     * @param {*} levelSize 
-     * @param {*} index 
-     * @returns  returns a number between 0 - GRIDSIZE*GRIDSZE - 1
-     */
-    private getRelativeIndex(levelSize: number,index: number) {
-        //So the first thing to do is check the levelsize.
-        //We do this to get the number of spots a single tictac of levelSize is supposed to envelop
-        //Legend: Levelsize of 0 would represent the largest tictac, levelsize of say 1 would be smallest tictacs on a standard board
-        //That means the total number of slots envoloped by one tictac of that size would be 
-        let size = (this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - levelSize);
-        //Now we need to find a multiple of size that is the closest value to index - where it must be below index by a max of size.
-        let factor = Math.floor(index/size);
-        //Now to get the tictac, it would be
-        let range = index - factor*size;
-        //Then we need to divide range by this.GRIDSIZE*this.GRIDSIZE, so that we can split it into that many and return a number from 
-        let divisions = Math.floor((size)/(this.GRID_SIZE*this.GRID_SIZE));
-        //Then we find how many times divisions fits into range
-        return Math.floor(range/divisions);
+        return this.tictac.getSelectedIndex();
     }
 
     /**
@@ -301,11 +278,13 @@ export default class TicTacBoard {
         //*This method must be called assuming that the player is on the right tile
         //TODO: This method must already know the current turn. should take no parameters.
         //* invoke these methods through the game manager
-        this.tictac.setSlot(this.tictac.getSelectedIndex(),this.game.getTurn());
-        this.game.changeTurn(); //Now we change the turn.
-        //The previous two methods handle setting the appropriate locations, so just reset the cursor pos
-        this.cursorCol = 0;
-        this.cursorRow = 0;
+        if (this.game.playMove(this.cursorCol,this.cursorRow)) {
+            this.cursorCol = 0;
+            this.cursorRow = 0;
+            return;
+        }
+        //TODO: Make the cursor wobble a little bit.
+
     }
     
     /**
@@ -315,10 +294,10 @@ export default class TicTacBoard {
             this.sketch.rectMode(this.sketch.CORNER);
             this.sketch.noFill();
             this.sketch.strokeWeight(5);
-            this.sketch.rect(this.cache[this.selectedLevelSize][this.getCacheIndex() + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
-                this.cache[this.selectedLevelSize][this.getCacheIndex() + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
-                this.calculateSize(this.selectedLevelSize),
-                this.calculateSize(this.selectedLevelSize));
+            this.sketch.rect(this.cache[this.tictac.getSelectedLevel()][this.getCacheIndex() + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
+                this.cache[this.tictac.getSelectedLevel()][this.getCacheIndex() + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
+                this.calculateSize(this.tictac.getSelectedLevel()),
+                this.calculateSize(this.tictac.getSelectedLevel()));
     }
 
     /**
@@ -328,20 +307,17 @@ export default class TicTacBoard {
         if (this.tictac.getSelectedLevel() == this.tictac.getLevelSize()) {
             this.playMove();
         } else {
-            this.tictac.selectSpot(this.cursorCol,this.cursorRow);
+            this.tictac.selectSlot(this.cursorCol,this.cursorRow);
+            this.cursorCol = 0;
+            this.cursorRow = 0;
         }
-        this.cursorCol = 0;
-        this.cursorRow = 0;
+        
     }
 
     /**
      * This method is responsible for deleselecting the tictac
      */
     public deselectTicTac() {
-        this.selectedLevelSize--;
-        // if (this.selectedLevelSize == 0) {
-            
-        // }
         this.cursorCol = 0;
         this.cursorRow = 0;
     }

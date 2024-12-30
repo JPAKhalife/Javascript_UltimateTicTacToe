@@ -28,7 +28,7 @@ export default class TicTac {
         //Grid size constant
         this.maxLevelSize = maxLevelSize;
         //Initialize the board with a grid of zeroes
-        this.grid = Array((this.GRID_SIZE*this.GRID_SIZE)**this.maxLevelSize).fill(1);
+        this.grid = Array((this.GRID_SIZE*this.GRID_SIZE)**this.maxLevelSize).fill(0);
         //We set the state variable - indicating if tic tac is active or not
         //! Potentially unnecessary
         this.state = TicTacState.ONGOING;
@@ -56,7 +56,7 @@ export default class TicTac {
      * @param index {number}
      * @param item {number}
      */
-    public setSlot(index: number,item: number): void 
+    private setSlot(index: number,item: number): void 
     {
         this.grid[index] = item;
     }
@@ -119,6 +119,64 @@ export default class TicTac {
      */
     public getSelectedIndex(): number {
         return this.selectedIndex;
+    }
+
+    /**
+     * @method selectSlot
+     * @description modifies the selected level and size variables to reflect the slot selected by the player.
+     * @param cursorCol - a number signifying the 
+     */
+    public selectSlot(cursorCol: number, cursorRow: number) {
+        //*Level size should be incremented by one to indicate the size of the cursor/level of tictac that is selected.
+        this.selectedLevel++; 
+        //*Selected tictac size needs to be added to by cursor position (toget the selected tictac pos), then multiplied by the number of slots in a tictac.
+        this.selectedIndex += (this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE)*(this.GRID_SIZE*this.GRID_SIZE);
+        console.log("multiplied the selectedIndexTo: " + this.selectedIndex);
+        console.log("The selected levelSize is: " + this.selectedLevel);
+    }
+
+    /**
+     * @method updateSlot
+     * @description This method sets a spot in the tictac and updates the position accordingly
+     * @param turn - the value that the slot will be set to.
+     * @param cursorCol - the column of the tictac that the cursor was in
+     * @param cursorRow - the row of the tictac that the cursor was in 
+     * @returns boolean that says whether or not the placement was successful
+     */
+    public updateSlot(turn: number, cursorCol: number, cursorRow: number): boolean {
+        if (this.grid[this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE] != 0) {
+            return false;
+        }
+        this.grid[this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE] = turn; //Set the new slot
+        //Now where should I send the user?
+        //For now, keep the user on the same levelsize, send them to the equivalent square
+        this.selectedIndex -= ((this.GRID_SIZE*this.GRID_SIZE))*this.getRelativeIndex(this.selectedLevel - 2,this.selectedIndex); //Go to the first "index"
+        this.selectedIndex += (cursorCol + cursorRow*this.GRID_SIZE)*(this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - (this.selectedLevel - 1));
+        return true;
+    }
+
+
+    /**
+     * @method getRelativeIndex 
+     * @description This method returns the spot in the tictac we are looking for.
+     * @param {*} levelSize 
+     * @param {*} index 
+     * @returns  returns a number between 0 - GRIDSIZE*GRIDSZE - 1
+     */
+    public getRelativeIndex(levelSize: number,index: number) {
+        //So the first thing to do is check the levelsize.
+        //We do this to get the number of spots a single tictac of levelSize is supposed to envelop
+        //Legend: Levelsize of 0 would represent the largest tictac, levelsize of say 1 would be smallest tictacs on a standard board
+        //That means the total number of slots envoloped by one tictac of that size would be 
+        let size = (this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - levelSize);
+        //Now we need to find a multiple of size that is the closest value to index - where it must be below index by a max of size.
+        let factor = Math.floor(index/size);
+        //Now to get the tictac, it would be
+        let range = index - factor*size;
+        //Then we need to divide range by this.GRIDSIZE*this.GRIDSIZE, so that we can split it into that many and return a number from 
+        let divisions = Math.floor((size)/(this.GRID_SIZE*this.GRID_SIZE));
+        //Then we find how many times divisions fits into range
+        return Math.floor(range/divisions);
     }
 
     /**
