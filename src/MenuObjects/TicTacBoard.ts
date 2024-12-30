@@ -41,26 +41,22 @@ export default class TicTacBoard {
      * @param {*} y 
      * @param {*} gridSize 
      */
-    constructor(sketch:p5, gameManager: GameManager,tictac: TicTac, x: number,y: number,gridSize: number) {
+    constructor(sketch:p5, gameManager: GameManager, x: number,y: number,gridSize: number) {
         //Size and location
         this.gridSize = gridSize*TicTacBoard.BOARD_SHRINK_CONSTANT; 
         this.x = x - this.gridSize/2;
         this.y = y - this.gridSize /2;
-        this.GRID_SIZE = tictac.getGridSize();
+        this.GRID_SIZE = gameManager.getBoard().getGridSize();
         //These variables help with the line sizing.
         this.lineNum = this.GRID_SIZE - 1;
         // What section is selected by the player 
         // Coordinates of the cursor on the tictac
         this.cursorRow = 0;
         this.cursorCol = 0;
-        //This represents what levelsize the selected tictac is
-        this.selectedLevelSize = 1;
-        //This represents the index of the selected tictac
-        this.selectedTicTacIndex = 0;
         this.cursorOn = true; //Whether or not the cursor should be rendered.
         //we take the tictac as a pointer to the tictac this tictac is responsible for displaying
         this.game = gameManager;
-        this.tictac = tictac;
+        this.tictac = gameManager.getBoard();
         //This is the levelSize
         this.maxLevelSize = this.tictac.getLevelSize();
         //This is the cache that holds all of the points in the tictac
@@ -73,7 +69,7 @@ export default class TicTacBoard {
     /**
      * This method is intended to cache every single point of the tictac.
      */
-    cachePoints() {
+    public cachePoints() {
         for (let i = 0 ; i <= this.maxLevelSize ; i++) {
             let space = ((this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - i));
             for (let j = 0 ; j < this.tictac.getArraySize()/space ; j++) {
@@ -95,7 +91,7 @@ export default class TicTacBoard {
     /**
      * This method is responsible for rendering the tictac + the cursor on the tictac
      */
-    draw() {
+    public draw() {
         //*The plan: one loop to draw tictacs and larger symbols
         //*Another loop to draw the smallest symbols
         //*This avoids a number of if checks
@@ -138,7 +134,7 @@ export default class TicTacBoard {
      * @param {*} levelSize - How deep in the Big TicTac we are
      * @param {*} cacheIndex - the index of the coordinates to draw the tictac
      */
-    drawTicTac(levelSize: number,cacheIndex: number) {
+    private drawTicTac(levelSize: number,cacheIndex: number) {
         let size = this.calculateSize(levelSize);
         let x = this.cache[levelSize][cacheIndex][0];
         let y = this.cache[levelSize][cacheIndex][1];
@@ -149,7 +145,7 @@ export default class TicTacBoard {
         }
     }
 
-    drawIcon(levelSize: number, tictacIndex: number, cacheIndex: number) {
+    private drawIcon(levelSize: number, tictacIndex: number, cacheIndex: number) {
         //Get the size
         let size = this.calculateSize(levelSize);
         //Get the coordinates from the cache
@@ -188,7 +184,7 @@ export default class TicTacBoard {
      * @param {*} levelSize 
      * @returns a float containing the size
      */
-    calculateSize(levelSize: number) {
+    private calculateSize(levelSize: number) {
         return this.gridSize*((TicTacBoard.BOARD_SHRINK_CONSTANT/(this.GRID_SIZE))**(levelSize));
     }
 
@@ -197,7 +193,7 @@ export default class TicTacBoard {
      * @param {*} levelSize 
      * @returns margin size (float)
      */
-    calculateMarginSize(levelSize: number) {
+    private calculateMarginSize(levelSize: number) {
         return ((this.calculateSize(levelSize)/TicTacBoard.BOARD_SHRINK_CONSTANT) * (1 - TicTacBoard.BOARD_SHRINK_CONSTANT));
     }
 
@@ -207,7 +203,7 @@ export default class TicTacBoard {
      * @param {*} index 
      * @returns An integer from 0 - GRIDSIZE - 1
      */
-    getCol(levelSize: number,index: number) {
+    private getCol(levelSize: number,index: number) {
         return this.getRelativeIndex(levelSize,index) % this.GRID_SIZE;
     }
 
@@ -217,9 +213,18 @@ export default class TicTacBoard {
      * @param {*} index 
      * @returns An integer from 0 - GRIDSIZE - 1
      */
-    getRow(levelSize: number,index: number) {
+    private getRow(levelSize: number,index: number) {
         //The index needs to be reduced to a number out of nine.
         return Math.floor(this.getRelativeIndex(levelSize,index) / this.GRID_SIZE);
+    }
+
+    /**
+     * @method getCacheIndex
+     * @description This tictac returns the index (second array dimension) of the cache coordinates for the selected position.
+     * This is done because the selectedIndex stored in tictac is absolute.
+     */
+    private getCacheIndex(): number {
+        return this.tictac.getSelectedIndex()/(this.tictac.getSelectedLevel());
     }
 
     /**
@@ -228,7 +233,7 @@ export default class TicTacBoard {
      * @param {*} index 
      * @returns  returns a number between 0 - GRIDSIZE*GRIDSZE - 1
      */
-    getRelativeIndex(levelSize: number,index: number) {
+    private getRelativeIndex(levelSize: number,index: number) {
         //So the first thing to do is check the levelsize.
         //We do this to get the number of spots a single tictac of levelSize is supposed to envelop
         //Legend: Levelsize of 0 would represent the largest tictac, levelsize of say 1 would be smallest tictacs on a standard board
@@ -247,7 +252,7 @@ export default class TicTacBoard {
     /**
      * This method moves the cursor up
      */
-    cursorUp() {
+    public cursorUp() {
         if (this.cursorRow <= 0) {
             this.cursorRow = this.GRID_SIZE - 1;
         } else {
@@ -258,7 +263,7 @@ export default class TicTacBoard {
     /**
      * This method moves the cursor down
      */
-    cursorDown() {
+    public cursorDown() {
         if (this.cursorRow >= this.GRID_SIZE - 1) {
             this.cursorRow = 0;
         } else {
@@ -269,7 +274,7 @@ export default class TicTacBoard {
     /**
      * This method moves the cursor left
      */
-    cursorLeft() {
+    public cursorLeft() {
         if (this.cursorCol <= 0) {
             this.cursorCol = this.GRID_SIZE - 1;
         } else {
@@ -280,7 +285,7 @@ export default class TicTacBoard {
     /**
      * This method moves the cursor right
      */
-    cursorRight() {
+    public cursorRight() {
         if (this.cursorCol >= this.GRID_SIZE - 1) {
             this.cursorCol = 0;
         } else {
@@ -291,36 +296,27 @@ export default class TicTacBoard {
     /**
      * This method requests a change to be made to the board
      */
-    playMove() {
-        //modify the tictac. at the spot that is currently selected 
+    private playMove() {
+        //*Modify the tictac. at the spot that is currently selected 
         //*This method must be called assuming that the player is on the right tile
-        this.tictac.setSlot(this.selectedTicTacIndex,this.game.getTurn());
+        //TODO: This method must already know the current turn. should take no parameters.
+        //* invoke these methods through the game manager
+        this.tictac.setSlot(this.tictac.getSelectedIndex(),this.game.getTurn());
         this.game.changeTurn(); //Now we change the turn.
-        //Next we need to set the cursor to the proper tictac.
-        
-
-        if (this.selectedLevelSize != 0) {
-            //In order to calculate the next spot to send the cursor to, we need to find the equivalent spot in the previous levelsize
-            this.selectedTicTacIndex = Math.floor((this.selectedTicTacIndex + this.cursorRow*this.GRID_SIZE + this.cursorCol)/(this.GRID_SIZE*this.GRID_SIZE));
-            this.selectedLevelSize -= 1; //decrement the levesize
-            //Get the proper index that the cursor should be at
-            this.cursorCol = 0;
-            this.cursorRow = 0;
-        } else {
-
-        }
-        
+        //The previous two methods handle setting the appropriate locations, so just reset the cursor pos
+        this.cursorCol = 0;
+        this.cursorRow = 0;
     }
     
     /**
      * This method renders the cursor on the tictac
      */
-    renderCursor() {
+    private renderCursor() {
             this.sketch.rectMode(this.sketch.CORNER);
             this.sketch.noFill();
             this.sketch.strokeWeight(5);
-            this.sketch.rect(this.cache[this.selectedLevelSize][this.selectedTicTacIndex + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
-                this.cache[this.selectedLevelSize][this.selectedTicTacIndex + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
+            this.sketch.rect(this.cache[this.selectedLevelSize][this.getCacheIndex() + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
+                this.cache[this.selectedLevelSize][this.getCacheIndex() + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
                 this.calculateSize(this.selectedLevelSize),
                 this.calculateSize(this.selectedLevelSize));
     }
@@ -328,13 +324,12 @@ export default class TicTacBoard {
     /**
      * This method is responsible for selecting the tictac.
      */
-    selectTicTac() {
-        if (this.selectedLevelSize == this.maxLevelSize) {
+    public selectTicTac() {
+        if (this.tictac.getSelectedLevel() == this.tictac.getLevelSize()) {
             this.playMove();
         } else {
-            this.selectedLevelSize++;
+            this.tictac.selectSpot(this.cursorCol,this.cursorRow);
         }
-        
         this.cursorCol = 0;
         this.cursorRow = 0;
     }
@@ -342,7 +337,7 @@ export default class TicTacBoard {
     /**
      * This method is responsible for deleselecting the tictac
      */
-    deselectTicTac() {
+    public deselectTicTac() {
         this.selectedLevelSize--;
         // if (this.selectedLevelSize == 0) {
             

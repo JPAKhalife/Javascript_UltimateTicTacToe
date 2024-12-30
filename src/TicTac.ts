@@ -21,23 +21,22 @@ export default class TicTac {
     private grid: number[];
     private state: number;
     private maxLevelSize: number;
+    private selectedLevel: number;
+    private selectedIndex: number;
 
-    //We will start by initializing the tictac
-    //Create the grid - grids can contain a  number or a tictac literally anything
     public constructor(maxLevelSize: number = 0) {
-        //Non recursive solution
-        //All that is required for this tictac is that it is an array of signed integers
-        //The length of this array will be equal to (GRID_SIZE^2)^levelSize
-
-        //Within this array 0 means that nobody owns that particular square
-        //Anything greater than zero indicates that the nth player owns that square.
-        //Numbers less than zero will indicate a level size - and right after that number will be result of that tictac
         //Grid size constant
         this.maxLevelSize = maxLevelSize;
         //Initialize the board with a grid of zeroes
         this.grid = Array((this.GRID_SIZE*this.GRID_SIZE)**this.maxLevelSize).fill(1);
-        //We set the state variable
+        //We set the state variable - indicating if tic tac is active or not
+        //! Potentially unnecessary
         this.state = TicTacState.ONGOING;
+        //*Information about where the cursor is needs to be held by this class in order for legal move checking (online and offline).
+        //This represents what levelsize the selected tictac is
+        this.selectedLevel = 1;
+        //This represents the index of the selected tictac
+        this.selectedIndex = 0;
     }
 
     /**
@@ -102,6 +101,24 @@ export default class TicTac {
      */
     public getGridSize() {
         return this.GRID_SIZE;
+    }
+
+    /**
+     * @method getSelectedLevel
+     * @description gives the current selected level
+     * @returns an integer representing the currently selected level of the tictac.
+     */
+    public getSelectedLevel(): number {
+        return this.selectedLevel;
+    }
+
+    /**
+     * @method getSelectedIndex
+     * @description returns the currently selected index of the tictac
+     * @returns an integer representing the currently selected index of the tictac
+     */
+    public getSelectedIndex(): number {
+        return this.selectedIndex;
     }
 
     /**
