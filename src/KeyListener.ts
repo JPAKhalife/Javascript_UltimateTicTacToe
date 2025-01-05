@@ -31,12 +31,14 @@ export default class KeyListener
     private do_listen: boolean;
     //this is the delay between keypresses
     private inputdelay: number;
+    private setDelay: number;
     private sketch: p5;
 
-    constructor(sketch: p5) 
+    constructor(sketch: p5, inputdelay: number = INPUT_DELAY)
     {
         this.do_listen = true;
         this.inputdelay = 0;
+        this.setDelay = inputdelay
         this.sketch = sketch;
     }
 
@@ -72,24 +74,29 @@ export default class KeyListener
             }
             if (this.sketch.keyIsPressed) {
                 if (KEY_EVENTS.UP.includes(this.sketch.keyCode)) {
-                    this.inputdelay = INPUT_DELAY;
+                    this.inputdelay = this.setDelay;
+                    this.sketch.keyIsPressed = false;
                     return KEY_EVENTS.UP;
                 } else if (KEY_EVENTS.DOWN.includes(this.sketch.keyCode)) {
-                    this.inputdelay = INPUT_DELAY;
+                    this.inputdelay = this.setDelay;
+                    this.sketch.keyIsPressed = false;
                     return KEY_EVENTS.DOWN;
                 } else if (KEY_EVENTS.RIGHT.includes(this.sketch.keyCode)) {
-                    this.inputdelay = INPUT_DELAY;
+                    this.inputdelay = this.setDelay;
+                    this.sketch.keyIsPressed = false;
                     return KEY_EVENTS.RIGHT;
                 } else if (KEY_EVENTS.LEFT.includes(this.sketch.keyCode)) {
-                    this.inputdelay = INPUT_DELAY;
+                    this.inputdelay = this.setDelay;
+                    this.sketch.keyIsPressed = false;
                     return KEY_EVENTS.LEFT;
                 } else if (KEY_EVENTS.SELECT.includes(this.sketch.keyCode)) {
-                    this.inputdelay = INPUT_DELAY;
+                    this.inputdelay = this.setDelay;
+                    this.sketch.keyIsPressed = false;
                     return KEY_EVENTS.SELECT;
                 } else if (KEY_EVENTS.ESCAPE.includes(this.sketch.keyCode)) {
-                    this.inputdelay = INPUT_DELAY;
+                    this.inputdelay = this.setDelay;
+                    this.sketch.keyIsPressed = false;
                     return KEY_EVENTS.ESCAPE;
-                    
                 }   
             }
         }

@@ -8,9 +8,9 @@
 
 import * as p5 from 'p5';
 import { getCanvasSize } from '../sketch';
-import Button from './Button';
+import MenuItem from './MenuItem';
 
-export default class MenuButton implements Button
+export class MenuButton implements MenuItem
 {
     
     private selected: boolean;
@@ -166,7 +166,7 @@ export default class MenuButton implements Button
      * @description This method sets the selected status of the button
      * @param status 
      */
-    public setStatus(status: boolean): void 
+    public setSelected(status: boolean): void 
     {
         this.selected = status;
     }
@@ -294,36 +294,6 @@ export default class MenuButton implements Button
     }
 
     /**
-     * @method relevantValue
-     * @description this function will return the relevant coordinate based on the direction it is given
-     * @param direction {number}
-     * @returns the relevant coordinate
-     */
-    public relevantValue(direction: number): number 
-    {
-        if (direction == 0 || direction == 2) {
-            return this.y;
-        } else {
-            return this.x;
-        }
-    }
-
-    /**
-     * @method oppositeRelevantValue
-     * @description This method returns the opposite relevant value based on the direction it is given
-     * @param direction 
-     * @returns the opposite relevant value
-     */
-    public oppositeRelevantValue(direction: number): number 
-    {
-        if (direction == 0 || direction == 2) {
-            return this.x;
-        } else {
-            return this.y;
-        }
-    }
-
-    /**
      * @method fadeIn
      * @description controls the fading in animation of all buttons
      * @param time {number}
@@ -339,5 +309,13 @@ export default class MenuButton implements Button
      */
     setOpacity(opacity: number) {
         this.opacity = opacity;
+    }
+
+    getX(): number {
+        return this.x;
+    }
+
+    getY(): number {
+        return this.y;
     }
 }

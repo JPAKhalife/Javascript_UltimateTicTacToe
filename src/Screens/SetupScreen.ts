@@ -13,8 +13,8 @@ import Floater from "../Floater";
 import GuiManager from "../GuiManager";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
 import Menu, { Screens } from "../Menu"
-import ButtonNav from "../MenuObjects/ButtonNav";
-import MenuButton from "../MenuObjects/MenuButton";
+import MenuNav from "../MenuObjects/MenuNav";
+import {MenuButton} from "../MenuObjects/MenuButton";
 import {Text, Rectangle } from "../ShapeWrapper";
 import { whiteTicTac, getCanvasSize, HEADER, fontPointless } from "../sketch";
 
@@ -31,7 +31,7 @@ export default class SetupScreen implements Menu {
     private border_pos: number;
     private border: Rectangle;
     private title: Text;
-    private multiplayer_MenuButton_list: ButtonNav;
+    private multiplayer_MenuButton_list: MenuNav;
     private transition_in: Cutscene;
     private transition_out: Cutscene;
 
@@ -65,7 +65,7 @@ export default class SetupScreen implements Menu {
         this.title.setFill(sketch.color(255,255,255,0));
 
         //Here are the buttons for the setup screen
-        this.multiplayer_MenuButton_list = new ButtonNav([new MenuButton(this.sketch,0.5,0.4,"Local",0.1,0.1,50*0.25,0),
+        this.multiplayer_MenuButton_list = new MenuNav([new MenuButton(this.sketch,0.5,0.4,"Local",0.1,0.1,50*0.25,0),
             new MenuButton(this.sketch,0.80,0.85, "How to play",0.05,0.15,50*0.25,0),
             new MenuButton(this.sketch,0.20, 0.85, "Controls",0.05,0.15,50*0.25,0),
             new MenuButton(this.sketch,0.5, 0.6 , "Online",0.1,0.1,50*0.25,0)]); 

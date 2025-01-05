@@ -10,9 +10,10 @@ import p5 from "p5";
 
 import GameManager from "../GameManager";
 import TicTac from "../TicTac";
+import MenuItem from "./MenuItem";
 
 //creating the object type smalltictac.
-export default class TicTacBoard {
+export default class TicTacBoard implements MenuItem {
     private gridSize: number;
     private x: number;
     private y: number;
@@ -26,6 +27,9 @@ export default class TicTacBoard {
     private maxLevelSize: number;
     private cache: number[][][];
     private sketch: p5;
+    //MenuItem variables
+    private selected: boolean;
+    private isConfirmed: boolean;
 
     public static readonly BOARD_SHRINK_CONSTANT: number = 0.8;
     public static readonly ICON_SHRINK_CONSTANT: number = 0.6;
@@ -40,6 +44,8 @@ export default class TicTacBoard {
      * @param {*} gridSize 
      */
     constructor(sketch:p5, gameManager: GameManager, x: number,y: number,gridSize: number) {
+        this.isConfirmed = true;
+        this.selected = true;
         //Size and location
         this.gridSize = gridSize*TicTacBoard.BOARD_SHRINK_CONSTANT; 
         this.x = x - this.gridSize/2;
@@ -62,6 +68,9 @@ export default class TicTacBoard {
         //Now we need to cache the points
         this.cachePoints();
         this.sketch = sketch;
+
+        //These are the relevant variables for MenuItem
+
     }
 
     /**
@@ -76,8 +85,8 @@ export default class TicTacBoard {
                 let y = this.y;
                 //Iterate through all current levelsizes to get x and y coordinates
                 for (let z = 0 ; z < i ; z++) {
-                    let col =  this.getCol(z,j*space); //Get the relative column
-                    let row = this.getRow(z,j*space); //Get the relative row
+                    let col =  this.tictac.getCol(z,j*space); //Get the relative column
+                    let row = this.tictac.getRow(z,j*space); //Get the relative row
                     x += col*this.calculateSize(z+1) + col*this.calculateMarginSize(z+1) + this.calculateMarginSize(z+1)/2;
                     y += row*this.calculateSize(z+1) + row*this.calculateMarginSize(z+1) + this.calculateMarginSize(z+1)/2;
                 }
@@ -197,27 +206,6 @@ export default class TicTacBoard {
     }
 
     /**
-     * This method is intended to return the column of which tictac that a certain index is in.
-     * @param {*} levelSize - the level of Tictac that should be scanned
-     * @param {*} index 
-     * @returns An integer from 0 - GRIDSIZE - 1
-     */
-    private getCol(levelSize: number,index: number) {
-        return this.tictac.getRelativeIndex(levelSize,index) % this.GRID_SIZE;
-    }
-
-    /**
-     * This method is intended to return the row of which tictac that a certain index is in.
-     * @param {*} levelSize - the level of Tictac that should be scanned
-     * @param {*} index 
-     * @returns An integer from 0 - GRIDSIZE - 1
-     */
-    private getRow(levelSize: number,index: number) {
-        //The index needs to be reduced to a number out of nine.
-        return Math.floor(this.tictac.getRelativeIndex(levelSize,index) / this.GRID_SIZE);
-    }
-
-    /**
      * @method getCacheIndex
      * @description This tictac returns the index (second array dimension) of the cache coordinates for the selected position.
      * This is done because the selectedIndex stored in tictac is absolute.
@@ -310,16 +298,45 @@ export default class TicTacBoard {
             this.tictac.selectSlot(this.cursorCol,this.cursorRow);
             this.cursorCol = 0;
             this.cursorRow = 0;
-        }
-        
+        }   
+    }
+
+    /**
+     * @method deselectTicTac
+     * @description This method is responsible for deselecting a TicTac (but is this something you want to do?)
+     */
+    public deselectTicTac() {
+        this.isConfirmed = false;
     }
 
     /**
      * This method is responsible for deleselecting the tictac
      */
-    public deselectTicTac() {
-        this.cursorCol = 0;
-        this.cursorRow = 0;
+    public reset() {
+        this.selected = false;
+        this.isConfirmed = false;
+    }
+
+    //These are all 
+
+    public confirm() {
+        this.isConfirmed = true;
+    }
+
+    public setSelected(status: boolean): void {
+        this.selected = status;
+    }
+
+    public isSelected(): boolean {
+        return this.selected;
+    }
+
+    public getX(): number {
+        return this.x;
+    }
+
+    public getY(): number {
+        return this.y;
     }
 }
 

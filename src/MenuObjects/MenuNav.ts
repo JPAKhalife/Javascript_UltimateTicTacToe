@@ -6,26 +6,26 @@
  * @updated 2024-06-23
  */
 
-import Button from './Button'
+import MenuItem from './MenuItem'
 
 /**
  * @class ButtonNav
  * @description This class is used to create a button navigation system
  */
-export default class ButtonNav {
-    private buttonArray: Button[];
-    private currentlySelected: Button;
+export default class MenuNav {
+    private itemArray: MenuItem[];
+    private currentlySelected: MenuItem;
 
     /**
      * @constructor
-     * @param {Button[]} buttonArray 
+     * @param {MenuItem[]} itemArray 
      */
-    constructor(buttonArray: Button[]) {
+    constructor(itemArray: MenuItem[]) {
         //this is the array of buttons
-        this.buttonArray = buttonArray;
+        this.itemArray = itemArray;
         //currently selected button
-        this.currentlySelected = buttonArray[0];
-        this.currentlySelected.setStatus(true);
+        this.currentlySelected = itemArray[0];
+        this.currentlySelected.setSelected(true);
     }
 
     /**
@@ -33,8 +33,8 @@ export default class ButtonNav {
      * @description This method is intended to draw all of the buttons
      */
     public drawAll(): void {
-        for (let i = 0; i < this.buttonArray.length; i++) {
-            this.buttonArray[i].draw();
+        for (let i = 0; i < this.itemArray.length; i++) {
+            this.itemArray[i].draw();
         }
     }
 
@@ -43,11 +43,11 @@ export default class ButtonNav {
      * @description This method resets all of the buttons
      */
     public reset(): void {
-        for (let i = 0; i < this.buttonArray.length; i++) {
-            this.buttonArray[i].reset();
+        for (let i = 0; i < this.itemArray.length; i++) {
+            this.itemArray[i].reset();
         }
-        this.currentlySelected = this.buttonArray[0];
-        this.currentlySelected.setStatus(true);
+        this.currentlySelected = this.itemArray[0];
+        this.currentlySelected.setSelected(true);
     }
 
     //this function is meant to confriemd a button
@@ -78,32 +78,32 @@ export default class ButtonNav {
             direction_multiplier = -1;
         }
         //first screening
-        let in_range: Button[] = [];
+        let in_range: MenuItem[] = [];
 
         //finding all of the watchamacallits in a certain direction
-        for (let i = 0; i < this.buttonArray.length; i++) {
-            if (this.buttonArray[i].relevantValue(direction) > this.currentlySelected.relevantValue(direction) && direction_multiplier == 1) {
+        for (let i = 0; i < this.itemArray.length; i++) {
+            if (this.relevantValue(this.itemArray[i],direction) > this.relevantValue(this.currentlySelected,direction) && direction_multiplier == 1) {
 
-                in_range.push(this.buttonArray[i]);
+                in_range.push(this.itemArray[i]);
                 foundwithin = true;
             }
 
-            if (this.buttonArray[i].relevantValue(direction) < this.currentlySelected.relevantValue(direction) && direction_multiplier == -1) {
-                in_range.push(this.buttonArray[i]);
+            if (this.relevantValue(this.itemArray[i],direction) < this.relevantValue(this.currentlySelected,direction) && direction_multiplier == -1) {
+                in_range.push(this.itemArray[i]);
                 foundwithin = true;
             }
         }
 
         //findind the cloest in the other coordinate
         for (let i = 0; i < in_range.length; i++) {
-            if (Math.abs(this.currentlySelected.oppositeRelevantValue(direction) - in_range[i].oppositeRelevantValue(direction)) < Math.abs(this.currentlySelected.oppositeRelevantValue(direction) - in_range[closestButton].oppositeRelevantValue(direction))) {
+            if (Math.abs(this.oppositeRelevantValue(this.currentlySelected,direction) - this.oppositeRelevantValue(in_range[i],direction)) < Math.abs(this.oppositeRelevantValue(this.currentlySelected,direction) - this.oppositeRelevantValue(in_range[closestButton],direction))) {
                 closestButton = i;
             }
         }
         if (foundwithin) {
-            return this.buttonArray.indexOf(in_range[closestButton]);
+            return this.itemArray.indexOf(in_range[closestButton]);
         } else {
-            return this.buttonArray.indexOf(this.currentlySelected);
+            return this.itemArray.indexOf(this.currentlySelected);
         }
     }
 
@@ -116,10 +116,42 @@ export default class ButtonNav {
     public selectClosest(direction: number): void 
     {
         let closest = this.findClosest(direction)
-        if (this.buttonArray[closest] != this.currentlySelected) {
-            this.buttonArray[closest].setStatus(true);
-            this.currentlySelected.setStatus(false);
-            this.currentlySelected = this.buttonArray[closest];
+        if (this.itemArray[closest] != this.currentlySelected) {
+            this.itemArray[closest].setSelected(true);
+            this.currentlySelected.setSelected(false);
+            this.currentlySelected = this.itemArray[closest];
+        }
+    }
+
+
+    /**
+     * @method relevantValue
+     * @description this function will return the relevant coordinate based on the direction it is given
+     * @param direction {number}
+     * @param index {number}
+     * @returns the relevant coordinate
+     */
+    private relevantValue(item: MenuItem,direction: number): number 
+    {
+        if (direction == 0 || direction == 2) {
+            return item.getY();
+        } else {
+            return item.getX();
+        }
+    }
+
+    /**
+     * @method oppositeRelevantValue
+     * @description This method returns the opposite relevant value based on the direction it is given
+     * @param direction 
+     * @returns the opposite relevant value
+     */
+    private oppositeRelevantValue(item: MenuItem, direction: number): number 
+    {
+        if (direction == 0 || direction == 2) {
+            return item.getX();
+        } else {
+            return item.getY();
         }
     }
 
@@ -130,7 +162,7 @@ export default class ButtonNav {
      */
     public select(index: number): void 
     {
-        this.buttonArray[index].setStatus(true);
+        this.itemArray[index].setSelected(true);
     }
 
     /**
@@ -140,7 +172,7 @@ export default class ButtonNav {
      */
     public unselect(index: number): void
     {
-        this.buttonArray[index].setStatus(false);
+        this.itemArray[index].setSelected(false);
     }
 
     /**
@@ -150,8 +182,8 @@ export default class ButtonNav {
      */
     public changeSelected(index: number): void
     {
-        this.unselect(this.buttonArray.indexOf(this.currentlySelected));
-        this.currentlySelected = this.buttonArray[index];
+        this.unselect(this.itemArray.indexOf(this.currentlySelected));
+        this.currentlySelected = this.itemArray[index];
         this.select(index);
     }
 
@@ -161,6 +193,6 @@ export default class ButtonNav {
      * @return number
      */
     public getLength() {
-        return this.buttonArray.length;
+        return this.itemArray.length;
     }
 }
