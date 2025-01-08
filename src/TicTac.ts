@@ -179,7 +179,7 @@ export default class TicTac {
         //For now, keep the user on the same levelsize, send them to the equivalent square
         //You need to check whether or not the square they are being sent to has been taken already
         //If it has, give them a pick of the tictacs at that levelsize.
-        let destination = this.selectedIndex - ((this.GRID_SIZE*this.GRID_SIZE))*this.getRelativeIndex(this.selectedLevel - 2,this.selectedIndex) + (cursorCol + cursorRow*this.GRID_SIZE)*(this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - (this.selectedLevel - 1));
+        let destination = this.getFirstSpot(this.selectedIndex,this.selectedLevel) + (cursorCol + cursorRow*this.GRID_SIZE)*(this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - (this.selectedLevel - 1));
         for (let i = this.selectedLevel ; i > 0 ; i--) {
             // console.log("selectedIndex: " + this.selectedIndex)
             // console.log("Index of destination " + destination);
@@ -189,7 +189,7 @@ export default class TicTac {
             if (this.getSlot(destination) < (this.maxLevelSize - this.selectedLevel)*-1) {
                 //console.log("spot full");
                 this.selectedLevel--;
-                destination = this.getFirstSpot(destination,this.selectedLevel);
+                destination = this.getFirstSpot(destination,this.selectedLevel + 1);
                 //destination = Math.floor(destination/this.calculateSize(this.selectedLevel) - this.getRelativeIndex(this.selectedLevel - 1,destination)*this.calculateSize(this.selectedLevel - 1))
                 // destination = destination/(this.GRID_SIZE*this.GRID_SIZE);
                 // destination = destination - ((this.GRID_SIZE*this.GRID_SIZE))*this.getRelativeIndex(this.selectedLevel - 2,destination)
