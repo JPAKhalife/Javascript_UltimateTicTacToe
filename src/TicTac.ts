@@ -70,7 +70,7 @@ export default class TicTac {
      * @param levelsize
      */
     private setOwner(index: number, item: number, levelSize: number) {
-        if (levelSize > 0) {
+        if (levelSize >= 0) {
             this.setSlot(index,levelSize*-1);
             this.setSlot(index+1,item);
         } else {
@@ -144,13 +144,13 @@ export default class TicTac {
      * @param cursorCol - a number signifying the 
      */
     public selectSlot(cursorCol: number, cursorRow: number): boolean {
-        if (this.getSlot(this.selectedIndex + (this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE)*(this.GRID_SIZE*this.GRID_SIZE)) < 0) {
+        if (this.getSlot((this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE)*(this.GRID_SIZE*this.GRID_SIZE)) < 0) {
             return false;
         }
         //*Level size should be incremented by one to indicate the size of the cursor/level of tictac that is selected.
         this.selectedLevel++; 
         //*Selected tictac size needs to be added to by cursor position (toget the selected tictac pos), then multiplied by the number of slots in a tictac.
-        this.selectedIndex += (this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE)*(this.GRID_SIZE*this.GRID_SIZE);
+        this.selectedIndex += (cursorCol*this.calculateSize(this.maxLevelSize - this.selectedLevel + 1) + cursorRow*this.GRID_SIZE*this.calculateSize(this.maxLevelSize - this.selectedLevel + 1));
         console.log("multiplied the selectedIndexTo: " + this.selectedIndex);
         console.log("The selected levelSize is: " + this.selectedLevel);
         return true;
@@ -171,34 +171,33 @@ export default class TicTac {
         this.grid[this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE] = turn; //Set the new slot
         //Then we check for a win
         let state = this.checkForWinOrFull(this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE);
-        if (state != TicTacState.ONGOING) {
-            return state;
-        }
         
         //Now where should I send the user?
         //For now, keep the user on the same levelsize, send them to the equivalent square
         //You need to check whether or not the square they are being sent to has been taken already
         //If it has, give them a pick of the tictacs at that levelsize.
-        let destination = this.getFirstSpot(this.selectedIndex,this.selectedLevel) + (cursorCol + cursorRow*this.GRID_SIZE)*(this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - (this.selectedLevel - 1));
+        let destination = this.getFirstSpot(this.selectedIndex,(this.selectedLevel - 1)) + (cursorCol + cursorRow*this.GRID_SIZE)*Math.pow((this.GRID_SIZE*this.GRID_SIZE),(this.maxLevelSize - (this.selectedLevel - 1)));
         for (let i = this.selectedLevel ; i > 0 ; i--) {
-            // console.log("selectedIndex: " + this.selectedIndex)
-            // console.log("Index of destination " + destination);
-            // console.log("Value of tictac " + this.getSlot(destination));
-            // console.log("current elvelsize: " + this.selectedLevel );
+            console.log("selectedIndex: " + this.selectedIndex)
+            console.log("Index of destination " + destination);
+            console.log("Value of tictac " + this.getSlot(destination));
+            console.log("current elvelsize: " + this.selectedLevel );
             //Check if the spot being sent to is full or won.
-            if (this.getSlot(destination) < (this.maxLevelSize - this.selectedLevel)*-1) {
-                //console.log("spot full");
+            if (this.isSpotOwnedOrFull(destination,this.maxLevelSize - i + 1)) {
+                console.log("spot full");
                 this.selectedLevel--;
-                destination = this.getFirstSpot(destination,this.selectedLevel + 1);
+                destination = this.getFirstSpot(destination,this.maxLevelSize - (this.selectedLevel));
                 //destination = Math.floor(destination/this.calculateSize(this.selectedLevel) - this.getRelativeIndex(this.selectedLevel - 1,destination)*this.calculateSize(this.selectedLevel - 1))
                 // destination = destination/(this.GRID_SIZE*this.GRID_SIZE);
                 // destination = destination - ((this.GRID_SIZE*this.GRID_SIZE))*this.getRelativeIndex(this.selectedLevel - 2,destination)
+            } else {
+                break;
             }
         }
         this.selectedIndex = destination;
 
         
-        return TicTacState.ONGOING;
+        return state;
     }
 
 
@@ -226,6 +225,39 @@ export default class TicTac {
     }
 
     /**
+     * @method isSpotOwnedOrFull
+     * @description this method checks for whether or not a given spot is owned or full
+     */
+    public isSpotOwnedOrFull(index: number, min: number = 1): boolean {
+        //Then check the larger slots for ownership
+        if (min <= 0) {
+            min = 1;
+            if (this.getSlot(index) > 0) {
+                return true;
+            }
+        }
+        for (let i = min ; i <= this.maxLevelSize ; i++) {
+            let slot = this.getSlot(this.getFirstSpot(index,i))
+            if (slot == i*-1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @method getLevelOfIndex
+     * @description returns the level of an index - whether or not it is base or higher
+     */
+    public getLevelOfIndex(index:number): number {
+        if (this.getSlot(index) < 0) {
+            return -1*this.getSlot(index);
+        } else {
+            return 0;
+        }
+    }
+
+    /**
      * @method checkForWin
      * @description This method checks whenever a tictac is placed to see whether or not a grid has been won.
      * 
@@ -243,7 +275,7 @@ export default class TicTac {
             let slotCol = this.getCol(i - 1,index);
             let slotSize = this.calculateSize(this.maxLevelSize - i);
             //Calculate the origin of the tictac (spot zero) for ease of checking
-            let origin = index - slotRow*this.GRID_SIZE*slotSize - slotCol*slotSize;
+            let origin = this.getFirstSpot(index,this.maxLevelSize - i + 1);
 
             //Whether or not isWon
             let isWon = true;
@@ -259,7 +291,7 @@ export default class TicTac {
             }
             if (isWon) {
                 console.log("Row win detected");
-                this.setOwner(origin,this.getSlot(index),i - 1);
+                this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                 if (i == 1) {
                     return TicTacState.WIN;
                 }
@@ -279,7 +311,7 @@ export default class TicTac {
             }
             if (isWon) {
                 console.log("Col win detected");
-                this.setOwner(origin,this.getSlot(index),i - 1);
+                this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                 if (i == 1) {
                     return TicTacState.WIN;
                 }
@@ -298,7 +330,7 @@ export default class TicTac {
                 }
                 if (isWon) {
                     console.log("diag win detected");
-                    this.setOwner(origin,this.getSlot(index),i - 1);
+                    this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                     if (i == 1) {
                         return TicTacState.WIN;
                     }
@@ -317,7 +349,7 @@ export default class TicTac {
                 }
                 if (isWon) {
                     console.log("backdiag win detected");
-                    this.setOwner(origin,this.getSlot(index),i - 1);
+                    this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                     if (i == 1) {
                         return TicTacState.WIN;
                     }
@@ -336,7 +368,7 @@ export default class TicTac {
             }
             if (isFull) {
                 console.log("full detected");
-                this.setOwner(origin,0,i - 1);
+                this.setOwner(origin,0,this.maxLevelSize - i + 1);
                 if (i == 1) {
                     return TicTacState.DRAW;
                 }

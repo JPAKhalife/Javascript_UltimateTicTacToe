@@ -45,20 +45,18 @@ export default class GameManager {
      * @description This method is used whenever the player makes a move on the grid.
      * @returns A boolean representing whether or not a move was played
      */
-    public playMove(cursorCol: number, cursorRow: number): boolean 
+    public playMove(cursorCol: number, cursorRow: number): TicTacState 
     {
         //Step one: Make the move on the tictac
         let state = this.board.updateSlot(this.turn,cursorCol,cursorRow);
         if (state == TicTacState.ONGOING) {
             this.changeTurn(); //change the turn, step two
             //TODO: Step three: I don't know yet
-            return true;
-        } else if (state != TicTacState.ERROR) {
-            return true;
-        }
-        return false; 
+            
+        }   
+        return state; 
     }
-    
+
     /**
      * @method getBoard
      * @description This method returns the board owned by the game manager

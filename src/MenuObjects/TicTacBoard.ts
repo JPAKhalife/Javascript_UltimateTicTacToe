@@ -9,7 +9,7 @@
 import p5 from "p5";
 
 import GameManager from "../GameManager";
-import TicTac from "../TicTac";
+import TicTac, { TicTacState } from "../TicTac";
 import MenuItem from "./MenuItem";
 
 //creating the object type smalltictac.
@@ -104,15 +104,18 @@ export default class TicTacBoard implements MenuItem {
         //*This avoids a number of if checks
         //*The reason is for this is that only larger symbols use negative numbers to signal they should be drawn
         this.sketch.stroke(255);
+        this.sketch.strokeWeight(1);
         //Iterate for larger structures - larger that the smallest unit in the array
         for (let i = 0 ; i < this.maxLevelSize ; i++) {
             let space = ((this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - i)); //represents the number of slots to skip per iteration
                 for (let j = 0 ; j < this.tictac.getArraySize()/space ; j++) {
                     let relevantSlot = this.tictac.getSlot(j*space);
-                    if (relevantSlot*-1 == (this.maxLevelSize - i)) {
+                    let isOwned = this.tictac.isSpotOwnedOrFull(j*space, this.maxLevelSize - i + 1);
+                    if (relevantSlot*-1 == (this.maxLevelSize - i) && !isOwned) {
                         this.drawIcon(i,j*space + 1,j); //Draw Icon if negative and iterating at equivalent levelsize
-                    } else if (relevantSlot*-1 > (this.maxLevelSize - i)) {
-                        i += (this.GRID_SIZE*this.GRID_SIZE)**(-1*relevantSlot) - 1; //Skip to the next open spot
+                    // } else if (relevantSlot*-1 > (this.maxLevelSize - i)) {
+                    //     i += (this.GRID_SIZE*this.GRID_SIZE)**(-1*relevantSlot) - 1; //Skip to the next open spot
+                    } else if (isOwned) {
                     } else {
                         //Otherwise draw tictac
                         this.drawTicTac(i,j);
@@ -159,7 +162,7 @@ export default class TicTacBoard implements MenuItem {
         let x = this.cache[levelSize][cacheIndex][0];
         let y = this.cache[levelSize][cacheIndex][1];
         this.sketch.strokeWeight(1);
-        let slot = this.tictac.getSlot(tictacIndex)
+        let slot = this.tictac.getOwner(tictacIndex)
         switch (slot) {
             case 0:
                 //Do nothing.
@@ -211,17 +214,19 @@ export default class TicTacBoard implements MenuItem {
      * This is done because the selectedIndex stored in tictac is absolute.
      */
     private getCacheIndex(): number {
-        return this.tictac.getSelectedIndex();
+        return Math.floor(this.tictac.getSelectedIndex()/(Math.pow(this.GRID_SIZE*this.GRID_SIZE,this.tictac.getLevelSize() - this.tictac.getSelectedLevel())));
     }
 
     /**
      * This method moves the cursor up
      */
     public cursorUp() {
-        if (this.cursorRow <= 0) {
-            this.cursorRow = this.GRID_SIZE - 1;
-        } else {
-            this.cursorRow -= 1;
+        if (this.isSelected()) {
+            if (this.cursorRow <= 0) {
+                this.cursorRow = this.GRID_SIZE - 1;
+            } else {
+                this.cursorRow -= 1;
+            }
         }
     }
 
@@ -229,10 +234,12 @@ export default class TicTacBoard implements MenuItem {
      * This method moves the cursor down
      */
     public cursorDown() {
-        if (this.cursorRow >= this.GRID_SIZE - 1) {
-            this.cursorRow = 0;
-        } else {
-            this.cursorRow += 1;
+        if (this.isSelected()) {
+            if (this.cursorRow >= this.GRID_SIZE - 1) {
+                this.cursorRow = 0;
+            } else {
+                this.cursorRow += 1;
+            }
         }
     }
 
@@ -240,10 +247,12 @@ export default class TicTacBoard implements MenuItem {
      * This method moves the cursor left
      */
     public cursorLeft() {
-        if (this.cursorCol <= 0) {
-            this.cursorCol = this.GRID_SIZE - 1;
-        } else {
-            this.cursorCol -= 1;
+        if (this.isSelected()) {
+            if (this.cursorCol <= 0) {
+                this.cursorCol = this.GRID_SIZE - 1;
+            } else {
+                this.cursorCol -= 1;
+            }
         }
     }
     
@@ -251,10 +260,12 @@ export default class TicTacBoard implements MenuItem {
      * This method moves the cursor right
      */
     public cursorRight() {
-        if (this.cursorCol >= this.GRID_SIZE - 1) {
-            this.cursorCol = 0;
-        } else {
-            this.cursorCol += 1;
+        if (this.isSelected()) {
+            if (this.cursorCol >= this.GRID_SIZE - 1) {
+                this.cursorCol = 0;
+            } else {
+                this.cursorCol += 1;
+            }
         }
     }
 
@@ -265,12 +276,16 @@ export default class TicTacBoard implements MenuItem {
         //*Modify the tictac. at the spot that is currently selected 
         //*This method must be called assuming that the player is on the right tile
         //TODO: This method must already know the current turn. should take no parameters.
-        //* invoke these methods through the game manager
-        if (this.game.playMove(this.cursorCol,this.cursorRow)) {
+        //* invoke these methods through the game manag
+        let state = this.game.playMove(this.cursorCol,this.cursorRow)
+        if (state != TicTacState.ERROR) {
             this.cursorCol = 0;
             this.cursorRow = 0;
+            if (state == TicTacState.WIN) {
+                this.setSelected(false);
+            }
             return;
-        }
+        } 
         //TODO: Make the cursor wobble a little bit.
 
     }

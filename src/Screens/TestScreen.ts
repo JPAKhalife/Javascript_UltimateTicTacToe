@@ -26,7 +26,7 @@ export default class TestScreen implements Menu {
     
     constructor(sketch: p5) {
         this.sketch = sketch
-        this.game = new GameManager(GameType.LOCAL, 3, 2);
+        this.game = new GameManager(GameType.LOCAL, 3, 3);
         this.board = new TicTacBoard(sketch,this.game,getCanvasSize()/2,getCanvasSize()/2,getCanvasSize() - 100);
         this.keylistener = new KeyListener(sketch);
     }
