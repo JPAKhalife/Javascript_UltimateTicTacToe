@@ -227,6 +227,7 @@ export default class TicTacBoard implements MenuItem {
             } else {
                 this.cursorRow -= 1;
             }
+            console.log(`Cursor row changed to: ${this.cursorRow}`);
         }
     }
 
@@ -240,6 +241,7 @@ export default class TicTacBoard implements MenuItem {
             } else {
                 this.cursorRow += 1;
             }
+            console.log(`Cursor row changed to: ${this.cursorRow}`);
         }
     }
 
@@ -253,6 +255,7 @@ export default class TicTacBoard implements MenuItem {
             } else {
                 this.cursorCol -= 1;
             }
+            console.log(`Cursor column changed to: ${this.cursorCol}`);
         }
     }
     
@@ -266,6 +269,7 @@ export default class TicTacBoard implements MenuItem {
             } else {
                 this.cursorCol += 1;
             }
+            console.log(`Cursor column changed to: ${this.cursorCol}`);
         }
     }
 
@@ -297,8 +301,9 @@ export default class TicTacBoard implements MenuItem {
             this.sketch.rectMode(this.sketch.CORNER);
             this.sketch.noFill();
             this.sketch.strokeWeight(5);
-            this.sketch.rect(this.cache[this.tictac.getSelectedLevel()][this.getCacheIndex() + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
-                this.cache[this.tictac.getSelectedLevel()][this.getCacheIndex() + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
+            let c = this.getCacheIndex();
+            this.sketch.rect(this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
+                this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
                 this.calculateSize(this.tictac.getSelectedLevel()),
                 this.calculateSize(this.tictac.getSelectedLevel()));
     }
