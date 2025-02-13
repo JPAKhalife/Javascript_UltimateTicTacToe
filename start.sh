@@ -1,33 +1,29 @@
 #!/bin/bash
-set -x  # Enable command printing for debugging
+set -x  # Enable command echoing for debugging
 
-echo "Starting deployment process..."
+# Create dist directory if it doesn't exist
+mkdir -p dist
 
-# Copy files to dist
-echo "Copying files..."
+# Copy HTML and CSS files from src to dist
 cp ./src/*.html ./dist/
 cp ./src/*.css ./dist/
 
-# Bundle files
-echo "Bundling files..."
+# Build the backend and frontend using webpack
 npx webpack --config webpack-back.config.js 
 npx webpack --config webpack-front.config.js 
 
-# Clean up Docker resources
-echo "Cleaning up Docker resources..."
-docker ps  # See what's running
-docker-compose down || true  # Continue even if this fails
-sleep 5  # Give system time to clean up
+# Show running containers
+docker ps
+# Stop any running containers from previous runs (|| true prevents script from failing if nothing to stop)
+docker-compose down || true
 
-echo "Pruning Docker resources..."
-docker container prune -f
-docker volume prune -f
-docker image prune -f
+# Clean up docker resources
+docker container prune -f  # Remove all stopped containers
+docker volume prune -f     # Remove all unused volumes
+docker image prune -f      # Remove all dangling images
 
-# Build new containers
-echo "Building containers..."
-docker-compose build --no-cache  # Force a fresh build
-sleep 5  # Give system time to process
+# Build fresh containers without using cache
+docker-compose build --no-cache
 
-echo "Starting containers..."
+# Start the application
 docker-compose up
