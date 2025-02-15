@@ -12,6 +12,7 @@ export enum TicTacState {
     ONGOING,
     DRAW,
     WIN,
+    LESSER_WIN,
     ERROR
 }
 export const DEFAULT_GRID_SIZE = 3;
@@ -70,7 +71,7 @@ export default class TicTac {
      * @param levelsize
      */
     private setOwner(index: number, item: number, levelSize: number) {
-        if (levelSize >= 0) {
+        if (levelSize > 0) {
             this.setSlot(index,levelSize*-1);
             this.setSlot(index+1,item);
         } else {
@@ -144,15 +145,13 @@ export default class TicTac {
      * @param cursorCol - a number signifying the 
      */
     public selectSlot(cursorCol: number, cursorRow: number): boolean {
-        if (this.getSlot((this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE)*(this.GRID_SIZE*this.GRID_SIZE)) < 0) {
+        if (this.getSlot((this.selectedIndex + cursorCol*this.calculateSize(this.maxLevelSize - this.selectedLevel + 1) + cursorRow*this.GRID_SIZE)*this.calculateSize(this.maxLevelSize - this.selectedLevel + 1)) < 0) {
             return false;
         }
         //*Level size should be incremented by one to indicate the size of the cursor/level of tictac that is selected.
         this.selectedLevel++; 
         //*Selected tictac size needs to be added to by cursor position (toget the selected tictac pos), then multiplied by the number of slots in a tictac.
         this.selectedIndex += (cursorCol*this.calculateSize(this.maxLevelSize - this.selectedLevel + 1) + cursorRow*this.GRID_SIZE*this.calculateSize(this.maxLevelSize - this.selectedLevel + 1));
-        console.log("multiplied the selectedIndexTo: " + this.selectedIndex);
-        console.log("The selected levelSize is: " + this.selectedLevel);
         return true;
     }
 
@@ -178,13 +177,8 @@ export default class TicTac {
         //If it has, give them a pick of the tictacs at that levelsize.
         let destination = this.getFirstSpot(this.selectedIndex,(this.selectedLevel - 1)) + (cursorCol + cursorRow*this.GRID_SIZE)*Math.pow((this.GRID_SIZE*this.GRID_SIZE),(this.maxLevelSize - (this.selectedLevel - 1)));
         for (let i = this.selectedLevel ; i > 0 ; i--) {
-            console.log("selectedIndex: " + this.selectedIndex)
-            console.log("Index of destination " + destination);
-            console.log("Value of tictac " + this.getSlot(destination));
-            console.log("current elvelsize: " + this.selectedLevel );
             //Check if the spot being sent to is full or won.
             if (this.isSpotOwnedOrFull(destination,this.maxLevelSize - i + 1)) {
-                console.log("spot full");
                 this.selectedLevel--;
                 destination = this.getFirstSpot(destination,this.maxLevelSize - (this.selectedLevel));
                 //destination = Math.floor(destination/this.calculateSize(this.selectedLevel) - this.getRelativeIndex(this.selectedLevel - 1,destination)*this.calculateSize(this.selectedLevel - 1))
@@ -195,6 +189,10 @@ export default class TicTac {
             }
         }
         this.selectedIndex = destination;
+        //What we want to do here is check if the sele
+        if (this.selectedLevel != 0) {
+            this.selectedIndex = this.getFirstSpot(destination,this.maxLevelSize - (this.selectedLevel - 1));
+        }
 
         
         return state;
@@ -269,7 +267,6 @@ export default class TicTac {
 
         //So we start with a loop from smallest to largest levelsize.
         for (let i = this.maxLevelSize; i >= 1 ; i--) {
-            console.log("started loop of levelSize " + i);
             //Get the appropriate column and row that the placed spot is in.
             let slotRow = this.getRow(i - 1,index);
             let slotCol = this.getCol(i - 1,index);
@@ -283,14 +280,12 @@ export default class TicTac {
             //Check the row that the slot was placed in.
             for (let j = 1 ; j < this.GRID_SIZE ; j ++) {
                 //Rows are stored next to each other, so no need for math
-                if (this.getOwner(origin + slotRow*this.GRID_SIZE*slotSize + j*slotSize) != this.getOwner(origin + slotRow*this.GRID_SIZE*slotSize + j*slotSize - slotSize)) {
-                    console.log("Row win broken");
+                if (this.getOwner(origin + slotRow*this.GRID_SIZE*slotSize + j*slotSize, this.maxLevelSize - i) != this.getOwner(origin + slotRow*this.GRID_SIZE*slotSize + j*slotSize - slotSize, this.maxLevelSize - i)) {
                     isWon = false;
                     break;
                 }
             }
             if (isWon) {
-                console.log("Row win detected");
                 this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                 if (i == 1) {
                     return TicTacState.WIN;
@@ -300,17 +295,12 @@ export default class TicTac {
             isWon = true;
             //Then check the column that the slot was placed in
             for (let j = 1 ; j < this.GRID_SIZE; j++) {
-                console.log("Column, ahead (" + (origin + slotCol*slotSize + j*slotSize*this.GRID_SIZE) + ", " + this.getOwner(origin + slotCol*slotSize + j*slotSize*this.GRID_SIZE) + ")");
-                console.log("Column, behind(" + (origin + slotCol*slotSize + (j - 1)*slotSize*this.GRID_SIZE) + ", " + this.getOwner(origin + slotCol*slotSize + (j - 1)*slotSize*this.GRID_SIZE) + ")");
-
-                if (this.getOwner(origin + slotCol*slotSize + j*slotSize*this.GRID_SIZE) != this.getOwner(origin + slotCol*slotSize + (j - 1)*slotSize*this.GRID_SIZE)) {
-                    console.log("Col win broken");
+                if (this.getOwner(origin + slotCol*slotSize + j*slotSize*this.GRID_SIZE, this.maxLevelSize - i) != this.getOwner(origin + slotCol*slotSize + (j - 1)*slotSize*this.GRID_SIZE, this.maxLevelSize - i)) {
                     isWon = false;
                     break;
                 }
             }
             if (isWon) {
-                console.log("Col win detected");
                 this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                 if (i == 1) {
                     return TicTacState.WIN;
@@ -322,14 +312,12 @@ export default class TicTac {
             //Now, depending on whether or not the slot was placed in the middle, check diagonals
             if (slotCol == slotRow) {
                 for (let j = 1 ; j < this.GRID_SIZE ; j++) {
-                    if (this.getOwner(origin + j*this.GRID_SIZE*slotSize + j*slotSize) != this.getOwner(origin + j*this.GRID_SIZE*slotSize + j*slotSize - slotSize - slotSize*this.GRID_SIZE)) {
-                        console.log("diag win broken");
+                    if (this.getOwner(origin + j*this.GRID_SIZE*slotSize + j*slotSize, this.maxLevelSize - i) != this.getOwner(origin + j*this.GRID_SIZE*slotSize + j*slotSize - slotSize - slotSize*this.GRID_SIZE, this.maxLevelSize - i)) {
                         isWon = false;
                         break;
                     }
                 }
                 if (isWon) {
-                    console.log("diag win detected");
                     this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                     if (i == 1) {
                         return TicTacState.WIN;
@@ -341,14 +329,12 @@ export default class TicTac {
 
             if (slotRow == this.GRID_SIZE - slotCol - 1) {
                 for (let j = 1 ; j < this.GRID_SIZE ; j++) {
-                    if (this.getOwner(origin + slotSize*j*this.GRID_SIZE + ((this.GRID_SIZE - 1)*slotSize - j*slotSize)) != this.getOwner(origin + j*slotSize*this.GRID_SIZE + ((this.GRID_SIZE - 1)*slotSize - slotSize*j) + slotSize - slotSize*this.GRID_SIZE)) {
-                        console.log("backdiag win broken");
+                    if (this.getOwner(origin + slotSize*j*this.GRID_SIZE + ((this.GRID_SIZE - 1)*slotSize - j*slotSize), this.maxLevelSize - i) != this.getOwner(origin + j*slotSize*this.GRID_SIZE + ((this.GRID_SIZE - 1)*slotSize - slotSize*j) + slotSize - slotSize*this.GRID_SIZE, this.maxLevelSize - i)) {
                         isWon = false;
                         break;
                     }
                 }
                 if (isWon) {
-                    console.log("backdiag win detected");
                     this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                     if (i == 1) {
                         return TicTacState.WIN;
@@ -359,22 +345,21 @@ export default class TicTac {
 
             //Finally, we need to check if the grid is full - do this by iterating through the entire grid.
             let isFull = true;
-            for (let j = 0 ; j < this.GRID_SIZE*this.GRID_SIZE*slotSize ; j+= slotSize) {
-                if (this.getOwner(origin + j) == 0) {
-                    console.log("full broken");
+            for (let j = 0 ; j < this.GRID_SIZE*this.GRID_SIZE ; j++) {
+                if (this.getOwner(origin + j*slotSize, this.maxLevelSize - i) == 0) {
                     isFull = false;
                     break;
                 }
             }
             if (isFull) {
-                console.log("full detected");
                 this.setOwner(origin,0,this.maxLevelSize - i + 1);
                 if (i == 1) {
                     return TicTacState.DRAW;
                 }
-            } else {
-                break;
             }
+            //If the loop makes it to this point without continuing, then no win was found and there is no need
+            //to check higher levels.
+            return TicTacState.ONGOING;
         }
         //Assuming none of these checks passed, the tictac is ongoing.
         return TicTacState.ONGOING
@@ -425,11 +410,14 @@ export default class TicTac {
      * @method getOwner
      * @description This method returns the owner near a specific index
      * @param index - the index of the tictac you want to get the owner of
+     * @param levelSize - the level of the tictac you want to get the owner of
      */
-    public getOwner(index: number): number {
-        if (this.getSlot(index) < 0) {
+    public getOwner(index: number, searchingLevel: number = 1): number {
+        if (this.getSlot(index) < 0 && searchingLevel > 0) {
             return this.getSlot(index + 1);
-        } 
+        } else if (searchingLevel > 0) {
+            return 0;
+        }
         return this.getSlot(index);
     }
 

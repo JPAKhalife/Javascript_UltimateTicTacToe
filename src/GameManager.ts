@@ -49,7 +49,7 @@ export default class GameManager {
     {
         //Step one: Make the move on the tictac
         let state = this.board.updateSlot(this.turn,cursorCol,cursorRow);
-        if (state == TicTacState.ONGOING) {
+        if (state == TicTacState.ONGOING || state == TicTacState.LESSER_WIN) {
             this.changeTurn(); //change the turn, step two
             //TODO: Step three: I don't know yet
             

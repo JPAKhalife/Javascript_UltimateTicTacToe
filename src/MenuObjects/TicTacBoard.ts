@@ -162,7 +162,7 @@ export default class TicTacBoard implements MenuItem {
         let x = this.cache[levelSize][cacheIndex][0];
         let y = this.cache[levelSize][cacheIndex][1];
         this.sketch.strokeWeight(1);
-        let slot = this.tictac.getOwner(tictacIndex)
+        let slot = this.tictac.getSlot(tictacIndex) < 0 ? this.tictac.getSlot(tictacIndex + 1) : this.tictac.getSlot(tictacIndex);
         switch (slot) {
             case 0:
                 //Do nothing.
@@ -287,7 +287,6 @@ export default class TicTacBoard implements MenuItem {
             return;
         } 
         //TODO: Make the cursor wobble a little bit.
-
     }
     
     /**
@@ -297,8 +296,9 @@ export default class TicTacBoard implements MenuItem {
             this.sketch.rectMode(this.sketch.CORNER);
             this.sketch.noFill();
             this.sketch.strokeWeight(5);
-            this.sketch.rect(this.cache[this.tictac.getSelectedLevel()][this.getCacheIndex() + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
-                this.cache[this.tictac.getSelectedLevel()][this.getCacheIndex() + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
+            let c = this.getCacheIndex();
+            this.sketch.rect(this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
+                this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
                 this.calculateSize(this.tictac.getSelectedLevel()),
                 this.calculateSize(this.tictac.getSelectedLevel()));
     }
