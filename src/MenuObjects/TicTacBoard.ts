@@ -56,9 +56,7 @@ export default class TicTacBoard implements MenuItem {
         // What section is selected by the player 
         // Coordinates of the cursor on the tictac
         this.cursorRow = 0;
-        console.log('Cursor initialized - row:', this.cursorRow);
         this.cursorCol = 0;
-        console.log('Cursor initialized - col:', this.cursorCol);
         this.cursorOn = true; //Whether or not the cursor should be rendered.
         //we take the tictac as a pointer to the tictac this tictac is responsible for displaying
         this.game = gameManager;
@@ -226,10 +224,8 @@ export default class TicTacBoard implements MenuItem {
         if (this.isSelected()) {
             if (this.cursorRow <= 0) {
                 this.cursorRow = this.GRID_SIZE - 1;
-                console.log('Cursor wrapped to bottom - row:', this.cursorRow);
             } else {
                 this.cursorRow -= 1;
-                console.log('Cursor moved up - row:', this.cursorRow);
             }
         }
     }
@@ -241,10 +237,8 @@ export default class TicTacBoard implements MenuItem {
         if (this.isSelected()) {
             if (this.cursorRow >= this.GRID_SIZE - 1) {
                 this.cursorRow = 0;
-                console.log('Cursor wrapped to top - row:', this.cursorRow);
             } else {
                 this.cursorRow += 1;
-                console.log('Cursor moved down - row:', this.cursorRow);
             }
         }
     }
@@ -256,10 +250,8 @@ export default class TicTacBoard implements MenuItem {
         if (this.isSelected()) {
             if (this.cursorCol <= 0) {
                 this.cursorCol = this.GRID_SIZE - 1;
-                console.log('Cursor wrapped to right - col:', this.cursorCol);
             } else {
                 this.cursorCol -= 1;
-                console.log('Cursor moved left - col:', this.cursorCol);
             }
         }
     }
@@ -271,10 +263,8 @@ export default class TicTacBoard implements MenuItem {
         if (this.isSelected()) {
             if (this.cursorCol >= this.GRID_SIZE - 1) {
                 this.cursorCol = 0;
-                console.log('Cursor wrapped to left - col:', this.cursorCol);
             } else {
                 this.cursorCol += 1;
-                console.log('Cursor moved right - col:', this.cursorCol);
             }
         }
     }
@@ -291,15 +281,12 @@ export default class TicTacBoard implements MenuItem {
         if (state != TicTacState.ERROR) {
             this.cursorCol = 0;
             this.cursorRow = 0;
-            console.log('Cursor set after move - col:', this.cursorCol);
-                console.log('Cursor set after move - row:', this.cursorRow);
             if (state == TicTacState.WIN) {
                 this.setSelected(false);
             }
             return;
         } 
         //TODO: Make the cursor wobble a little bit.
-
     }
     
     /**

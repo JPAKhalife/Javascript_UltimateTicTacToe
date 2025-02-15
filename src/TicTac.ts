@@ -71,7 +71,7 @@ export default class TicTac {
      * @param levelsize
      */
     private setOwner(index: number, item: number, levelSize: number) {
-        if (levelSize >= 0) {
+        if (levelSize > 0) {
             this.setSlot(index,levelSize*-1);
             this.setSlot(index+1,item);
         } else {
