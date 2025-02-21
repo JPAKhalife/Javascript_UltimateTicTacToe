@@ -20,7 +20,6 @@ export enum GameType {
 export default class GameManager {
 
     private gameType: GameType;
-    private gridSize: number;
     private board: TicTac;
     private turn: number;
     private isWon: boolean;
@@ -30,10 +29,9 @@ export default class GameManager {
     constructor(gameType: GameType = GameType.LOCAL, gridSize: number = DEFAULT_GRID_SIZE, gridLevels: number = 2) {
         //The game manager should have a variable that keeps track of whether or not it is playing online or offline
         this.gameType = gameType;
-        this.gridSize = gridSize;
         //The game manager will own a single tictac - which will hold all of the other tictacs and the lowest level slots
         //This is initialized with recursion
-        this.board = new TicTac(gridLevels); //TODO: Create a constant for the number of tictacs inside tictacs u
+        this.board = new TicTac(gridLevels, gridSize); //TODO: Create a constant for the number of tictacs inside tictacs u
         //This is used to keep track of the current player's turn
         this.turn = 1;
         this.isWon = false;

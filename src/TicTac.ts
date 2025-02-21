@@ -19,16 +19,17 @@ export const DEFAULT_GRID_SIZE = 3;
 export const DEFAULT_PLAYER_NUMBER = 2;
 
 export default class TicTac {
-    private GRID_SIZE = DEFAULT_GRID_SIZE;
+    private GRID_SIZE: number;
     private grid: number[];
     private state: number;
     private maxLevelSize: number;
     private selectedLevel: number;
     private selectedIndex: number;
 
-    public constructor(maxLevelSize: number = 0) {
+    public constructor(maxLevelSize: number = 0, gridSize = 3) {
         //Grid size constant
         this.maxLevelSize = maxLevelSize;
+        this.GRID_SIZE = gridSize;
         //Initialize the board with a grid of zeroes
         this.grid = Array((this.GRID_SIZE*this.GRID_SIZE)**this.maxLevelSize).fill(0);
         //We set the state variable - indicating if tic tac is active or not
