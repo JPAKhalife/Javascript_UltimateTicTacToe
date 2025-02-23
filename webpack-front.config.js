@@ -48,5 +48,7 @@ module.exports = (env, argv) => {
       express: 'commonjs express',
       p5: 'p5',
     },
+    devtool: false,
+    plugins: [new webpack.SourceMapDevToolPlugin({})],
   };
 };

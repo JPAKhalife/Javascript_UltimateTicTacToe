@@ -31,5 +31,7 @@ module.exports = {
     libraryTarget: 'commonjs2', // CommonJS for Node.js
   },
   externals: [nodeExternals()], // Prevent bundling of node_modules for server-side code
+  devtool: false,
+  plugins: [new webpack.SourceMapDevToolPlugin({})],
 };
 
