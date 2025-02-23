@@ -15,6 +15,18 @@ export enum TicTacState {
     LESSER_WIN,
     ERROR
 }
+
+//This is an object type that is used to send back information whenever the player makes a move.
+export function moveResponse(state: TicTacState, wonLevelSize: number = 0) {
+    return {
+        state: state,
+        wonLevelSize: wonLevelSize,
+        cursorCol: 0,
+        cursorRow: 0
+    }
+}  
+
+
 export const DEFAULT_GRID_SIZE = 3;
 export const DEFAULT_PLAYER_NUMBER = 2;
 
@@ -164,38 +176,59 @@ export default class TicTac {
      * @param cursorRow - the row of the tictac that the cursor was in 
      * @returns boolean that says whether or not the placement was successful
      */
-    public updateSlot(turn: number, cursorCol: number, cursorRow: number): TicTacState {
+    public updateSlot(turn: number, cursorCol: number, cursorRow: number): any {
         if (this.grid[this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE] != 0) {
-            return TicTacState.ERROR;
+            return moveResponse(TicTacState.ERROR);
         }
         this.grid[this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE] = turn; //Set the new slot
         //Then we check for a win
         let state = this.checkForWinOrFull(this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE);
         
         //Now where should I send the user?
-        //For now, keep the user on the same levelsize, send them to the equivalent square
-        //You need to check whether or not the square they are being sent to has been taken already
-        //If it has, give them a pick of the tictacs at that levelsize.
-        let destination = this.getFirstSpot(this.selectedIndex,(this.selectedLevel - 1)) + (cursorCol + cursorRow*this.GRID_SIZE)*Math.pow((this.GRID_SIZE*this.GRID_SIZE),(this.maxLevelSize - (this.selectedLevel - 1)));
-        for (let i = this.selectedLevel ; i > 0 ; i--) {
-            //Check if the spot being sent to is full or won.
-            if (this.isSpotOwnedOrFull(destination,this.maxLevelSize - i + 1)) {
-                this.selectedLevel--;
-                destination = this.getFirstSpot(destination,this.maxLevelSize - (this.selectedLevel));
-                //destination = Math.floor(destination/this.calculateSize(this.selectedLevel) - this.getRelativeIndex(this.selectedLevel - 1,destination)*this.calculateSize(this.selectedLevel - 1))
-                // destination = destination/(this.GRID_SIZE*this.GRID_SIZE);
-                // destination = destination - ((this.GRID_SIZE*this.GRID_SIZE))*this.getRelativeIndex(this.selectedLevel - 2,destination)
+
+        //Record the position of each tictac that the user is in.
+        //Based on the level of the tictac that has been won, relocate the user to the equivalent tictac of another levelsize.
+        // If there is none, allow the user to choose any tictac of the same levelsize.
+        
+        //Grab the relative spots of the tictacs that the user is in.
+        let relativeSpots: number[] = [];
+        for (let i = 0 ; i < this.maxLevelSize ; i++) {
+            relativeSpots.push(this.getRelativeIndex(i,this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE));
+        }
+        // Get the first spot of the levelsize that has been won.
+        if (state.wonLevelSize == 0) {
+            return state;
+        }
+        let destination = this.getFirstSpot(this.selectedIndex + cursorCol + cursorRow * this.GRID_SIZE, this.maxLevelSize - state.wonLevelSize + 1);
+        // Now we loop into that tictac and play the equivalent
+        for (let j = state.wonLevelSize - 1; j < relativeSpots.length; j++) {
+            cursorCol = relativeSpots[j] % this.GRID_SIZE;
+            cursorRow = Math.floor(relativeSpots[j] / this.GRID_SIZE);
+            let newSpot = destination + cursorCol * this.calculateSize(this.maxLevelSize - j) + cursorRow * this.GRID_SIZE * this.calculateSize(this.maxLevelSize - j);
+            if (this.getOwner(newSpot, j) == 0) {
+            destination = newSpot;
+            state.cursorCol = cursorCol;
+            state.cursorRow = cursorRow;
+            this.selectedLevel = state.wonLevelSize;
             } else {
-                break;
+            // Set to the zeroeth spot of this levelsize
+            break;
             }
         }
-        this.selectedIndex = destination;
-        //What we want to do here is check if the sele
-        if (this.selectedLevel != 0) {
-            this.selectedIndex = this.getFirstSpot(destination,this.maxLevelSize - (this.selectedLevel - 1));
-        }
+        state.cursorCol = cursorCol;
+        state.cursorRow = cursorRow;
 
-        
+        // Then we need to go to the highest levelsize that has been won
+        //! This is a bunch of wasted calculations, make it better johnny
+        //let destination = this.getFirstSpot(this.selectedIndex,(this.selectedLevel - 1)) + (cursorCol + cursorRow*this.GRID_SIZE)*Math.pow((this.GRID_SIZE*this.GRID_SIZE),(this.maxLevelSize - (this.selectedLevel - 1)));
+
+        this.selectedIndex = destination;
+        // //What we want to do here is check if the sele
+        // if (this.selectedLevel != 0) {
+        //     this.selectedIndex = this.getFirstSpot(destination,this.maxLevelSize - (this.selectedLevel - 1));
+        // }
+
+        //Once we have made it to this highest levelsize, we set the equivalent cursor size.
         return state;
     }
 
@@ -212,6 +245,7 @@ export default class TicTac {
         //We do this to get the number of spots a single tictac of levelSize is supposed to envelop
         //Legend: Levelsize of 0 would represent the largest tictac, levelsize of say 1 would be smallest tictacs on a standard board
         //That means the total number of slots envoloped by one tictac of that size would be 
+        //*Levelsize of zero means the largest tictac
         let size = (this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - levelSize);
         //Now we need to find a multiple of size that is the closest value to index - where it must be below index by a max of size.
         let factor = Math.floor(index/size);
@@ -261,7 +295,7 @@ export default class TicTac {
      * @description This method checks whenever a tictac is placed to see whether or not a grid has been won.
      * 
      */
-    private checkForWinOrFull(index: number): TicTacState  {
+    private checkForWinOrFull(index: number): any {
         //We start by checking for win. This entails first checking only the tictac played in
         //If that tictac has been won, then check higher levels of tictac, and so on.
         //In addition, a win is only needed to be checked in rows and columns from where an item was placed.
@@ -289,7 +323,7 @@ export default class TicTac {
             if (isWon) {
                 this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                 if (i == 1) {
-                    return TicTacState.WIN;
+                    return moveResponse(TicTacState.WIN,i);
                 }
                 continue;
             }
@@ -304,7 +338,7 @@ export default class TicTac {
             if (isWon) {
                 this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                 if (i == 1) {
-                    return TicTacState.WIN;
+                    return moveResponse(TicTacState.WIN,i);
                 }
                 continue;
             }
@@ -321,7 +355,7 @@ export default class TicTac {
                 if (isWon) {
                     this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                     if (i == 1) {
-                        return TicTacState.WIN;
+                        return moveResponse(TicTacState.WIN,i);
                     }
                     continue;
                 }
@@ -338,7 +372,7 @@ export default class TicTac {
                 if (isWon) {
                     this.setOwner(origin,this.getSlot(index),this.maxLevelSize - i + 1);
                     if (i == 1) {
-                        return TicTacState.WIN;
+                        return moveResponse(TicTacState.WIN,i);
                     }
                     continue;
                 }
@@ -355,15 +389,15 @@ export default class TicTac {
             if (isFull) {
                 this.setOwner(origin,0,this.maxLevelSize - i + 1);
                 if (i == 1) {
-                    return TicTacState.DRAW;
+                    return moveResponse(TicTacState.DRAW,i);
                 }
             }
             //If the loop makes it to this point without continuing, then no win was found and there is no need
             //to check higher levels.
-            return TicTacState.ONGOING;
+            return moveResponse(TicTacState.ONGOING,i);
         }
         //Assuming none of these checks passed, the tictac is ongoing.
-        return TicTacState.ONGOING
+        return moveResponse(TicTacState.ONGOING,0);
     }
 
     /**

@@ -43,11 +43,11 @@ export default class GameManager {
      * @description This method is used whenever the player makes a move on the grid.
      * @returns A boolean representing whether or not a move was played
      */
-    public playMove(cursorCol: number, cursorRow: number): TicTacState 
+    public playMove(cursorCol: number, cursorRow: number): any 
     {
         //Step one: Make the move on the tictac
         let state = this.board.updateSlot(this.turn,cursorCol,cursorRow);
-        if (state == TicTacState.ONGOING || state == TicTacState.LESSER_WIN) {
+        if (state.state == TicTacState.ONGOING || state.state == TicTacState.LESSER_WIN) {
             this.changeTurn(); //change the turn, step two
             //TODO: Step three: I don't know yet
             

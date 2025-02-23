@@ -9,8 +9,8 @@ cp ./src/*.html ./dist/
 cp ./src/*.css ./dist/
 
 # Build the backend and frontend using webpack
-npx webpack --config webpack-back.config.js 
-npx webpack --config webpack-front.config.js 
+npx webpack --config webpack-back.config.js --mode production 
+npx webpack --config webpack-front.config.js --mode production 
 
 # Show running containers
 docker ps
