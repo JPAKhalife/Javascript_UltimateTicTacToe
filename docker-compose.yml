@@ -2,20 +2,13 @@
 version: '3'
 # This header is meant for all of the containers that will be running
 services:
-#This is for the sql database
+#This is for the redis database
   db:
     container_name: tictacdb
-    image: mysql:latest
+    image: redis:latest
     restart: always
-    volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3306:3306"
+      - "6379:6379"
 
   web:
     container_name: tictacserver
@@ -23,7 +16,7 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
-    depends_on:
-      - db
+    # depends_on:
+      # - db
     ports:
       - 3000:3000

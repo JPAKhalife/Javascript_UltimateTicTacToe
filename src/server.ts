@@ -29,25 +29,10 @@ expressWs(app);
 app.use(cors());
 app.options('*', cors());  // Pre-flight requests for all routes
 
-// //Set up the msql database connection
-// const connection = mysql.createConnection({
-//     host: process.env.MYSQL_HOST,
-//     user: process.env.MYSQL_USER,
-//     password: process.env.MYSQL_PASSWORD,
-//     database: process.env.MYSQL_DATABASE
-// })
-
-// //Connect to the database
-// try {
-//     connection.connect();
-// } catch (err) {
-//     console.log('Error connecting to the database: ', err);
-// }
-
-
-// app.use(helmet()); // Use helmet to secure the server's http headers
-// app.use(ratelimiter); // Use the rate limiter to limit the number of requests a client can make (avoiding DDOS attacks)
-// app.use(cors()); // Use cors to allow resources to be shared across different domains
+//!P5.js conflicts with helmet because it has unsafe evals inside it.
+//app.use(helmet()); // Use helmet to secure the server's http headers
+app.use(ratelimiter); // Use the rate limiter to limit the number of requests a client can make (avoiding DDOS attacks)
+app.use(cors()); // Use cors to allow resources to be shared across different domains
 
 //Typescript's .ts can be interpreted as a video format based on MIME type.
 //This fixes that.
