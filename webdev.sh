@@ -1,0 +1,1 @@
+npx webpack serve --config webpack-front.config.js --mode development   

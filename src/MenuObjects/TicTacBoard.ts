@@ -272,16 +272,16 @@ export default class TicTacBoard implements MenuItem {
     /**
      * This method requests a change to be made to the board
      */
-    private playMove() {
+    private playMove(): void {
         //*Modify the tictac. at the spot that is currently selected 
         //*This method must be called assuming that the player is on the right tile
         //TODO: This method must already know the current turn. should take no parameters.
         //* invoke these methods through the game manag
         let state = this.game.playMove(this.cursorCol,this.cursorRow)
-        if (state != TicTacState.ERROR) {
-            this.cursorCol = 0;
-            this.cursorRow = 0;
-            if (state == TicTacState.WIN) {
+        if (state.state != TicTacState.ERROR) {
+            this.cursorCol = state.cursorCol;
+            this.cursorRow = state.cursorRow;
+            if (state.state == TicTacState.WIN) {
                 this.setSelected(false);
             }
             return;
