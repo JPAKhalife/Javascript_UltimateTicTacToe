@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "module": "commonjs",          // Compile to CommonJS
-    "target": "es6",               // Set target to ES6 (or higher)
+    "module": "ES2022",          // Compile to CommonJS
+    "target": "ES2024",               // Set target to ES6 (or higher)
     "moduleResolution": "node",    // Helps TypeScript understand Node.js module resolution
     "esModuleInterop": true,       // Ensures compatibility with CommonJS modules
     "outDir": "./dist",            // Output directory
