@@ -196,27 +196,36 @@ export default class TicTac {
             relativeSpots.push(this.getRelativeIndex(i,this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE));
         }
         // Get the first spot of the levelsize that has been won.
-        if (state.wonLevelSize == 0) {
+        if (state.wonLevelSize == 0 || state.state == TicTacState.WIN) {
+            this.selectedIndex = 0;
+            this.selectedLevel = 0;
             return state;
         }
-        let destination = this.getFirstSpot(this.selectedIndex + cursorCol + cursorRow * this.GRID_SIZE, this.maxLevelSize - state.wonLevelSize + 1);
+        let destination = this.getFirstSpot(this.selectedIndex + cursorCol + cursorRow * this.GRID_SIZE, this.maxLevelSize - state.wonLevelSize + 2);
+        let row = 0;
+        let col = 0;
         // Now we loop into that tictac and play the equivalent
-        for (let j = state.wonLevelSize - 1; j < relativeSpots.length; j++) {
-            cursorCol = relativeSpots[j] % this.GRID_SIZE;
-            cursorRow = Math.floor(relativeSpots[j] / this.GRID_SIZE);
-            let newSpot = destination + cursorCol * this.calculateSize(this.maxLevelSize - j) + cursorRow * this.GRID_SIZE * this.calculateSize(this.maxLevelSize - j);
-            if (this.getOwner(newSpot, j) == 0) {
-            destination = newSpot;
-            state.cursorCol = cursorCol;
-            state.cursorRow = cursorRow;
-            this.selectedLevel = state.wonLevelSize;
+        for (let j = Math.max(state.wonLevelSize - 1,1); j < relativeSpots.length ; j++) {
+            col = relativeSpots[j] % this.GRID_SIZE;
+            row = Math.floor(relativeSpots[j] / this.GRID_SIZE);
+            let newSpot = destination + col * this.calculateSize(this.maxLevelSize - (j)) + row * this.GRID_SIZE * this.calculateSize(this.maxLevelSize - (j));
+            if (this.getOwner(newSpot,this.maxLevelSize - j) == 0) {
+                destination = newSpot;
+                // state.cursorCol = col;
+                // state.cursorRow = row;
+                this.selectedLevel = j + 1;
             } else {
+                //This clause is triggered if the spot being sent to is already owned
+                //In that case, loop and decrease levelsize until the spot is no longer owned
+                this.selectedLevel = this.maxLevelSize - j + 1;
+                while (this.getOwner(newSpot,this.maxLevelSize - this.selectedLevel + 1) != 0) {
+                    this.selectedLevel--;
+                }
+                
             // Set to the zeroeth spot of this levelsize
             break;
             }
         }
-        state.cursorCol = cursorCol;
-        state.cursorRow = cursorRow;
 
         // Then we need to go to the highest levelsize that has been won
         //! This is a bunch of wasted calculations, make it better johnny
@@ -449,6 +458,7 @@ export default class TicTac {
      */
     public getOwner(index: number, searchingLevel: number = 1): number {
         if (this.getSlot(index) < 0 && searchingLevel > 0) {
+            if (searchingLevel > Math.abs(this.getSlot(index))) {return 0;}
             return this.getSlot(index + 1);
         } else if (searchingLevel > 0) {
             return 0;
