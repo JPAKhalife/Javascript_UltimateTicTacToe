@@ -5,7 +5,7 @@ services:
 #This is for the redis database
   db:
     container_name: tictacdb
-    image: redis:latest
+    image: redis/redis-stack:latest
     restart: always
     ports:
       - "6379:6379"

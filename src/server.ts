@@ -7,6 +7,10 @@
  * @updated 2024-06-23
  */
 
+//Important constants
+const host = 'tictacdb'; // The name of the database
+const port = 6379; // The port of the database
+
 //Dependencies
 import express from 'express'; // This is the express framework
 import expressWs from 'express-ws'; // This is the express websocket framework
@@ -15,20 +19,8 @@ import expressWs from 'express-ws'; // This is the express websocket framework
 import helmet from 'helmet'; // This is the helmet framework - used for security of http headers
 import rateLimit from 'express-rate-limit'; // This is the express-rate-limit framework - used for limiting the number of requests a client can make
 import cors from 'cors'; // The cors framework allows for resources (assets like fonts, ect) to be shared across different domains
+import RedisManager from './redis.ts'
 
-const redis = require('redis');
-const redisClient = redis.createClient(6379,'127.0.0.1');
-redisClient.on('error', (err) => {
-    console.log('Error occured while connecting or accessing redis server');
-});
-if(!redisClient.get('customer_name',redis.print)) {
-    //create a new record
-    redisClient.set('customer_name','John Doe', redis.print);
-    console.log('Writing Property : customer_name');
-} else {
-    let val = redisClient.get('customer_name',redis.print);
-    console.log(`Reading property : customer_name - ${val}`);
-}
 const ratelimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100 // limit each IP to 100 requests per windowMs
@@ -55,7 +47,11 @@ app.use((req: any, res: any, next: any) => {
         res.type('application/javascript');
     }
     next();
-})
+});
+
+//Now before enabling any requests, we need to connect to the Redis server
+const redis = new RedisManager(host,port); //initialize client
+redis.connect(); //connect
 
 /**  
 *! We need to send multiple files to the client, but we cannot use the sendFile method more than once.
@@ -75,22 +71,6 @@ app.get('/', (req: any, res: any) => {
     //Send the index.html file to the client (any files included in the html file will be sent automatically)
     res.sendFile(process.cwd() + '/index.html');
 });
-
-// //This will store and retrive a single string
-// await client.set('key', 'value');
-// const value = await client.get('key');
-
-// //This will store and retrieve a map
-// await client.hSet('user-session:123', {
-//     name: 'John',
-//     surname: 'Smith',
-//     company: 'Redis',
-//     age: 29
-// })
-
-// let userSession = await client.hGetAll('user-session:123');
-// console.log(JSON.stringify(userSession, null, 2));
-
 
 // Listen on port 3000
 app.listen(3000, () => {
