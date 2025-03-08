@@ -19,7 +19,7 @@ import expressWs from 'express-ws'; // This is the express websocket framework
 import helmet from 'helmet'; // This is the helmet framework - used for security of http headers
 import rateLimit from 'express-rate-limit'; // This is the express-rate-limit framework - used for limiting the number of requests a client can make
 import cors from 'cors'; // The cors framework allows for resources (assets like fonts, ect) to be shared across different domains
-import RedisManager from './redis.ts'
+import RedisManager from './RedisManager'
 
 const ratelimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -50,8 +50,7 @@ app.use((req: any, res: any, next: any) => {
 });
 
 //Now before enabling any requests, we need to connect to the Redis server
-const redis = new RedisManager(host,port); //initialize client
-redis.connect(); //connect
+const redis = new RedisManager(host,port); //initialize and connect client
 
 /**  
 *! We need to send multiple files to the client, but we cannot use the sendFile method more than once.

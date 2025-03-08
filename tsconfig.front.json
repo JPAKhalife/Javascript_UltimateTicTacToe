@@ -6,10 +6,10 @@
       "moduleResolution": "node",    // Helps TypeScript understand module resolution
       "esModuleInterop": true,       // Ensures compatibility with CommonJS modules if needed
       "outDir": "./dist",            // Output directory
-      "rootDir": "./src",            // Source directory
+      "rootDir": "./src/FrontEnd",            // Source directory
       "strict": true                 // Optional, for strict type checking
     },
-    "include": ["src/**/*.ts"],      // Include all TypeScript files in the 'src' directory
+    "include": ["src/FrontEnd/**/*.ts"],      // Include all TypeScript files in the 'src' directory
     "exclude": ["node_modules","src/server.ts"]      // Exclude node_modules
   }
   

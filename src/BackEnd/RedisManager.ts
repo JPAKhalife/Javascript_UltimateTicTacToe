@@ -55,15 +55,6 @@ export default class RedisManager {
     constructor(host: string,port: number) {
         this.host = host;
         this.port = port;
-    }
-
-    /**
-     * @method connect
-     * @description This method is used to establish a connection to the redis server
-     * This only needs to be called once.
-     * @returns A boolean representing whether or not the connection was successful
-     */
-    public connect(): boolean {
         //Create the client object
         this.redisClient = new Redis({
             host: this.host,
@@ -75,8 +66,8 @@ export default class RedisManager {
         this.redisClient.on('connect', () => {
             console.log('Connected to Redis server');
         });
-        return this.redisClient.status === 'ready';
     }
+
 
     /**
      * @method createLobby

@@ -5,7 +5,7 @@ module.exports = (env, argv) => {
   const isDevelopment = argv.mode === 'development';
 
   return {
-    entry: './src/sketch.ts',
+    entry: './src/FrontEnd/sketch.ts',
     output: {
       filename: 'front.bundle.js',
       path: path.resolve(__dirname, 'dist'),
@@ -14,7 +14,7 @@ module.exports = (env, argv) => {
     devServer: isDevelopment
       ? {
           static: {
-            directory: path.join(__dirname, 'src'),
+            directory: path.join(__dirname, 'src/FrontEnd'),
           },
           compress: true,
           port: 9000,

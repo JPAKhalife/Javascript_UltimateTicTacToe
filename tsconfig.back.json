@@ -5,10 +5,10 @@
     "moduleResolution": "node",    // Helps TypeScript understand Node.js module resolution
     "esModuleInterop": true,       // Ensures compatibility with CommonJS modules
     "outDir": "./dist",            // Output directory
-    "rootDir": "./src",            // Source directory
+    "rootDir": "./src/BackEnd",            // Source directory
     "strict": true,                // Optional, for strict type checking
     "resolveJsonModule": true      // If you need to import JSON files
   },
-  "include": ["src/server.ts"],      // Include all TypeScript files
+  "include": ["src/BackEnd/*"],      // Include all TypeScript files
   "exclude": ["node_modules"]      // Exclude node_modules
 }
