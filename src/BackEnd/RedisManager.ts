@@ -21,7 +21,7 @@ type PlayerData = {
 }
 
 /*
-Possible example of a lobbyJSON object:
+example of a lobbyJSON object:
 "lobby1: {
     "playerNum": 2,
     "playersJoined": 1,
@@ -33,6 +33,7 @@ Possible example of a lobbyJSON object:
     "players": [playerID, playerID2...]
 }
 
+Example of a playerJSON object for containing all players:
 "Players": {
     "player1": {
         "playerName": "John",
@@ -68,7 +69,6 @@ export default class RedisManager {
         });
     }
 
-
     /**
      * @method createLobby
      * @description This method is meant to create a lobby for a game.
@@ -77,29 +77,8 @@ export default class RedisManager {
      * @returns A boolean representing whether or not the lobby was created successfully
      */
     public createLobby(lobbyName: string, lobbyData: LobbyData, playerData: PlayerData): boolean {
-        //First I need to add the entry to the lobby dictionary
-        try {
-            this.redisClient.sadd('lobbyList', lobbyName);
-        } catch (error) {
-            console.error('Error occurred while entering lobby into set:', error);
-            return false;
-        }
-        
-        //Then I need to create a lobby object with the data
-        try {
-            this.redisClient.hset(lobbyName, 'playerNum', lobbyData.playerNum);
-            this.redisClient.hset(lobbyName, 'playersJoined', 0);
-            this.redisClient.hset(lobbyName, 'levelSize', lobbyData.levelSize);
-            this.redisClient.hset(lobbyName, 'gridSize', lobbyData.gridSize);
-            this.redisClient.hset(lobbyName, 'creator', playerData.playerID);
-        } catch (error) {
-            console.error('Error occurred while creating lobby hash:', error);
-            return false;
-        }
-        //A Lobby may only be created by a player. Therefore, Add the player now.
-        this.addPlayer(lobbyName, playerData.playerName,playerData.playerID);
-        return true;
-
+        //This method has yet to be implemented
+        return false;
     }
 
     /**
@@ -111,39 +90,7 @@ export default class RedisManager {
      * @return A boolean representing whether or not the player was added successfully
      */
     public addPlayer(lobbyName: string, playerName: string, playerID: string): boolean {
-        let playersJoined;
-        let playerNum;
-        try {
-            //First get the number of players in the game.
-            playersJoined = this.redisClient.hget(lobbyName, 'playersJoined');
-            playerNum = this.redisClient.hget(lobbyName, 'playerNum');
-        } catch(err) {
-            console.error('Error occurred while getting number of players in lobby:', err);
-            return false;
-        }
-        //Make sure that you CAN add that player to the lobby.
-        if (playersJoined >= playerNum) {
-            console.error('Error: Cannot add player to lobby. Lobby is full.');
-            return false;
-        }
-       
-        try {
-
-            
-            //this.redisClient.hset(lobbyName, 'player1', playerData.playerID);
-            this.redisClient.hset(lobbyName, 'playersJoined', 1);
-            //Add the player to the player set
-            this.redisClient.sadd('Players', playerID);
-            this.redisClient.hset(lobbyName, 'playersJoined', 1);
-            //Add the player to the lobby
-            // this.redisClient.sadd(lobbyName, 'player' +  , playerID);
-            //Add the player as a hash set and put in their username + lobbyname
-            this.redisClient.hset(playerID, 'playerName', playerName, 'lobbyName',lobbyName);
-        } catch (error) {
-            console.error('Error occurred while adding player to lobby:', error);
-            return false;
-        }
-        return true;
+        //This method has yet to be implemented
+        return false;
     }
-
 }
