@@ -1,10 +1,11 @@
 const path = require('path');
 const nodeExternals = require('webpack-node-externals');
+const webpack = require('webpack');
 
 module.exports = {
   target: 'node', // Indicate this is for Node.js
   entry: {
-    app: ['./src/server.ts'], // Your Node.js entry point
+    app: ['./src/BackEnd/server.ts'], // Your Node.js entry point
   },
   module: {
     rules: [

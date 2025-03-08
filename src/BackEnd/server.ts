@@ -7,6 +7,10 @@
  * @updated 2024-06-23
  */
 
+//Important constants
+const host = 'tictacdb'; // The name of the database
+const port = 6379; // The port of the database
+
 //Dependencies
 import express from 'express'; // This is the express framework
 import expressWs from 'express-ws'; // This is the express websocket framework
@@ -15,7 +19,7 @@ import expressWs from 'express-ws'; // This is the express websocket framework
 import helmet from 'helmet'; // This is the helmet framework - used for security of http headers
 import rateLimit from 'express-rate-limit'; // This is the express-rate-limit framework - used for limiting the number of requests a client can make
 import cors from 'cors'; // The cors framework allows for resources (assets like fonts, ect) to be shared across different domains
-
+import RedisManager from './RedisManager'
 
 const ratelimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -29,25 +33,10 @@ expressWs(app);
 app.use(cors());
 app.options('*', cors());  // Pre-flight requests for all routes
 
-// //Set up the msql database connection
-// const connection = mysql.createConnection({
-//     host: process.env.MYSQL_HOST,
-//     user: process.env.MYSQL_USER,
-//     password: process.env.MYSQL_PASSWORD,
-//     database: process.env.MYSQL_DATABASE
-// })
-
-// //Connect to the database
-// try {
-//     connection.connect();
-// } catch (err) {
-//     console.log('Error connecting to the database: ', err);
-// }
-
-
-// app.use(helmet()); // Use helmet to secure the server's http headers
-// app.use(ratelimiter); // Use the rate limiter to limit the number of requests a client can make (avoiding DDOS attacks)
-// app.use(cors()); // Use cors to allow resources to be shared across different domains
+//!P5.js conflicts with helmet because it has unsafe evals inside it.
+//app.use(helmet()); // Use helmet to secure the server's http headers
+app.use(ratelimiter); // Use the rate limiter to limit the number of requests a client can make (avoiding DDOS attacks)
+app.use(cors()); // Use cors to allow resources to be shared across different domains
 
 //Typescript's .ts can be interpreted as a video format based on MIME type.
 //This fixes that.
@@ -58,7 +47,10 @@ app.use((req: any, res: any, next: any) => {
         res.type('application/javascript');
     }
     next();
-})
+});
+
+//Now before enabling any requests, we need to connect to the Redis server
+const redis = new RedisManager(host,port); //initialize and connect client
 
 /**  
 *! We need to send multiple files to the client, but we cannot use the sendFile method more than once.
