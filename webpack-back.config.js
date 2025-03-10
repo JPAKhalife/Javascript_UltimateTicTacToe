@@ -33,6 +33,6 @@ module.exports = {
   },
   externals: [nodeExternals()], // Prevent bundling of node_modules for server-side code
   devtool: false,
-  plugins: [new webpack.SourceMapDevToolPlugin({})],
+  plugins: [new webpack.SourceMapDevToolPlugin({})],  //This is here for debugging purposes
 };
 

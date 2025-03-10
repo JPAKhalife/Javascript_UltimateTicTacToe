@@ -1,5 +1,6 @@
 // filepath: /Users/johnkhalife/Code/Javascript_UltimateTicTacToe/webpack-front.config.js
 const path = require('path');
+const webpack = require('webpack');
 
 module.exports = (env, argv) => {
   const isDevelopment = argv.mode === 'development';
@@ -46,5 +47,6 @@ module.exports = (env, argv) => {
     resolve: {
       extensions: ['.tsx', '.ts', '.js'],
     },
+    plugins: [new webpack.SourceMapDevToolPlugin({})],
   };
 };

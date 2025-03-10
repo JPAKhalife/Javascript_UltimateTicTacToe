@@ -64,6 +64,26 @@ const sketch = (p5: P5) => {
 
     p5.frameRate(FRAMERATE);
 
+    //Define all images and fonts here.
+    fontSquareo = p5.loadFont('/assets/Squareo.ttf');
+    fontmono = p5.loadFont('/assets/mono.otf');
+    fontminecraft = p5.loadFont('/assets/minecraft.ttf');
+    fontAldoApache = p5.loadFont('/assets/AldotheApache.ttf');
+    fontPointless = p5.loadFont('/assets/Pointless.ttf');
+    fontPixeled = p5.loadFont('/assets/Pixeled.ttf');
+    fontRobot = p5.loadFont('/assets/Robot Crush.ttf');
+    fontommy = p5.loadFont('/assets/tommy.otf');
+    fontOSDMONO = p5.loadFont('/assets/OSDMONO.ttf');
+
+    whiteTicTac = p5.loadImage('/assets/whitetictac.png');
+    space = p5.loadImage('/assets/spacebarimage.jpeg');
+    arrows = p5.loadImage('/assets/Arrow Keys.png');
+    wasd = p5.loadImage('/assets/wasd.png');
+    tictacboard = p5.loadImage('/assets/tictacboard.png');
+    tictacboard_two = p5.loadImage('/assets/tictacplay.png');
+    tictacboard_three = p5.loadImage('/assets/tictacbigmove.png');
+
+    //Add all screens to the Gui Manager adn set the screen to start
     GuiManager.addScreen(ControlScreen, Screens.CONTROL_SCREEN);
     GuiManager.addScreen(GameScreen, Screens.GAME_SCREEN);
     GuiManager.addScreen(LoadingScreen, Screens.LOADING_SCREEN);
@@ -71,10 +91,11 @@ const sketch = (p5: P5) => {
     GuiManager.addScreen(StartScreen, Screens.START_SCREEN);
     GuiManager.addScreen(TestScreen, Screens.TEST_SCREEN);
     GuiManager.addScreen(TutorialScreen, Screens.TUTORIAL_SCREEN);
-    GuiManager.changeScreen(Screens.TEST_SCREEN, p5);
+    GuiManager.changeScreen(Screens.START_SCREEN, p5);
     p5.background(255);
   };
 
+  //A very simple draw function that just draws the screen.
   p5.draw = () => {
     p5.fill(255);
     GuiManager.drawScreen();
@@ -83,6 +104,13 @@ const sketch = (p5: P5) => {
 
 new P5(sketch);
 
+/**
+ * @function getRandomInt
+ * @description This function returns a random integer between the min and max values.
+ * @param min 
+ * @param max 
+ * @returns 
+ */
 export function getRandomInt(min: number, max: number): number {
   min = Math.ceil(min);
   max = Math.floor(max);

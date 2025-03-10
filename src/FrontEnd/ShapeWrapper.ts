@@ -43,7 +43,7 @@ export default abstract class ShapeWrapper {
      * @param {string} stroke - The stroke color of the shape in color format.
      * @param {number} strokeWeight - The stroke weight of the shape.
      */
-    constructor(sketch: p5, x: number, y: number, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) 
+    constructor(sketch: p5, x: number, y: number, fill?: p5.Color, stroke?: p5.Color, strokeWeight: number = 1) 
     {
         this.sketch = sketch;
         this.x = x;
@@ -56,8 +56,8 @@ export default abstract class ShapeWrapper {
         this.angle = 0;
         this.tx = 0;
         this.ty = 0;
-        this.fill = fill;
-        this.stroke = stroke;
+        this.fill = fill ? fill: sketch.color(0,0,0,0);
+        this.stroke = stroke ? stroke: sketch.color(0,0,0,0);
         this.strokeWeight = strokeWeight;
         this.anglem = sketch.DEGREES;
         this.orientation = sketch.CORNER;
@@ -254,6 +254,14 @@ export default abstract class ShapeWrapper {
     }
 
     /**
+     * @method unsetFill
+     * @description Unsets the fill color of the shape.
+     */
+    unsetFill(): void {
+        this.doFill = false;
+    }
+
+    /**
      * @method setStroke
      * @param {p5.Color} color - the color of the stroke
      * @description Sets the stroke color of the shape.
@@ -420,7 +428,7 @@ export class Rectangle extends ShapeWrapper {
      * @param {string} stroke - The stroke color of the rectangle in color format.
      * @param {number} strokeWeight - The stroke weight of the rectangle.
      */
-    constructor(height: number, width: number, sketch: p5, x: number, y: number, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) {
+    constructor(height: number, width: number, sketch: p5, x: number, y: number, fill?: p5.Color, stroke?: p5.Color, strokeWeight: number = 1) {
         super(sketch, x, y, fill, stroke, strokeWeight);
         this.width = width;
         this.height = height;
@@ -432,6 +440,7 @@ export class Rectangle extends ShapeWrapper {
      */
     draw(): void 
     {
+        
         this.sketch.rect(this.x, this.y, this.width, this.height);
     }
 
@@ -493,7 +502,7 @@ export class Img extends Rectangle {
     private img: p5.Image;
     private imageOrientation: p5.IMAGE_MODE;
 
-    constructor(img: p5.Image, height: number, width: number, sketch: p5, x: number, y: number, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) 
+    constructor(img: p5.Image, height: number, width: number, sketch: p5, x: number, y: number, fill?: p5.Color, stroke?: p5.Color, strokeWeight: number = 1) 
     {
        super(height,width, sketch, x, y, fill, stroke, strokeWeight);
         this.img = img;
@@ -548,7 +557,7 @@ export class Text extends ShapeWrapper {
     private txtxt: number;
     private tytxt: number;
 
-    constructor(text: string, x: number, y: number, sketch: p5, size?: number, font?: p5.Font, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) 
+    constructor(text: string, x: number, y: number, sketch: p5, size?: number, font?: p5.Font, fill?: p5.Color, stroke?: p5.Color, strokeWeight: number = 1) 
     {
         super(sketch, x, y, fill, stroke, strokeWeight);
         this.text = text;

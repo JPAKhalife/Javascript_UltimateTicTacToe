@@ -29,7 +29,7 @@ const ratelimiter = rateLimit({
 // Create a new express application
 const app = express();
 //Extend the express app with express-ws to add websocket support
-expressWs(app);
+const wsInstance = expressWs(app);
 app.use(cors());
 app.options('*', cors());  // Pre-flight requests for all routes
 
@@ -62,6 +62,8 @@ const redis = new RedisManager(host,port); //initialize and connect client
 * The server will automatically send them.
 */
 app.use(express.static(process.cwd()));
+console.log('Local directory is: ' + process.cwd());
+
 
 app.get('/favicon.ico', (req: any, res: any) => res.status(204));
 //Handling http requests
@@ -71,8 +73,22 @@ app.get('/', (req: any, res: any) => {
     res.sendFile(process.cwd() + '/index.html');
 });
 
+// WebSocket route
+wsInstance.app.ws('/ws', (ws, req) => {
+    ws.send(JSON.stringify({ message: 'Connection established' }));
+
+    ws.on('message', async (message) => {
+        const data = JSON.parse(message.toString());
+    });
+});
+
 // Listen on port 3000
 app.listen(3000, () => {
     console.log('Server started on port 3000');
 });
 
+// Middleware to log the URL of any request
+app.use((req, res, next) => {
+    console.log(`Request URL: ${req.url}`);
+    next();
+});

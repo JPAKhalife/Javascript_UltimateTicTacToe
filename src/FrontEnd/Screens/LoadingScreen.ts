@@ -12,6 +12,7 @@ import KeyListener from "../KeyListener";
 import Cutscene from "../Cutscene";
 import {Text, Img } from "../ShapeWrapper";
 import { whiteTicTac, getCanvasSize, HEADER, fontRobot, fontminecraft, getRandomInt } from "../sketch";
+import WebManager from "../WebManager";
 
 //Constants for the loading screen
 const LOADING_TRANSITION_IN = 180;
@@ -109,6 +110,13 @@ export default class LoadingScreen implements Menu {
     
 
     public draw(): void {
+        //Over here, we want to run the code below while the websocket connection is established. When that is done,
+        //Move on to the multiplayer menu.
+
+        //Test the conneciton real
+        const manager = new WebManager();
+
+
         this.sketch.background(0);
         this.spinner.render();
         this.title.render();

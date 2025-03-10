@@ -84,9 +84,9 @@ export default class SetupScreen implements Menu {
         //Set the animation condition
         this.transition_in.setAnimation(() => {
             if (this.transition_in.getShape(4) >= STROKEWEIGHT*2) {
-                for (let i = 0 ; i < this.transition_in.getShape(0).buttonArray.length ; i++) {
-                    if (this.transition_in.getShape(0).buttonArray[i].opacity <= 255) { 
-                    this.transition_in.getShape(0).buttonArray[i].fadeIn(SETUP_SCREEN_ANIMATION_TIME/3*2);
+                for (let i = 0 ; i < this.transition_in.getShape(0).multiplayer_MenuButton_list.length ; i++) {
+                    if (this.transition_in.getShape(0).multiplayer_MenuButton_list[i].opacity <= 255) { 
+                    this.transition_in.getShape(0).multiplayer_MenuButton_list[i].fadeIn(SETUP_SCREEN_ANIMATION_TIME/3*2);
                 }
                 }
                 if (this.transition_in.getShape(5) < 255) { 
@@ -136,10 +136,10 @@ export default class SetupScreen implements Menu {
 
         this.transition_out.setAnimation(() => {
             //Fade buttons
-            for (let i = 0 ; i < this.transition_out.getShape(0).buttonArray.length ; i++) {
-                if (this.transition_out.getShape(0).buttonArray[i] == this.transition_out.getShape(0).currentlySelected) {
+            for (let i = 0 ; i < this.transition_out.getShape(0).length ; i++) {
+                if (this.transition_out.getShape(0).multiplayer_MenuButton_list[i] == this.transition_out.getShape(0).currentlySelected) {
                 } else {
-                    this.transition_out.getShape(0).buttonArray[i].fade();
+                    this.transition_out.getShape(0).multiplayer_MenuButton_list[i].fade();
                 }
             }
             //Fade out floaters
