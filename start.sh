@@ -5,8 +5,8 @@ set -x  # Enable command echoing for debugging
 mkdir -p dist
 
 # Copy HTML and CSS files from src to dist
-cp ./src/*.html ./dist/
-cp ./src/*.css ./dist/
+cp ./src/FrontEnd/*.html ./dist/
+cp ./src/FrontEnd*.css ./dist/
 
 # Build the backend and frontend using webpack
 npx webpack --config webpack-back.config.js --mode production 
