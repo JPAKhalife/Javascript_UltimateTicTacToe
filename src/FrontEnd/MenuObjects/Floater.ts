@@ -7,8 +7,8 @@
  */
 
 import * as p5 from 'p5';
-import { Img } from './ShapeWrapper';
-import { getCanvasSize, getRandomInt } from './sketch';
+import { Img } from '../ShapeWrapper';
+import { getCanvasSize, getRandomInt } from '../sketch';
 
 
 /**
@@ -19,7 +19,7 @@ import { getCanvasSize, getRandomInt } from './sketch';
  * @param {number} width
  * @param {number} length
  */
-export default class Floater 
+export default class Floater
 {
     //Members of floater
     private floater: Img; 
@@ -44,6 +44,7 @@ export default class Floater
         this.length = length;
         this.sketch = sketch
         this.floater = new Img(image,length,width,sketch,0,0);
+        this.floater.setImageOrientation(this.sketch.CENTER);
     }
 
     /**
@@ -55,7 +56,6 @@ export default class Floater
         this.vx = this.randomVelocity();
         this.vy = this.randomVelocity();
         this.sv = this.randomVelocity();
-        this.floater.setTint(this.sketch.color(255, 255, 255, 255));
         this.floater.translate(this.randomCoord(),this.randomCoord());
     }
 
@@ -111,13 +111,22 @@ export default class Floater
     }
 
     /**
+     * @method getOpacity
+     * @description This is a getter that gets the opacity of the floater
+     * @returns {number}
+     */
+    getOpacity(): number {
+        return parseFloat(this.floater.getTint().toString().split(",")[3].replace(')', ''));
+    }
+
+    /**
      * @method fadeIn
      * @description This method fades in the floater
      * @param {number} time 
      */
     fadeIn(time: number): void 
     {
-        this.floater.changeTint(0,0,0,255/time); 
+        this.floater.changeTint(0,0,0,255/time)
     }
 
     /**
@@ -147,6 +156,8 @@ export default class Floater
      */
     fadeOut(time: number): void 
     {
-        this.floater.changeTint(0,0,0,-255/time); 
+        const currentOpacity = this.getOpacity();
+        const newOpacity = Math.max(currentOpacity - 255 / time, 0);
+        this.floater.setTint(this.sketch.color(255, 255, 255, newOpacity));
     }
 }

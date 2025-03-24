@@ -100,8 +100,6 @@ export default abstract class ShapeWrapper {
             this.sketch.fill(this.fill);
         }
         this.sketch.strokeWeight(this.strokeWeight)
-        this.sketch.stroke(this.stroke);
-        this.sketch.fill(this.fill)
         customOperation();
         this.draw();
         this.sketch.pop();
@@ -236,9 +234,11 @@ export default abstract class ShapeWrapper {
      */
     changeTint(r: number, g: number, b: number, a: number): void 
     {
-        let colorSettings: string[] =  this.tint.toString('rgba').split(',');
+        let colorSettings: string[] = this.tint.toString('rgba').replace(/[^\d,]/g, '').split(',');
         this.doTint = true;
-        this.tint.setAlpha(parseFloat(colorSettings[3]) + a);
+        let currentAlpha = parseFloat(colorSettings[3]);
+        let newAlpha = Math.min(currentAlpha + a, 255); // Ensure alpha does not exceed 255
+        this.tint.setAlpha(newAlpha);
         this.tint.setRed(parseFloat(colorSettings[0]) + r);
         this.tint.setGreen(parseFloat(colorSettings[1]) + g);
         this.tint.setBlue(parseFloat(colorSettings[2]) + b);
@@ -251,6 +251,26 @@ export default abstract class ShapeWrapper {
     unsetTint(): void 
     {      
         this.doTint = false;
+    }
+
+    /**
+     * @method getTint
+     * @description Gets the tint color of the shape.
+     * @returns {p5.Color} The tint color of the shape.
+     */
+    getTint(): p5.Color 
+    {
+        return this.tint;
+    }
+
+    /**
+     * @method getTintAlpha
+     * @description Gets the alpha color of the shape.
+     * @returns {number} The alpha color of the shape.
+     */
+    getTintAlpha(): number
+    {
+       return parseFloat(this.tint.toString().split(",")[3].replace(')', ''));
     }
 
     /**
@@ -270,6 +290,51 @@ export default abstract class ShapeWrapper {
     {
         this.doStroke = true;
         this.stroke = color;
+    }
+
+    /**
+     * @method getStroke
+     * @description Gets the stroke color of the shape.
+     * @returns {p5.Color} The stroke color of the shape.
+     */
+    getStroke(): p5.Color
+    {
+        return this.stroke;
+    }
+
+    /**
+     * @method getStrokeAlpha
+     * @description Gets the alpha component of the stroke color.
+     * @returns {number} The alpha component of the stroke color.
+     */
+    getStrokeAlpha(): number
+    {
+        return parseFloat(this.stroke.toString().split(",")[3].replace(')', ''));
+    }
+
+    /**
+     * @method setStrokeAlpha
+     * @description Sets the alpha component of the stroke color.
+     * @param {number} a
+     */
+    setStrokeAlpha(a: number): void
+    {
+        this.stroke.setAlpha(a);
+    }
+
+    /**
+     * @method changeStroke
+     * @description Sets the alpha component of the stroke color.
+     * @param {number} a
+     */
+    changeStroke(r: number, g: number, b: number, a: number): void 
+    {
+        let colorSettings: string[] =  this.stroke.toString('rgba').split(',');
+        this.doStroke = true;
+        this.tint.setAlpha(parseFloat(colorSettings[3]) + a);
+        this.tint.setRed(parseFloat(colorSettings[0]) + r);
+        this.tint.setGreen(parseFloat(colorSettings[1]) + g);
+        this.tint.setBlue(parseFloat(colorSettings[2]) + b);
     }
 
     /**
@@ -440,7 +505,6 @@ export class Rectangle extends ShapeWrapper {
      */
     draw(): void 
     {
-        
         this.sketch.rect(this.x, this.y, this.width, this.height);
     }
 
@@ -498,27 +562,70 @@ export class Rectangle extends ShapeWrapper {
  * @param {number} strokeWeight - The stroke weight of the image.
  */
 export class Img extends Rectangle {
-
     private img: p5.Image;
     private imageOrientation: p5.IMAGE_MODE;
 
-    constructor(img: p5.Image, height: number, width: number, sketch: p5, x: number, y: number, fill?: p5.Color, stroke?: p5.Color, strokeWeight: number = 1) 
-    {
-       super(height,width, sketch, x, y, fill, stroke, strokeWeight);
+    constructor(img: p5.Image, height: number, width: number, sketch: p5, x: number, y: number, fill?: p5.Color, stroke?: p5.Color, strokeWeight: number = 1) {
+        super(height, width, sketch, x, y, fill, stroke, strokeWeight);
         this.img = img;
         this.width = width;
         this.height = height;
         this.imageOrientation = sketch.CORNER;
+        this.doFill = false;
+        this.doRotate = false;
+        this.doTranslate = false;
+        this.doStroke = false;
+        this.doTint = false;
+        this.sketch.colorMode(this.sketch.HSL, 255);
+        this.tint = sketch.color(255, 255, 255, 255); // Default tint color
     }
 
     /**
      * @function draw
      * @description Draws the image on the canvas.
      */
-    draw(): void 
-    {
+    draw(): void {
         this.sketch.imageMode(this.imageOrientation);
+        this.sketch.colorMode(this.sketch.HSB,255);
+        console.log(this.tint);
+        this.sketch.tint(this.tint);
         this.sketch.image(this.img, this.x, this.y, this.width, this.height);
+    }
+
+    /**
+     * @function setTint
+     * @param {p5.Color} tint - The tint color.
+     * @description Sets the tint color of the image.
+     */
+    setTint(tint: p5.Color): void {
+        this.tint = tint;
+    }
+
+    /**
+     * @function getTint
+     * @description Gets the tint color of the image.
+     * @returns {p5.Color} The tint color.
+     */
+    getTint(): p5.Color {
+        return this.tint;
+    }
+
+    /**
+     * @function changeTint
+     * @param {number} r - The amount to change the red component of the tint color.
+     * @param {number} g - The amount to change the green component of the tint color.
+     * @param {number} b - The amount to change the blue component of the tint color.
+     * @param {number} a - The amount to change the alpha component of the tint color.
+     * @description Changes the tint color of the image by the specified amount.
+     */
+    changeTint(r: number, g: number, b: number, a: number): void {
+        let colorSettings: string[] = this.tint.toString('rgba').replace(/[^\d,]/g, '').split(',');
+        let currentAlpha = parseFloat(colorSettings[3]);
+        let newAlpha = Math.min(currentAlpha + a, 255); // Ensure alpha does not exceed 255
+        this.tint.setAlpha(newAlpha);
+        this.tint.setRed(parseFloat(colorSettings[0]) + r);
+        this.tint.setGreen(parseFloat(colorSettings[1]) + g);
+        this.tint.setBlue(parseFloat(colorSettings[2]) + b);
     }
 
     /**

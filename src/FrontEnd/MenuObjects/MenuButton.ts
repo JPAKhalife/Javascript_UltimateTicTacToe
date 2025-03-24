@@ -298,8 +298,17 @@ export class MenuButton implements MenuItem
      * @description controls the fading in animation of all buttons
      * @param time {number}
      */
-    fadeIn(time: number) {
+    public fadeIn(time: number) {
         this.opacity += (255/(time));
+    }
+
+    /**
+     * @method getText
+     * @description This method gets the text of the button
+     * @returns {string}
+     */
+    public getText(): string {
+        return this.phrase;
     }
 
     /**
@@ -307,15 +316,24 @@ export class MenuButton implements MenuItem
      * @description This is a setter that sets the opacity of the button
      * @param opacity {number} 
      */
-    setOpacity(opacity: number) {
+    public setOpacity(opacity: number) {
         this.opacity = opacity;
     }
 
-    getX(): number {
+    /**
+     * @method getOpacity
+     * @description This is a getter that gets the opacity of the button
+     * @returns number
+     */
+    public getOpacity(): number {
+        return this.opacity;
+    }
+
+    public getX(): number {
         return this.x;
     }
 
-    getY(): number {
+    public getY(): number {
         return this.y;
     }
 }

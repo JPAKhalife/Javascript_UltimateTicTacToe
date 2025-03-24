@@ -7,8 +7,8 @@ rm -rf dist
 mkdir -p dist
 
 # Copy HTML and CSS files from src to dist
-cp ./src/*.html ./dist/
-cp ./src/*.css ./dist/
+cp ./src/FrontEnd/*.html ./dist/
+cp ./src/FrontEnd/*.css ./dist/
 # Copy the assets and content to dist
 cp -r ./src/assets ./dist/assets
 
