@@ -29,7 +29,7 @@ const ratelimiter = rateLimit({
 // Create a new express application
 const app = express();
 //Extend the express app with express-ws to add websocket support
-const wsInstance = expressWs(app);
+//const wsInstance = expressWs(app);
 app.use(cors());
 app.options('*', cors());  // Pre-flight requests for all routes
 
@@ -74,13 +74,13 @@ app.get('/', (req: any, res: any) => {
 });
 
 // WebSocket route
-wsInstance.app.ws('/ws', (ws, req) => {
-    ws.send(JSON.stringify({ message: 'Connection established' }));
+// wsInstance.app.ws('/ws', (ws, req) => {
+//     ws.send(JSON.stringify({ message: 'Connection established' }));
 
-    ws.on('message', async (message) => {
-        const data = JSON.parse(message.toString());
-    });
-});
+//     ws.on('message', async (message) => {
+//         const data = JSON.parse(message.toString());
+//     });
+// });
 
 // Listen on port 3000
 app.listen(3000, () => {

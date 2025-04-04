@@ -22,12 +22,20 @@ import { getCanvasSize, getRandomInt } from '../sketch';
 export default class Floater
 {
     //Members of floater
-    private floater: Img; 
+    private floater: p5.Image; 
     private sketch: p5;
+
+    //These are for the current x and y
+    private x: number;
+    private y: number;
 
     //These are for the current x and y velocity
     private vx: number;
     private vy: number;
+
+    //These are for the translation coordinates
+    private tx: number;
+    private ty: number;
 
     //This controls the spin speed of the bouncer
     private sv: number;
@@ -35,16 +43,25 @@ export default class Floater
     //These are the dimensions of the floater
     private width: number;
     private length: number;
+    private rotation: number;
+
+    //This is the opacity of the floater
+    private opacity: number;
 
     constructor(sketch: p5, image : p5.Image, width: number, length: number) {
         this.vx = 0;
         this.vy = 0;
         this.sv = 0;
+        this.tx = 0;
+        this.ty = 0;
+        this.x = 0;
+        this.y = 0;
+        this.opacity = 255;
         this.width = width;
         this.length = length;
         this.sketch = sketch
-        this.floater = new Img(image,length,width,sketch,0,0);
-        this.floater.setImageOrientation(this.sketch.CENTER);
+        this.floater = image;
+        this.rotation = 0;
     }
 
     /**
@@ -56,7 +73,8 @@ export default class Floater
         this.vx = this.randomVelocity();
         this.vy = this.randomVelocity();
         this.sv = this.randomVelocity();
-        this.floater.translate(this.randomCoord(),this.randomCoord());
+        this.tx = this.randomCoord();
+        this.ty = this.randomCoord();
     }
 
     /**
@@ -65,9 +83,22 @@ export default class Floater
      */
     draw(): void
     {
-        this.floater.roll(this.sv);
-        this.floater.render();
-        this.floater.changeTranslation(this.vx,this.vy);
+        //Change the roll and position of the floater
+        this.tx += this.vx;
+        this.ty += this.vy;
+        this.rotation += this.sv;
+
+        //Draw the floater
+        this.sketch.push();
+        this.sketch.imageMode(this.sketch.CENTER);
+        this.sketch.tint(255,255,255,this.opacity)
+        this.sketch.translate(this.tx,this.ty);
+        this.sketch.angleMode(this.sketch.DEGREES);
+        this.sketch.rotate(this.rotation);
+        this.sketch.image(this.floater,this.x,this.y,this.width,this.length);
+        this.sketch.pop();
+
+        //Check for bouncing off of walls
         if (this.doBounce()) {
             this.bounce();
         }
@@ -80,7 +111,7 @@ export default class Floater
      */
     doBounce(): boolean 
     {
-        if (this.floater.getTX() + this.width/2 > getCanvasSize() || this.floater.getTX() - this.floater.getWidth()/2 < 0 || this.floater.getTY() + this.floater.getHeight()/2 > getCanvasSize() || (this.floater.getTY()) - this.floater.getHeight()/2 < 0) {
+        if (this.tx + this.width / 2 > getCanvasSize() || this.tx - this.width / 2 < 0 || this.ty + this.length / 2 > getCanvasSize() || this.ty - this.length / 2 < 0) {
             return true;
         }
         return false;
@@ -91,11 +122,11 @@ export default class Floater
      * @description This method bounces the floater
      */
     bounce() {
-        if (this.floater.getTX() + this.floater.getWidth()/2 > getCanvasSize() || this.floater.getTX() - this.width/2 < 0) {
-            this.vx = this.vx*-1;
+        if (this.tx + this.width / 2 > getCanvasSize() || this.tx - this.width / 2 < 0) {
+            this.vx = this.vx * -1;
         }
-        if (this.floater.getTY()  + this.floater.getHeight()/2 > getCanvasSize() || this.floater.getTY() - this.floater.getHeight()/2 < 0) {
-            this.vy = this.vy*-1;
+        if (this.ty + this.length / 2 > getCanvasSize() || this.ty - this.length / 2 < 0) {
+            this.vy = this.vy * -1;
         }
         this.sv = this.sv*-1;
     }
@@ -107,7 +138,7 @@ export default class Floater
      */
     setOpacity(opacity: number): void 
     {
-        this.floater.setTint(this.sketch.color(255,255,255,opacity));
+        this.opacity = opacity;
     }
 
     /**
@@ -116,7 +147,7 @@ export default class Floater
      * @returns {number}
      */
     getOpacity(): number {
-        return parseFloat(this.floater.getTint().toString().split(",")[3].replace(')', ''));
+        return this.opacity;
     }
 
     /**
@@ -126,7 +157,7 @@ export default class Floater
      */
     fadeIn(time: number): void 
     {
-        this.floater.changeTint(0,0,0,255/time)
+        this.opacity += (255 / time);
     }
 
     /**
@@ -145,8 +176,12 @@ export default class Floater
      * @returns {number}
      */
     randomVelocity(): number 
-    {
-        return getRandomInt(-3,3);
+    {   
+        let random = 0;
+        do {
+            random  = getRandomInt(-3,3);
+        } while (random == 0);
+        return random;
     }
 
     /**
@@ -156,8 +191,6 @@ export default class Floater
      */
     fadeOut(time: number): void 
     {
-        const currentOpacity = this.getOpacity();
-        const newOpacity = Math.max(currentOpacity - 255 / time, 0);
-        this.floater.setTint(this.sketch.color(255, 255, 255, newOpacity));
+        this.opacity = this.opacity - (255 / time);
     }
 }

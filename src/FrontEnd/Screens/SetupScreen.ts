@@ -91,7 +91,6 @@ export default class SetupScreen implements Menu {
                     this.floater_array[i].fadeIn(SETUP_SCREEN_ANIMATION_TIME / 3);
                 }
             }
-            let currop = this.floater_array[this.floater_array.length - 1].getOpacity();
             if (this.floater_array[this.floater_array.length - 1].getOpacity() >= 255) {
                 this.transition_in_active = false;
                 this.keylistener.activate();
