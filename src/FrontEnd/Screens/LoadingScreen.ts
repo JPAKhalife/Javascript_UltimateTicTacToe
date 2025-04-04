@@ -114,7 +114,7 @@ export default class LoadingScreen implements Menu {
         //Move on to the multiplayer menu.
 
         //Test the conneciton real
-        const manager = new WebManager();
+        //const manager = new WebManager();
 
 
         this.sketch.background(0);

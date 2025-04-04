@@ -16,7 +16,7 @@ import {MenuButton} from "../MenuObjects/MenuButton";
 import {Text, Rectangle } from "../ShapeWrapper";
 import { whiteTicTac, getCanvasSize, HEADER, fontPointless } from "../sketch";
 
-const STROKEWEIGHT = 15;
+export const STROKEWEIGHT = 15;
 const SETUP_SCREEN_ANIMATION_TIME = 120;
 
 export default class SetupScreen implements Menu {
@@ -91,7 +91,6 @@ export default class SetupScreen implements Menu {
                     this.floater_array[i].fadeIn(SETUP_SCREEN_ANIMATION_TIME / 3);
                 }
             }
-            let currop = this.floater_array[this.floater_array.length - 1].getOpacity();
             if (this.floater_array[this.floater_array.length - 1].getOpacity() >= 255) {
                 this.transition_in_active = false;
                 this.keylistener.activate();
