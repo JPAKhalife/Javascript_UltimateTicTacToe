@@ -9,6 +9,7 @@
 import * as p5 from 'p5';
 import { Img } from '../ShapeWrapper';
 import { getCanvasSize, getRandomInt } from '../sketch';
+import { STROKEWEIGHT } from '../Screens/SetupScreen';
 
 
 /**
@@ -111,7 +112,7 @@ export default class Floater
      */
     doBounce(): boolean 
     {
-        if (this.tx + this.width / 2 > getCanvasSize() || this.tx - this.width / 2 < 0 || this.ty + this.length / 2 > getCanvasSize() || this.ty - this.length / 2 < 0) {
+        if (this.tx + this.width / 2 > getCanvasSize() - STROKEWEIGHT || this.tx - this.width / 2 < 0 + STROKEWEIGHT || this.ty + this.length / 2 > getCanvasSize() - STROKEWEIGHT || this.ty - this.length / 2 < 0 + STROKEWEIGHT) {
             return true;
         }
         return false;
@@ -122,10 +123,10 @@ export default class Floater
      * @description This method bounces the floater
      */
     bounce() {
-        if (this.tx + this.width / 2 > getCanvasSize() || this.tx - this.width / 2 < 0) {
+        if (this.tx + this.width / 2 > getCanvasSize() - STROKEWEIGHT || this.tx - this.width / 2 < 0 + STROKEWEIGHT) {
             this.vx = this.vx * -1;
         }
-        if (this.ty + this.length / 2 > getCanvasSize() || this.ty - this.length / 2 < 0) {
+        if (this.ty + this.length / 2 > getCanvasSize() - STROKEWEIGHT || this.ty - this.length / 2 < 0 + STROKEWEIGHT) {
             this.vy = this.vy * -1;
         }
         this.sv = this.sv*-1;

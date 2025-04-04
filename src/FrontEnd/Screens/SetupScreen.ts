@@ -16,7 +16,7 @@ import {MenuButton} from "../MenuObjects/MenuButton";
 import {Text, Rectangle } from "../ShapeWrapper";
 import { whiteTicTac, getCanvasSize, HEADER, fontPointless } from "../sketch";
 
-const STROKEWEIGHT = 15;
+export const STROKEWEIGHT = 15;
 const SETUP_SCREEN_ANIMATION_TIME = 120;
 
 export default class SetupScreen implements Menu {
