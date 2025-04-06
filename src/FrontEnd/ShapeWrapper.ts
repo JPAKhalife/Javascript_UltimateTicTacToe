@@ -587,7 +587,6 @@ export class Img extends Rectangle {
     draw(): void {
         this.sketch.imageMode(this.imageOrientation);
         this.sketch.colorMode(this.sketch.HSB,255);
-        console.log(this.tint);
         this.sketch.tint(this.tint);
         this.sketch.image(this.img, this.x, this.y, this.width, this.height);
     }
@@ -685,6 +684,8 @@ export class Text extends ShapeWrapper {
         this.sketch.textFont(this.font);
         this.sketch.textSize(this.size);
         this.sketch.textAlign(this.textOrientation[0],this.textOrientation[1]);
+        this.sketch.tint(this.tint);
+        this.sketch.fill(this.fill);
         if (this.textbox) {
             this.sketch.text(this.text, this.x, this.y,this.txtxt, this.tytxt);
         } else {
@@ -760,6 +761,7 @@ export class ShapeGroup
      */
     constructor(...args: ShapeWrapper[]) {
         this.shapes = [];
+        this.shapes.push(args[0]);
         for (let i = 1; i < args.length; i++) {
             if (typeof(args[i]) != typeof(args[i-1])) {
                 throw new Error('All arguments must be of the same type');

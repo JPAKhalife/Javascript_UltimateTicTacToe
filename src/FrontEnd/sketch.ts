@@ -91,7 +91,7 @@ const sketch = (p5: P5) => {
     GuiManager.addScreen(StartScreen, Screens.START_SCREEN);
     GuiManager.addScreen(TestScreen, Screens.TEST_SCREEN);
     GuiManager.addScreen(TutorialScreen, Screens.TUTORIAL_SCREEN);
-    GuiManager.changeScreen(Screens.SETUP_SCREEN, p5);
+    GuiManager.changeScreen(Screens.CONTROL_SCREEN, p5);
     p5.background(255);
   };
 
