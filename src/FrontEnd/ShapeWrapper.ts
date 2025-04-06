@@ -43,7 +43,7 @@ export default abstract class ShapeWrapper {
      * @param {string} stroke - The stroke color of the shape in color format.
      * @param {number} strokeWeight - The stroke weight of the shape.
      */
-    constructor(sketch: p5, x: number, y: number, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) 
+    constructor(sketch: p5, x: number, y: number, fill?: p5.Color, stroke?: p5.Color, strokeWeight: number = 1) 
     {
         this.sketch = sketch;
         this.x = x;
@@ -56,8 +56,8 @@ export default abstract class ShapeWrapper {
         this.angle = 0;
         this.tx = 0;
         this.ty = 0;
-        this.fill = fill;
-        this.stroke = stroke;
+        this.fill = fill ? fill: sketch.color(0,0,0,0);
+        this.stroke = stroke ? stroke: sketch.color(0,0,0,0);
         this.strokeWeight = strokeWeight;
         this.anglem = sketch.DEGREES;
         this.orientation = sketch.CORNER;
@@ -100,8 +100,6 @@ export default abstract class ShapeWrapper {
             this.sketch.fill(this.fill);
         }
         this.sketch.strokeWeight(this.strokeWeight)
-        this.sketch.stroke(this.stroke);
-        this.sketch.fill(this.fill)
         customOperation();
         this.draw();
         this.sketch.pop();
@@ -236,9 +234,11 @@ export default abstract class ShapeWrapper {
      */
     changeTint(r: number, g: number, b: number, a: number): void 
     {
-        let colorSettings: string[] =  this.tint.toString('rgba').split(',');
+        let colorSettings: string[] = this.tint.toString('rgba').replace(/[^\d,]/g, '').split(',');
         this.doTint = true;
-        this.tint.setAlpha(parseFloat(colorSettings[3]) + a);
+        let currentAlpha = parseFloat(colorSettings[3]);
+        let newAlpha = Math.min(currentAlpha + a, 255); // Ensure alpha does not exceed 255
+        this.tint.setAlpha(newAlpha);
         this.tint.setRed(parseFloat(colorSettings[0]) + r);
         this.tint.setGreen(parseFloat(colorSettings[1]) + g);
         this.tint.setBlue(parseFloat(colorSettings[2]) + b);
@@ -254,6 +254,34 @@ export default abstract class ShapeWrapper {
     }
 
     /**
+     * @method getTint
+     * @description Gets the tint color of the shape.
+     * @returns {p5.Color} The tint color of the shape.
+     */
+    getTint(): p5.Color 
+    {
+        return this.tint;
+    }
+
+    /**
+     * @method getTintAlpha
+     * @description Gets the alpha color of the shape.
+     * @returns {number} The alpha color of the shape.
+     */
+    getTintAlpha(): number
+    {
+       return parseFloat(this.tint.toString().split(",")[3].replace(')', ''));
+    }
+
+    /**
+     * @method unsetFill
+     * @description Unsets the fill color of the shape.
+     */
+    unsetFill(): void {
+        this.doFill = false;
+    }
+
+    /**
      * @method setStroke
      * @param {p5.Color} color - the color of the stroke
      * @description Sets the stroke color of the shape.
@@ -262,6 +290,51 @@ export default abstract class ShapeWrapper {
     {
         this.doStroke = true;
         this.stroke = color;
+    }
+
+    /**
+     * @method getStroke
+     * @description Gets the stroke color of the shape.
+     * @returns {p5.Color} The stroke color of the shape.
+     */
+    getStroke(): p5.Color
+    {
+        return this.stroke;
+    }
+
+    /**
+     * @method getStrokeAlpha
+     * @description Gets the alpha component of the stroke color.
+     * @returns {number} The alpha component of the stroke color.
+     */
+    getStrokeAlpha(): number
+    {
+        return parseFloat(this.stroke.toString().split(",")[3].replace(')', ''));
+    }
+
+    /**
+     * @method setStrokeAlpha
+     * @description Sets the alpha component of the stroke color.
+     * @param {number} a
+     */
+    setStrokeAlpha(a: number): void
+    {
+        this.stroke.setAlpha(a);
+    }
+
+    /**
+     * @method changeStroke
+     * @description Sets the alpha component of the stroke color.
+     * @param {number} a
+     */
+    changeStroke(r: number, g: number, b: number, a: number): void 
+    {
+        let colorSettings: string[] =  this.stroke.toString('rgba').split(',');
+        this.doStroke = true;
+        this.tint.setAlpha(parseFloat(colorSettings[3]) + a);
+        this.tint.setRed(parseFloat(colorSettings[0]) + r);
+        this.tint.setGreen(parseFloat(colorSettings[1]) + g);
+        this.tint.setBlue(parseFloat(colorSettings[2]) + b);
     }
 
     /**
@@ -400,6 +473,26 @@ export default abstract class ShapeWrapper {
     {
         return this.ty;
     }
+
+    /**
+     * @method getTX
+     * @description Gets the x-translation of the shape.
+     * @returns {number} The x-translation of the shape.
+     */
+    setTX(tx: number): void
+    {
+        this.tx = tx;
+    }
+
+    /**
+     * @method getTY
+     * @description Gets the y-translation of the shape.
+     * @returns {number} The y-translation of the shape.
+     */
+    setTY(ty: number): void
+    {
+        this.ty = ty;
+    }
 }
 
 /**
@@ -420,7 +513,7 @@ export class Rectangle extends ShapeWrapper {
      * @param {string} stroke - The stroke color of the rectangle in color format.
      * @param {number} strokeWeight - The stroke weight of the rectangle.
      */
-    constructor(height: number, width: number, sketch: p5, x: number, y: number, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) {
+    constructor(height: number, width: number, sketch: p5, x: number, y: number, fill?: p5.Color, stroke?: p5.Color, strokeWeight: number = 1) {
         super(sketch, x, y, fill, stroke, strokeWeight);
         this.width = width;
         this.height = height;
@@ -489,27 +582,69 @@ export class Rectangle extends ShapeWrapper {
  * @param {number} strokeWeight - The stroke weight of the image.
  */
 export class Img extends Rectangle {
-
     private img: p5.Image;
     private imageOrientation: p5.IMAGE_MODE;
 
-    constructor(img: p5.Image, height: number, width: number, sketch: p5, x: number, y: number, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) 
-    {
-       super(height,width, sketch, x, y, fill, stroke, strokeWeight);
+    constructor(img: p5.Image, height: number, width: number, sketch: p5, x: number, y: number, fill?: p5.Color, stroke?: p5.Color, strokeWeight: number = 1) {
+        super(height, width, sketch, x, y, fill, stroke, strokeWeight);
         this.img = img;
         this.width = width;
         this.height = height;
         this.imageOrientation = sketch.CORNER;
+        this.doFill = false;
+        this.doRotate = false;
+        this.doTranslate = false;
+        this.doStroke = false;
+        this.doTint = false;
+        this.sketch.colorMode(this.sketch.HSL, 255);
+        this.tint = sketch.color(255, 255, 255, 255); // Default tint color
     }
 
     /**
      * @function draw
      * @description Draws the image on the canvas.
      */
-    draw(): void 
-    {
+    draw(): void {
         this.sketch.imageMode(this.imageOrientation);
+        this.sketch.colorMode(this.sketch.HSB,255);
+        this.sketch.tint(this.tint);
         this.sketch.image(this.img, this.x, this.y, this.width, this.height);
+    }
+
+    /**
+     * @function setTint
+     * @param {p5.Color} tint - The tint color.
+     * @description Sets the tint color of the image.
+     */
+    setTint(tint: p5.Color): void {
+        this.tint = tint;
+    }
+
+    /**
+     * @function getTint
+     * @description Gets the tint color of the image.
+     * @returns {p5.Color} The tint color.
+     */
+    getTint(): p5.Color {
+        return this.tint;
+    }
+
+    /**
+     * @function changeTint
+     * @param {number} r - The amount to change the red component of the tint color.
+     * @param {number} g - The amount to change the green component of the tint color.
+     * @param {number} b - The amount to change the blue component of the tint color.
+     * @param {number} a - The amount to change the alpha component of the tint color.
+     * @description Changes the tint color of the image by the specified amount.
+     */
+    changeTint(r: number, g: number, b: number, a: number): void {
+        let colorSettings: string[] = this.tint.toString('rgba').replace(/[^\d,]/g, '').split(',');
+        let currentAlpha = parseFloat(colorSettings[3]);
+        let newAlpha = Math.min(currentAlpha + a, 255); // Ensure alpha does not exceed 255
+        this.tint.setAlpha(newAlpha);
+        this.tint.setRed(parseFloat(colorSettings[0]) + r);
+        this.tint.setGreen(parseFloat(colorSettings[1]) + g);
+        this.tint.setBlue(parseFloat(colorSettings[2]) + b);
     }
 
     /**
@@ -548,7 +683,7 @@ export class Text extends ShapeWrapper {
     private txtxt: number;
     private tytxt: number;
 
-    constructor(text: string, x: number, y: number, sketch: p5, size?: number, font?: p5.Font, fill: p5.Color = new p5.Color(), stroke: p5.Color = new p5.Color(), strokeWeight: number = 1) 
+    constructor(text: string, x: number, y: number, sketch: p5, size?: number, font?: p5.Font, fill?: p5.Color, stroke?: p5.Color, strokeWeight: number = 1) 
     {
         super(sketch, x, y, fill, stroke, strokeWeight);
         this.text = text;
@@ -569,6 +704,8 @@ export class Text extends ShapeWrapper {
         this.sketch.textFont(this.font);
         this.sketch.textSize(this.size);
         this.sketch.textAlign(this.textOrientation[0],this.textOrientation[1]);
+        this.sketch.tint(this.tint);
+        this.sketch.fill(this.fill);
         if (this.textbox) {
             this.sketch.text(this.text, this.x, this.y,this.txtxt, this.tytxt);
         } else {
@@ -644,6 +781,7 @@ export class ShapeGroup
      */
     constructor(...args: ShapeWrapper[]) {
         this.shapes = [];
+        this.shapes.push(args[0]);
         for (let i = 1; i < args.length; i++) {
             if (typeof(args[i]) != typeof(args[i-1])) {
                 throw new Error('All arguments must be of the same type');

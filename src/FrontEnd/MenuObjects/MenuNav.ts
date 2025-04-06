@@ -29,6 +29,15 @@ export default class MenuNav {
     }
 
     /**
+     * @method getCurrenlySelected
+     * @description This method returns the currently selected button
+     * @returns {MenuItem}
+     */
+    public getCurrentlySelected(): MenuItem
+    {
+        return this.currentlySelected;
+    } 
+    /**
      * @method drawAll
      * @description This method is intended to draw all of the buttons
      */
@@ -194,5 +203,14 @@ export default class MenuNav {
      */
     public getLength() {
         return this.itemArray.length;
+    }
+
+    /**
+     * @method getAtIndex
+     * @description return the item at a given index
+     * @param {number} index
+     */
+    public getAtIndex(index: number): MenuItem {
+        return this.itemArray[index];
     }
 }

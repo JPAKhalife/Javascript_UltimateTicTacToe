@@ -1,12 +1,17 @@
 #!/bin/bash
 set -x  # Enable command echoing for debugging
 
-# Create dist directory if it doesn't exist
+#Erase the dist directory if it does exist
+rm -rf dist
+# Create dist directory
 mkdir -p dist
 
 # Copy HTML and CSS files from src to dist
 cp ./src/FrontEnd/*.html ./dist/
-cp ./src/FrontEnd*.css ./dist/
+cp ./src/FrontEnd/*.css ./dist/
+# Copy the assets and content to dist
+cp -r ./src/assets ./dist/assets
+
 
 # Build the backend and frontend using webpack
 npx webpack --config webpack-back.config.js --mode production 
