@@ -473,6 +473,26 @@ export default abstract class ShapeWrapper {
     {
         return this.ty;
     }
+
+    /**
+     * @method getTX
+     * @description Gets the x-translation of the shape.
+     * @returns {number} The x-translation of the shape.
+     */
+    setTX(tx: number): void
+    {
+        this.tx = tx;
+    }
+
+    /**
+     * @method getTY
+     * @description Gets the y-translation of the shape.
+     * @returns {number} The y-translation of the shape.
+     */
+    setTY(ty: number): void
+    {
+        this.ty = ty;
+    }
 }
 
 /**
