@@ -12,6 +12,7 @@ cp ./src/FrontEnd/*.css ./dist/
 # Copy the assets and content to dist
 cp -r ./src/assets ./dist/assets
 
+
 # Build the backend and frontend using webpack
 npx webpack --config webpack-back.config.js --mode production 
 npx webpack --config webpack-front.config.js --mode production 
