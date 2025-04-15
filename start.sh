@@ -5,12 +5,13 @@ set -x  # Enable command echoing for debugging
 rm -rf dist
 # Create dist directory
 mkdir -p dist
+mkdir -p dist/FrontEnd
 
 # Copy HTML and CSS files from src to dist
-cp ./src/FrontEnd/*.html ./dist/
-cp ./src/FrontEnd/*.css ./dist/
+cp ./src/FrontEnd/*.html ./dist/FrontEnd/
+cp ./src/FrontEnd/*.css ./dist/FrontEnd/
 # Copy the assets and content to dist
-cp -r ./src/assets ./dist/assets
+cp -r ./src/FrontEnd/assets ./dist/FrontEnd/assets
 
 
 # Build the backend and frontend using webpack

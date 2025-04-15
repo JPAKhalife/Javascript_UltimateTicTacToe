@@ -12,8 +12,8 @@ RUN npm install
 # Check dependencies for vulnerabilities and fix them (I think this is pointless)
 RUN npm audit fix
 
-# Copy the rest of the application code to the working directory
-COPY "./dist/*" /app/
+# Copy the rest of the application code to the working directory recursively
+COPY ./dist/ /app/
 
 # Expose the port on which the server will run
 EXPOSE 3000

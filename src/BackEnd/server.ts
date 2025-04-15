@@ -61,7 +61,7 @@ const redis = new RedisManager(host,port); //initialize and connect client
 * The browser will then request the other files automatically when it sees the html file requires other files.
 * The server will automatically send them.
 */
-app.use(express.static(process.cwd()));
+app.use(express.static(process.cwd() + '/FrontEnd'));
 console.log('Local directory is: ' + process.cwd());
 
 
@@ -70,7 +70,7 @@ app.get('/favicon.ico', (req: any, res: any) => res.status(204));
 //* This is the default route for the server. It sends the index.html file to the client.
 app.get('/', (req: any, res: any) => {
     //Send the index.html file to the client (any files included in the html file will be sent automatically)
-    res.sendFile(process.cwd() + '/index.html');
+    res.sendFile(process.cwd() + '/FrontEnd/index.html');
 });
 
 // WebSocket route

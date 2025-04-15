@@ -9,7 +9,7 @@ module.exports = (env, argv) => {
     entry: './src/FrontEnd/sketch.ts',
     output: {
       filename: 'front.bundle.js',
-      path: path.resolve(__dirname, 'dist'),
+      path: path.resolve(__dirname, 'dist/FrontEnd'),
     },
     mode: argv.mode,
     devServer: isDevelopment
@@ -47,6 +47,10 @@ module.exports = (env, argv) => {
     resolve: {
       extensions: ['.tsx', '.ts', '.js'],
     },
-    plugins: [new webpack.SourceMapDevToolPlugin({})],
+    plugins: [new webpack.SourceMapDevToolPlugin({}),
+      new webpack.DefinePlugin({
+          REMOTE_SERVER_ADDRESS:'localhost:3000',
+      }),
+    ],
   };
 };
