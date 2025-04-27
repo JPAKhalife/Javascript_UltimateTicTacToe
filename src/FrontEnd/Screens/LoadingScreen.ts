@@ -12,6 +12,7 @@ import KeyListener from "../KeyListener";
 import {Text, Img } from "../ShapeWrapper";
 import { whiteTicTac, getCanvasSize, HEADER, fontRobot, fontminecraft, getRandomInt, fontAldoApache, FRAMERATE } from "../sketch";
 import WebManager from "../WebManager";
+import GuiManager from "../GuiManager";
 
 //Constants for the loading screen
 const LOADING_TRANSITION_IN = 180;
@@ -95,6 +96,23 @@ export default class LoadingScreen implements Menu {
         }
     }
 
+    /**
+     * @method animateTransitionOut
+     * @description This method is responsible for animating the transition out of the loading screen
+     */
+    private animateTransitionOut(): void 
+    {
+        this.titleOpacity -= 255 / (LOADING_TRANSITION_IN / 2);
+        this.spinner.setTX(this.spinner.getTX() - (getCanvasSize()) / (LOADING_TRANSITION_IN / 2));
+        this.title.setFill(this.sketch.color(255, 255, 255, this.titleOpacity));
+        this.loadingMessage.setFill(this.sketch.color(255, 255, 255, this.titleOpacity));
+        if (this.titleOpacity <= 0 && this.spinner.getTX() <= 0 - this.spinner.getWidth()) {
+            this.transitionOutActive = false;
+            this.keylistener.activate();
+            GuiManager.changeScreen(Screens.START_SCREEN, this.sketch);
+        }
+    }
+
     private animateLoading(): void {
         this.spinner.setAngleMode(this.sketch.DEGREES);
         this.spinner.setOrientation(this.spinnerAngle);
@@ -129,11 +147,16 @@ export default class LoadingScreen implements Menu {
         //Check for the transition Timer to start the transition out
         if (this.transitionTimer <= 0) {
            if (WebManager.socket.readyState === WebManager.socket.OPEN) {
-            //If the connection has been established, start the transition out   
-            this.transitionOutActive = true;
+                //If the connection has been established, start the transition out   
+                this.transitionOutActive = true;
+                console.log("Begin transitioning out of loading screen");
+                this.keylistener.deactivate();
+                this.transitionTimer = FRAMERATE * 3;
            } else {
+                console.log("Connection not established yet");
                 //If the connection has not been established, keep loading.
                 this.transitionTimer = FRAMERATE * 3;
+                WebManager.initiateWebsocketConnection();
            }
         }
 
@@ -141,7 +164,8 @@ export default class LoadingScreen implements Menu {
         if (this.transitionInActive) {
             this.animateTransitionIn();
         } else if (this.transitionOutActive) {
-            
+            console.log("Transitioning out");
+            this.animateTransitionOut();
         } else {
             this.transitionTimer--;
         }
