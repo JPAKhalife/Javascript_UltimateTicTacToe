@@ -109,7 +109,7 @@ export default class LoadingScreen implements Menu {
         if (this.titleOpacity <= 0 && this.spinner.getTX() <= 0 - this.spinner.getWidth()) {
             this.transitionOutActive = false;
             this.keylistener.activate();
-            GuiManager.changeScreen(Screens.START_SCREEN, this.sketch);
+            GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
         }
     }
 
@@ -149,11 +149,9 @@ export default class LoadingScreen implements Menu {
            if (WebManager.socket.readyState === WebManager.socket.OPEN) {
                 //If the connection has been established, start the transition out   
                 this.transitionOutActive = true;
-                console.log("Begin transitioning out of loading screen");
                 this.keylistener.deactivate();
                 this.transitionTimer = FRAMERATE * 3;
            } else {
-                console.log("Connection not established yet");
                 //If the connection has not been established, keep loading.
                 this.transitionTimer = FRAMERATE * 3;
                 WebManager.initiateWebsocketConnection();
@@ -164,7 +162,6 @@ export default class LoadingScreen implements Menu {
         if (this.transitionInActive) {
             this.animateTransitionIn();
         } else if (this.transitionOutActive) {
-            console.log("Transitioning out");
             this.animateTransitionOut();
         } else {
             this.transitionTimer--;
