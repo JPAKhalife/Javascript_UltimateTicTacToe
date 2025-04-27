@@ -10,7 +10,7 @@ import p5 from "p5";
 import Menu, { Screens } from "../Menu"
 import KeyListener from "../KeyListener";
 import {Text, Img } from "../ShapeWrapper";
-import { whiteTicTac, getCanvasSize, HEADER, fontRobot, fontminecraft, getRandomInt, fontAldoApache } from "../sketch";
+import { whiteTicTac, getCanvasSize, HEADER, fontRobot, fontminecraft, getRandomInt, fontAldoApache, FRAMERATE } from "../sketch";
 import WebManager from "../WebManager";
 
 //Constants for the loading screen
@@ -29,6 +29,9 @@ export default class LoadingScreen implements Menu {
     private loadingMessageIndex: number;
     private titleDotIndex: number;
     private frameCounter: number;
+    private transitionInActive: boolean;
+    private transitionOutActive: boolean;
+    private transitionTimer: number;
 
     constructor(sketch: p5) {
         this.sketch = sketch;
@@ -58,8 +61,13 @@ export default class LoadingScreen implements Menu {
         this.loadingMessage.setTextBox(getCanvasSize(), getCanvasSize());
         this.loadingMessageIndex = 0;
 
+        //Transition markers
+        this.transitionInActive = false;
+        this.transitionOutActive = false;
+
         // Frame counter for animations
         this.frameCounter = 0;
+        this.transitionTimer = FRAMERATE * 3;
 
         // Start transition in animation
         this.keylistener.deactivate();
@@ -69,6 +77,7 @@ export default class LoadingScreen implements Menu {
     private startTransitionIn(): void {
         this.spinnerOpacity = 0;
         this.titleOpacity = 0;
+        this.transitionInActive = true;
     }
 
     private animateTransitionIn(): void {
@@ -79,7 +88,10 @@ export default class LoadingScreen implements Menu {
             this.loadingMessage.setFill(this.sketch.color(255, 255, 255, this.titleOpacity));
             this.titleOpacity += 255 / (LOADING_TRANSITION_IN / 2);
         } else {
+            //When the transition in is complete, activate the websocket connection
             this.keylistener.activate();
+            WebManager.initiateWebsocketConnection();
+            this.transitionInActive = false;
         }
     }
 
@@ -114,7 +126,25 @@ export default class LoadingScreen implements Menu {
         this.title.render();
         this.loadingMessage.render();
 
-        this.animateTransitionIn();
+        //Check for the transition Timer to start the transition out
+        if (this.transitionTimer <= 0) {
+           if (WebManager.socket.readyState === WebManager.socket.OPEN) {
+            //If the connection has been established, start the transition out   
+            this.transitionOutActive = true;
+           } else {
+                //If the connection has not been established, keep loading.
+                this.transitionTimer = FRAMERATE * 3;
+           }
+        }
+
+        //Check for the transitions
+        if (this.transitionInActive) {
+            this.animateTransitionIn();
+        } else if (this.transitionOutActive) {
+            
+        } else {
+            this.transitionTimer--;
+        }
         this.animateLoading();
     }
 

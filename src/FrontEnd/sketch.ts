@@ -21,7 +21,7 @@ import TestScreen from './Screens/TestScreen';
 import TutorialScreen from './Screens/TutorialScreen';
 
 // These are the game constants. Modifying them changes the game itself.
-const FRAMERATE = 60;
+export const FRAMERATE = 60;
 const WINDOW_MARGIN = 10;
 const GRID_LENGTH = 3;
 const SMALL_GRID_LENGTH = 3;

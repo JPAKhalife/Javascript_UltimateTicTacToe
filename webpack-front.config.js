@@ -4,6 +4,7 @@ const webpack = require('webpack');
 
 module.exports = (env, argv) => {
   const isDevelopment = argv.mode === 'development';
+  const remoteServerAddress = process.env.REMOTE_SERVER_ADDRESS || 'http://localhost:3000';
 
   return {
     entry: './src/FrontEnd/sketch.ts',
@@ -49,7 +50,7 @@ module.exports = (env, argv) => {
     },
     plugins: [new webpack.SourceMapDevToolPlugin({}),
       new webpack.DefinePlugin({
-          REMOTE_SERVER_ADDRESS:'localhost:3000',
+        'process.env.REMOTE_SERVER_ADDRESS': JSON.stringify(process.env.REMOTE_SERVER_ADDRESS || 'ws://localhost:3000'),
       }),
     ],
   };
