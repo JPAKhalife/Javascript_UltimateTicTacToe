@@ -213,4 +213,31 @@ export default class MenuNav {
     public getAtIndex(index: number): MenuItem {
         return this.itemArray[index];
     }
+
+    /**
+     * @method addItem
+     * @description This method adds an item to the MenuItem arra
+     * @param {MenuItem} item
+     */
+    public addItem(item: MenuItem): void {
+        this.itemArray.push(item);
+    }
+
+    /**
+     * @method removeItem
+     * @description This method removes an item from the MenuItem array
+     * @param {MenuItem | number} item
+     */
+    public removeItem(item: MenuItem | number): void {
+        if (typeof item === 'number') {
+            //If the parameter is a number, remove item at that index
+            this.itemArray.splice(item,1);
+        } else {
+            //If the parameter is a menu item
+            const index = this.itemArray.indexOf(item);
+            if (index > -1) {
+                this.itemArray.splice(index, 1);
+            }
+        }    
+    }
 }
