@@ -15,6 +15,7 @@ export enum Screens {
     CONTROL_SCREEN,
     GAME_SCREEN,
     MULTIPLAYER_SCREEN,
+    CREATE_LOBBY_SCREEN,
     TEST_SCREEN,
 };
 

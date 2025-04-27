@@ -1,5 +1,5 @@
 /**
- * @file MultiplayerScreen.ts
+ * @file CreateLobbyScreen.ts
  * @description This file is responsible for displaying all open lobbies
  * @author John Khalife
  * @created 2024-06-9
@@ -14,14 +14,13 @@ import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 
-export default class MultiplayerScreen implements Menu {
+export default class CreateLobbyScreen implements Menu {
     
     private sketch: p5;
     private keylistener: KeyListener;
 
     //Buttons
-    private returnToSetupScreen: MenuButton;
-    private createNewLobby: MenuButton;
+    private returnToOnlineScreen: MenuButton;
     private lobbyNav: MenuNav;
 
     //Transition varaibles
@@ -33,11 +32,9 @@ export default class MultiplayerScreen implements Menu {
         this.keylistener = new KeyListener(sketch);
 
         //This is where the menu buttons will be defined
-        this.returnToSetupScreen = new MenuButton(this.sketch, 0.15, 0.20, "Return", 0.05, 0.2, 50*0.25, 255);
-        this.createNewLobby = new MenuButton(this.sketch, 0.85, 0.20, "Create Lobby", 0.05, 0.2, 50*0.25, 255);
+        this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.20, "Return", 0.05, 0.2, 50*0.25, 255);
         this.lobbyNav = new MenuNav([
-            this.returnToSetupScreen,
-            this.createNewLobby
+            this.returnToOnlineScreen,
         ]);
         
     }
@@ -51,8 +48,6 @@ export default class MultiplayerScreen implements Menu {
         const selectedPhrase = (this.lobbyNav.getCurrentlySelected() as MenuButton).getText();
             if (selectedPhrase === 'Return') {
                 GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
-            } else if (selectedPhrase === 'Create Lobby') {
-                GuiManager.changeScreen(Screens.CREATE_LOBBY_SCREEN, this.sketch);
             } else {
                 GuiManager.changeScreen(Screens.START_SCREEN, this.sketch);
             }
@@ -67,18 +62,13 @@ export default class MultiplayerScreen implements Menu {
         //this.sketch.push();
             this.sketch.stroke(255);
             this.sketch.strokeWeight(5);
-            this.sketch.line(0,getCanvasSize()/4,getCanvasSize(),getCanvasSize()/4);
-            this.sketch.line(0,getCanvasSize()/4*3,getCanvasSize(),getCanvasSize()/4*3);
+            this.sketch.line(getCanvasSize()/5, 0, getCanvasSize()/5, getCanvasSize());
+            this.sketch.line(getCanvasSize()/5*4, 0, getCanvasSize()/5*4, getCanvasSize());
         //this.sketch.pop();
 
-        //TODO: Add a button to the top right corner to create a new lobby
-        this.createNewLobby.draw();
-        // TODO: Add a button to the top left corner to go back to the menu
-        this.returnToSetupScreen.draw();
+        // TODO: Add a button to go back to the menu
+        this.returnToOnlineScreen.draw();
 
-        // TODO: Add some stats to show how many lobbies are open / players online
-
-        // TODO: Add keylistener bits
 
         //Check for transitionout
         if (this.transition_out_active) {

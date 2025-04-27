@@ -20,6 +20,7 @@ import StartScreen from './Screens/StartScreen';
 import TestScreen from './Screens/TestScreen';
 import TutorialScreen from './Screens/TutorialScreen';
 import MultiplayerScreen from './Screens/MultiplayerScreen';
+import CreateLobbyScreen from './Screens/CreateLobbyScreen';
 
 // These are the game constants. Modifying them changes the game itself.
 export const FRAMERATE = 60;
@@ -93,6 +94,7 @@ const sketch = (p5: P5) => {
     GuiManager.addScreen(TestScreen, Screens.TEST_SCREEN);
     GuiManager.addScreen(TutorialScreen, Screens.TUTORIAL_SCREEN);
     GuiManager.addScreen(MultiplayerScreen, Screens.MULTIPLAYER_SCREEN)
+    GuiManager.addScreen(CreateLobbyScreen, Screens.CREATE_LOBBY_SCREEN);
     GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, p5);
     p5.background(255);
   };
