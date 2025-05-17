@@ -11,11 +11,37 @@ import {getCanvasSize, getRandomInt } from "../sketch";
 import { FRAMERATE } from "../Constants";
 import MenuItem from "./MenuItem";
 import MenuNav from "./MenuNav";
+import { stringify } from "querystring";
 
 //These are constants for this class
 //THe value that framerate is being multiplied by is the number of seconds.
 const DOT_ENTER_ANIMATION_TIME = FRAMERATE * 3;
 const PULSE_ANIMATION_TIME = FRAMERATE * 2;
+
+/**
+ * This is an object that will contain all the neccessary information that should be displayed
+ * When a user is looking at a lobby.
+ */
+export class LobbyInfo {
+    public lobbyName: string;
+    public state: string;
+    public players: number;
+    public gridsize: number;
+    public levelsize: number;
+
+    constructor(
+        lobbyName: string = "defaultLobby",
+        state: string = "DNE", 
+        players: number = 0,
+        gridsize: number = 3,
+        levelsize: number = 2) {
+        this.lobbyName = lobbyName;
+        this.state = state;
+        this.players = players;
+        this.gridsize = gridsize;
+        this.levelsize = levelsize;
+    }
+}
 
 //Within a square area, draw a dot at a random location, with a fading circle expanding from it.
 //When the dot is hovered over, a small menu will open up with details of the lobby that the dot represents
@@ -37,6 +63,9 @@ export default class LobbyDot implements MenuItem {
     private doTransitionOut: boolean = false;
     private lifeTime: number;
     private navMenu: MenuNav;
+    //Box Coordinates
+    private boxX: number;
+    private boxY: number;
     //Pulse variables
     private radius: number = 0;
     private pulseOpacity: number = 255;
@@ -44,11 +73,13 @@ export default class LobbyDot implements MenuItem {
     private pulseInterval: number = 0;
 
     //TODO: Make a specific object for lobby info
-    constructor(sketch: p5, x: number, y: number, size: number, lifetime: number, info: any, menuNav: MenuNav) {
+    constructor(sketch: p5, x: number, y: number, size: number, lifetime: number, info: any, menuNav: MenuNav, boxX: number, boxY: number) {
         this.sketch = sketch;
         this.opacity = 0;
         this.x = x;
         this.y = y;
+        this.boxX = boxX;
+        this.boxY = boxY;
         this.size = size;
         this.info = 0;
         this.doTransitionIn = true;
@@ -73,10 +104,18 @@ export default class LobbyDot implements MenuItem {
             this.pulse();
         }
 
+        //This is the part that draws the info displayer on the menu.
+        if (this.isSelected()) {
+            this.drawSelected();
+        }
+
         if (this.lifeTime <= 0) {
             this.doTransitionOut = true;
         }
-        this.lifeTime --;
+
+        if (!this.isSelected()) {
+            this.lifeTime--;
+        }
     }
 
     /**
@@ -85,7 +124,7 @@ export default class LobbyDot implements MenuItem {
      * @returns {number} - The x position of the dot
      */
     public isSelected(): boolean {
-        return false;
+        return this.selected;
     }
 
     /**
@@ -94,7 +133,7 @@ export default class LobbyDot implements MenuItem {
      * @param isSelected {boolean} - The selected state of the button
      */
     public setSelected(isSelected: boolean): void {
-
+        this.selected = isSelected;
     }
 
     /**
@@ -177,7 +216,6 @@ export default class LobbyDot implements MenuItem {
             this.radius += 5;
             this.pulseOpacity -= 255 / PULSE_ANIMATION_TIME;
             this.pulseTime -= 1;
-
             //TODO: Add a random time period between each pulse
             if (this.pulseTime <= 0) {
                 this.radius = 0;
@@ -186,5 +224,21 @@ export default class LobbyDot implements MenuItem {
                 this.pulseInterval = getRandomInt(2*FRAMERATE,6*FRAMERATE);
             }
         }
+    }
+
+    /**
+     * @method drawSelected
+     * @description This method is activated when the a
+     * @param
+     */
+    private drawSelected() {
+        //Draw a line from the dot to the center of the screen
+        this.sketch.push();
+            this.sketch.strokeWeight(3);
+            this.sketch.stroke(255);
+            this.sketch.line(this.x,this.y, this.boxX, this.boxY);
+            this.sketch.fill(0);
+            this.sketch.strokeWeight(2);
+        this.sketch.pop();
     }
 }

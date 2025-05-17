@@ -46,7 +46,7 @@ export default class MultiplayerScreen implements Menu {
         this.keylistener = new KeyListener(sketch);
 
         // Initialize bounds
-        this.XMIN = getCanvasSize() / 5;
+        this.XMIN = getCanvasSize() / 4;
         this.XMAX = getCanvasSize() / 5 * 4;
         this.YMIN = getCanvasSize() / 4;
         this.YMAX = getCanvasSize() / 4 * 3;
@@ -77,12 +77,14 @@ export default class MultiplayerScreen implements Menu {
 
     public draw(): void {
         this.sketch.background(0);
-
         // Add two lines along the top and bottom of the screen
         this.sketch.stroke(255);
         this.sketch.strokeWeight(5);
         this.sketch.line(0, getCanvasSize() / 4, getCanvasSize(), getCanvasSize() / 4);
         this.sketch.line(0, getCanvasSize() / 4 * 3, getCanvasSize(), getCanvasSize() / 4 * 3);
+
+        //Add a third line along the left side of the screen
+        this.sketch.line(getCanvasSize()/4,getCanvasSize() / 4,getCanvasSize() / 4,getCanvasSize() / 4 * 3);
 
         // Draw all MenuItem objects
         this.lobbyNav.drawAll();
@@ -146,7 +148,7 @@ export default class MultiplayerScreen implements Menu {
             let y = getRandomInt(this.YMIN, this.YMAX);
 
             // Create a new lobbyDot
-            this.lobbyNav.addItem(new LobbyDot(this.sketch, x, y, 5, getRandomInt(3,15) * FRAMERATE, 0, this.lobbyNav));
+            this.lobbyNav.addItem(new LobbyDot(this.sketch, x, y, 5, getRandomInt(3,15) * FRAMERATE, 0, this.lobbyNav,getCanvasSize()/4, getCanvasSize()/2));
         }
     }
 }
