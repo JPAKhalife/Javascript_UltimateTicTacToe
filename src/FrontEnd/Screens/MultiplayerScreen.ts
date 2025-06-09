@@ -57,7 +57,7 @@ export default class MultiplayerScreen implements Menu {
         this.lobbyNav = new MenuNav([
             this.returnToSetupScreen,
             this.createNewLobby
-        ]);
+        ], this.sketch);
     }
 
     /**
@@ -106,17 +106,17 @@ export default class MultiplayerScreen implements Menu {
         }
 
         // Detect any keypresses
-        let keypress = this.keylistener.listen();
+        let keypress = this.lobbyNav.getKeyEvent();
         // Handle keypresses
         if (!this.transition_in_active && !this.transition_out_active) {
             if (keypress === KEY_EVENTS.UP) {
-                this.lobbyNav.selectClosest(2);
+                this.lobbyNav.selectClosest(270);
             } else if (keypress === KEY_EVENTS.RIGHT) {
-                this.lobbyNav.selectClosest(1);
-            } else if (keypress === KEY_EVENTS.DOWN) {
                 this.lobbyNav.selectClosest(0);
+            } else if (keypress === KEY_EVENTS.DOWN) {
+                this.lobbyNav.selectClosest(90);
             } else if (keypress === KEY_EVENTS.LEFT) {
-                this.lobbyNav.selectClosest(3);
+                this.lobbyNav.selectClosest(180);
             } else if (keypress === KEY_EVENTS.SELECT) {
                 this.lobbyNav.confirm();
                 this.transition_out_active = true;

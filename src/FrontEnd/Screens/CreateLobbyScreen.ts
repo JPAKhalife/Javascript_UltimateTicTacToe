@@ -13,6 +13,7 @@ import { getCanvasSize } from "../sketch";
 import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
+import Slider from "../MenuObjects/Slider";
 
 export default class CreateLobbyScreen implements Menu {
     
@@ -33,9 +34,15 @@ export default class CreateLobbyScreen implements Menu {
 
         //This is where the menu buttons will be defined
         this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.20, "Return", 0.05, 0.2, 50*0.25, 255);
+        let genericButton = new MenuButton(this.sketch, 0.5, 0.80, "Test", 0.05, 0.2, 50*0.25, 255);
+        let slider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize()/2, getCanvasSize()/2, 5, 0, 100, 10, 50, "LevelSize");
+
+
         this.lobbyNav = new MenuNav([
             this.returnToOnlineScreen,
-        ]);
+            slider,
+            genericButton,
+        ], this.sketch);
         
     }
 
@@ -59,16 +66,17 @@ export default class CreateLobbyScreen implements Menu {
         this.sketch.background(0);
 
         //Add two lines along the top and bottom of the screen
-        //this.sketch.push();
+        this.sketch.push();
             this.sketch.stroke(255);
             this.sketch.strokeWeight(5);
             this.sketch.line(getCanvasSize()/5, 0, getCanvasSize()/5, getCanvasSize());
             this.sketch.line(getCanvasSize()/5*4, 0, getCanvasSize()/5*4, getCanvasSize());
-        //this.sketch.pop();
+        this.sketch.pop();
 
-        // TODO: Add a button to go back to the menu
         this.returnToOnlineScreen.draw();
 
+        // Draw the buttons for options
+        this.lobbyNav.drawAll();
 
         //Check for transitionout
         if (this.transition_out_active) {
@@ -76,21 +84,21 @@ export default class CreateLobbyScreen implements Menu {
         }
 
         // Detect any keypresses
-        let keypress = this.keylistener.listen();
+        let keypress = this.lobbyNav.getKeyEvent();
         // Handle keypresses
         if (!this.transition_in_active && !this.transition_out_active) {
             if (keypress === KEY_EVENTS.UP) {
-            this.lobbyNav.selectClosest(2);
+                this.lobbyNav.selectClosest(270);
             } else if (keypress === KEY_EVENTS.RIGHT) {
-            this.lobbyNav.selectClosest(1);
+                this.lobbyNav.selectClosest(0);
             } else if (keypress === KEY_EVENTS.DOWN) {
-            this.lobbyNav.selectClosest(0);
+                this.lobbyNav.selectClosest(90);
             } else if (keypress === KEY_EVENTS.LEFT) {
-            this.lobbyNav.selectClosest(3);
+                this.lobbyNav.selectClosest(180);
             } else if (keypress === KEY_EVENTS.SELECT) {
-            this.lobbyNav.confirm();
-            this.transition_out_active = true;
-            this.keylistener.deactivate();
+                this.lobbyNav.confirm();
+                // this.transition_out_active = true;
+                this.keylistener.deactivate();
             }
         }
     }

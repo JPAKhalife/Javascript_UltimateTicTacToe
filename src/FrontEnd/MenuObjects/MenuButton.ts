@@ -51,9 +51,9 @@ export class MenuButton implements MenuItem
         this.selected = false;
         //whether or not the button is confirmed
         this.confirmed = false;
-        //the coordinates on the canvas of the button
-        this.x = x;
-        this.y = y;
+        //the coordinates on the canvas of the button - Given in the constructor as a percentage
+        this.x = x * getCanvasSize();
+        this.y = y * getCanvasSize();
         //the word in the button
         this.phrase = phrase;
         //the current animation time of the button
@@ -117,12 +117,12 @@ export class MenuButton implements MenuItem
         this.sketch.strokeWeight(1);
         this.sketch.stroke(255,this.opacity);
         this.sketch.rectMode(this.sketch.CENTER);
-        this.sketch.rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());
+        this.sketch.rect(this.x, this.y, this.currentWidth * getCanvasSize(), this.currentLength * getCanvasSize());
         this.sketch.textSize(this.currentTextSize);
         this.sketch.fill(this.currentTextFill,this.opacity);
         this.sketch.noStroke();
         this.sketch.textAlign(this.sketch.CENTER,this.sketch.CENTER);
-        this.sketch.text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());    
+        this.sketch.text(this.phrase, this.x, this.y, this.currentWidth * getCanvasSize(), this.currentLength * getCanvasSize());    
         
     }
 
@@ -195,12 +195,12 @@ export class MenuButton implements MenuItem
         this.sketch.stroke(255,this.opacity);
         this.sketch.fill(this.currentButtonFill,this.opacity);
 
-        this.sketch.rect(this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());
+        this.sketch.rect(this.x, this.y, this.currentWidth * getCanvasSize(), this.currentLength * getCanvasSize());
         this.sketch.textSize(this.currentTextSize);
         this.sketch.fill(this.currentTextFill,this.opacity);
         this.sketch.noStroke()
         this.sketch.textAlign(this.sketch.CENTER,this.sketch.CENTER);
-        this.sketch.text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());   
+        this.sketch.text(this.phrase, this.x, this.y, this.currentWidth * getCanvasSize(), this.currentLength * getCanvasSize());   
     }
 
     /**
@@ -225,17 +225,17 @@ export class MenuButton implements MenuItem
         this.sketch.noStroke()
         this.sketch.fill(255);
         //fill(this.currentButtonFill);
-        this.sketch.rect(this.x * getCanvasSize(), this.y * getCanvasSize(),(this.currentWidth * getCanvasSize()) - this.cw ,(this.currentLength * getCanvasSize()) - this.cl);
+        this.sketch.rect(this.x, this.y, (this.currentWidth * getCanvasSize()) - this.cw ,(this.currentLength * getCanvasSize()) - this.cl);
         this.sketch.textSize(this.currentTextSize);
         this.sketch.fill(this.currentTextFill);
         this.sketch.tint(0,255);
         this.sketch.textAlign(this.sketch.CENTER,this.sketch.CENTER);
-        this.sketch.text(this.phrase,this.x * getCanvasSize(), this.y * getCanvasSize(),this.currentWidth * getCanvasSize(),this.currentLength * getCanvasSize());  
+        this.sketch.text(this.phrase, this.x, this.y, this.currentWidth * getCanvasSize(), this.currentLength * getCanvasSize());  
         //this is the second rectangle that will be acting as the 
         this.sketch.stroke(255,this.opacity);
         this.sketch.fill(0);
         this.sketch.strokeWeight(MenuButton.OUTLINE_WEIGHT);
-        this.sketch.rect(this.x * getCanvasSize(), this.y * getCanvasSize(),MenuButton.OUTLINE_WEIGHT + this.cw,this.cl + MenuButton.OUTLINE_WEIGHT);
+        this.sketch.rect(this.x, this.y, MenuButton.OUTLINE_WEIGHT + this.cw,this.cl + MenuButton.OUTLINE_WEIGHT);
     }
 
     /**
