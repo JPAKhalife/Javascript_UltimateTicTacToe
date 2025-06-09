@@ -4,12 +4,13 @@ const webpack = require('webpack');
 
 module.exports = (env, argv) => {
   const isDevelopment = argv.mode === 'development';
+  const remoteServerAddress = process.env.REMOTE_SERVER_ADDRESS || 'http://localhost:3000';
 
   return {
     entry: './src/FrontEnd/sketch.ts',
     output: {
       filename: 'front.bundle.js',
-      path: path.resolve(__dirname, 'dist'),
+      path: path.resolve(__dirname, 'dist/FrontEnd'),
     },
     mode: argv.mode,
     devServer: isDevelopment
@@ -47,6 +48,10 @@ module.exports = (env, argv) => {
     resolve: {
       extensions: ['.tsx', '.ts', '.js'],
     },
-    plugins: [new webpack.SourceMapDevToolPlugin({})],
+    plugins: [new webpack.SourceMapDevToolPlugin({}),
+      new webpack.DefinePlugin({
+        'process.env.REMOTE_SERVER_ADDRESS': JSON.stringify(process.env.REMOTE_SERVER_ADDRESS || 'ws://localhost:3000'),
+      }),
+    ],
   };
 };

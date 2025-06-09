@@ -67,7 +67,7 @@ export default class SetupScreen implements Menu {
             new MenuButton(this.sketch, 0.80, 0.85, "How to play", 0.05, 0.15, 50*0.25, 0),
             new MenuButton(this.sketch, 0.20, 0.85, "Controls", 0.05, 0.15, 50*0.25, 0),
             new MenuButton(this.sketch, 0.5, 0.6, "Online", 0.1, 0.1, 50*0.25, 0)
-        ]);
+        ], this.sketch);
 
         this.transition_in_active = true;
         this.transition_out_active = false;
@@ -154,7 +154,7 @@ export default class SetupScreen implements Menu {
         this.title.render();
     
         // Detect any keypresses
-        let keypress = this.keylistener.listen();
+        let keypress = this.multiplayer_MenuButton_list.getKeyEvent();
     
         // Detect for our entry and exit animations
         if (this.transition_in_active) {
@@ -167,13 +167,13 @@ export default class SetupScreen implements Menu {
         // Handle keypresses
         if (!this.transition_in_active && !this.transition_out_active) {
             if (keypress === KEY_EVENTS.UP) {
-                this.multiplayer_MenuButton_list.selectClosest(2);   
+                this.multiplayer_MenuButton_list.selectClosest(270);
             } else if (keypress === KEY_EVENTS.RIGHT) {
-                this.multiplayer_MenuButton_list.selectClosest(1);
-            } else if (keypress === KEY_EVENTS.DOWN) {
                 this.multiplayer_MenuButton_list.selectClosest(0);
+            } else if (keypress === KEY_EVENTS.DOWN) {
+                this.multiplayer_MenuButton_list.selectClosest(90);
             } else if (keypress === KEY_EVENTS.LEFT) {
-                this.multiplayer_MenuButton_list.selectClosest(3);
+                this.multiplayer_MenuButton_list.selectClosest(180);
             } else if (keypress === KEY_EVENTS.SELECT) {
                 this.opacity = 255;
                 this.multiplayer_MenuButton_list.confirm();

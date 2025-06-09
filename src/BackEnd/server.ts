@@ -11,6 +11,7 @@
 const host = 'tictacdb'; // The name of the database
 const port = 6379; // The port of the database
 
+
 //Dependencies
 import express from 'express'; // This is the express framework
 import expressWs from 'express-ws'; // This is the express websocket framework
@@ -28,8 +29,8 @@ const ratelimiter = rateLimit({
 
 // Create a new express application
 const app = express();
+var expressWsApp = require('express-ws')(app);
 //Extend the express app with express-ws to add websocket support
-//const wsInstance = expressWs(app);
 app.use(cors());
 app.options('*', cors());  // Pre-flight requests for all routes
 
@@ -61,7 +62,7 @@ const redis = new RedisManager(host,port); //initialize and connect client
 * The browser will then request the other files automatically when it sees the html file requires other files.
 * The server will automatically send them.
 */
-app.use(express.static(process.cwd()));
+app.use(express.static(process.cwd() + '/FrontEnd'));
 console.log('Local directory is: ' + process.cwd());
 
 
@@ -70,17 +71,24 @@ app.get('/favicon.ico', (req: any, res: any) => res.status(204));
 //* This is the default route for the server. It sends the index.html file to the client.
 app.get('/', (req: any, res: any) => {
     //Send the index.html file to the client (any files included in the html file will be sent automatically)
-    res.sendFile(process.cwd() + '/index.html');
+    res.sendFile(process.cwd() + '/FrontEnd/index.html');
 });
 
-// WebSocket route
-// wsInstance.app.ws('/ws', (ws, req) => {
-//     ws.send(JSON.stringify({ message: 'Connection established' }));
+expressWsApp.app.ws('/', (ws: any, req: any) => {
+    console.log("WebSocket connection established from client");
 
-//     ws.on('message', async (message) => {
-//         const data = JSON.parse(message.toString());
-//     });
-// });
+    // Send a message to the client upon connection
+    ws.send(JSON.stringify({ message: 'Welcome to the WebSocket server!' }));
+
+    // Handle incoming messages from the client
+    ws.on('message', async (message: any) => {
+        const data = JSON.parse(message.toString());
+        console.log('Received message from client:', data);
+
+        // Optionally, send a response back to the client
+        ws.send(JSON.stringify({ message: 'Message received', data }));
+    });
+})
 
 // Listen on port 3000
 app.listen(3000, () => {

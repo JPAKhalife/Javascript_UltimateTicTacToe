@@ -6,6 +6,8 @@
  * @updated 2024-06-23
  */
 
+import { KEY_EVENTS } from "../KeyListener";
+
 export default interface MenuItem {
     //All buttons need to know if they are selected or not (cursor is on them)
     isSelected(): boolean;
@@ -18,6 +20,6 @@ export default interface MenuItem {
     //All buttons must have their coordinates accessible
     getX(): number;
     getY(): number;
-    //All menuitems should have a draw method
-    draw(): void;
+    //All menuitems should have a draw method - that can also optionnaly take in a keyevent if needed.
+    draw(keyEvent: KEY_EVENTS): void;
 }

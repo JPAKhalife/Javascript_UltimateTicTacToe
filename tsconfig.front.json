@@ -5,7 +5,7 @@
       "target": "es6",               // Set target to ES6 (or higher)
       "moduleResolution": "node",    // Helps TypeScript understand module resolution
       "esModuleInterop": true,       // Ensures compatibility with CommonJS modules if needed
-      "outDir": "./dist",            // Output directory
+      "outDir": "./dist/FrontEnd",            // Output directory
       "rootDir": "./src/FrontEnd",            // Source directory
       "strict": true                 // Optional, for strict type checking
     },
