@@ -76,9 +76,69 @@ export default class RedisManager {
      * @params lobbyData The data to be stored in the lobby
      * @returns A boolean representing whether or not the lobby was created successfully
      */
-    public createLobby(lobbyName: string, lobbyData: LobbyData, playerData: PlayerData): boolean {
-        //This method has yet to be implemented
-        return false;
+    public async createLobby(lobbyName: string, lobbyData: LobbyData, playerData: PlayerData): Promise<boolean> {
+        try {
+            // Check if lobby already exists
+            const lobbyExists = await this.redisClient.exists(lobbyName);
+            if (lobbyExists) {
+                console.log(`Lobby ${lobbyName} already exists`);
+                return false;
+            }
+
+            // Create game state array based on gridSize
+            const gameStateSize = lobbyData.gridSize * lobbyData.gridSize;
+            const gameState = new Array(gameStateSize).fill(0);
+
+            // Create lobby object
+            const lobbyObject = {
+                playerNum: lobbyData.playerNum,
+                playersJoined: 1, // Starting with 1 player (the creator)
+                levelSize: lobbyData.levelSize,
+                gridSize: lobbyData.gridSize,
+                creator: playerData.playerID,
+                lobbyState: "waiting",
+                gameState: gameState,
+                players: [playerData.playerID]
+            };
+
+            // Start a Redis transaction
+            const multi = this.redisClient.multi();
+
+            // Store lobby data
+            multi.set(lobbyName, JSON.stringify(lobbyObject));
+
+            // Check if Players object exists
+            const playersExists = await this.redisClient.exists("Players");
+            
+            if (!playersExists) {
+                // Create new Players object if it doesn't exist
+                const playersObject: any = {};
+                playersObject[playerData.playerID] = {
+                    playerName: playerData.playerName,
+                    lobbyName: lobbyName
+                };
+                multi.set("Players", JSON.stringify(playersObject));
+            } else {
+                // Update existing Players object
+                const playersJson = await this.redisClient.get("Players");
+                if (playersJson) {
+                    const playersObject = JSON.parse(playersJson);
+                    playersObject[playerData.playerID] = {
+                        playerName: playerData.playerName,
+                        lobbyName: lobbyName
+                    };
+                    multi.set("Players", JSON.stringify(playersObject));
+                }
+            }
+
+            // Execute transaction
+            await multi.exec();
+            console.log(`Lobby ${lobbyName} created successfully`);
+            return true;
+        } catch (error) {
+            console.error(`Error creating lobby ${lobbyName}:`, error);
+            return false;
+        }
     }
 
     /**
@@ -89,8 +149,76 @@ export default class RedisManager {
      * @params playerID The ID of the player to add to the lobby
      * @return A boolean representing whether or not the player was added successfully
      */
-    public addPlayer(lobbyName: string, playerName: string, playerID: string): boolean {
-        //This method has yet to be implemented
-        return false;
+    public async addPlayer(lobbyName: string, playerName: string, playerID: string): Promise<boolean> {
+        try {
+            // Check if lobby exists
+            const lobbyExists = await this.redisClient.exists(lobbyName);
+            if (!lobbyExists) {
+                console.log(`Lobby ${lobbyName} does not exist`);
+                return false;
+            }
+
+            // Get lobby data
+            const lobbyJson = await this.redisClient.get(lobbyName);
+            if (!lobbyJson) {
+                console.log(`Failed to retrieve lobby data for ${lobbyName}`);
+                return false;
+            }
+
+            const lobbyObject = JSON.parse(lobbyJson);
+
+            // Check if lobby is full
+            if (lobbyObject.playersJoined >= lobbyObject.playerNum) {
+                console.log(`Lobby ${lobbyName} is full`);
+                return false;
+            }
+
+            // Check if player is already in the lobby
+            if (lobbyObject.players.includes(playerID)) {
+                console.log(`Player ${playerID} is already in lobby ${lobbyName}`);
+                return false;
+            }
+
+            // Start a Redis transaction
+            const multi = this.redisClient.multi();
+
+            // Update lobby data
+            lobbyObject.playersJoined += 1;
+            lobbyObject.players.push(playerID);
+
+            // Update lobby state if it's now full
+            if (lobbyObject.playersJoined === lobbyObject.playerNum) {
+                lobbyObject.lobbyState = "ready";
+            }
+
+            multi.set(lobbyName, JSON.stringify(lobbyObject));
+
+            // Update player data
+            const playersJson = await this.redisClient.get("Players");
+            if (playersJson) {
+                const playersObject = JSON.parse(playersJson);
+                playersObject[playerID] = {
+                    playerName: playerName,
+                    lobbyName: lobbyName
+                };
+                multi.set("Players", JSON.stringify(playersObject));
+            } else {
+                // Create Players object if it doesn't exist
+                const playersObject: any = {};
+                playersObject[playerID] = {
+                    playerName: playerName,
+                    lobbyName: lobbyName
+                };
+                multi.set("Players", JSON.stringify(playersObject));
+            }
+
+            // Execute transaction
+            await multi.exec();
+            console.log(`Player ${playerID} added to lobby ${lobbyName} successfully`);
+            return true;
+        } catch (error) {
+            console.error(`Error adding player ${playerID} to lobby ${lobbyName}:`, error);
+            return false;
+        }
     }
 }
