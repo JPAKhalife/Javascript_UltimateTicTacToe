@@ -82,13 +82,65 @@ expressWsApp.app.ws('/', (ws: any, req: any) => {
 
     // Handle incoming messages from the client
     ws.on('message', async (message: any) => {
-        const data = JSON.parse(message.toString());
-        console.log('Received message from client:', data);
+        try {
+            const data = JSON.parse(message.toString());
+            console.log('Received message from client:', data);
 
-        // Optionally, send a response back to the client
-        ws.send(JSON.stringify({ message: 'Message received', data }));
+            // Handle different message types
+            if (data.type === 'createLobby') {
+                await handleCreateLobby(ws, data);
+            } else {
+                // Default response for unhandled message types
+                ws.send(JSON.stringify({ 
+                    messageId: data.messageId,
+                    message: 'Message received', 
+                    data 
+                }));
+            }
+        } catch (error) {
+            console.error('Error processing message:', error);
+            ws.send(JSON.stringify({ 
+                success: false, 
+                error: 'Error processing message' 
+            }));
+        }
     });
 })
+
+/**
+ * @function handleCreateLobby
+ * @description Handles the createLobby message from the client
+ * @param ws WebSocket connection
+ * @param data Message data
+ */
+async function handleCreateLobby(ws: any, data: any) {
+    let messageId: string | undefined;
+    
+    try {
+        messageId = data.messageId;
+        const { data: lobbyData } = data;
+        const { lobbyName, lobbyData: lobby, playerData } = lobbyData;
+
+        console.log(`Creating lobby ${lobbyName} with data:`, lobby, playerData);
+
+        // Call RedisManager to create the lobby
+        const success = await redis.createLobby(lobbyName, lobby, playerData);
+
+        // Send response back to client
+        ws.send(JSON.stringify({
+            messageId,
+            success,
+            message: success ? `Lobby ${lobbyName} created successfully` : `Failed to create lobby ${lobbyName}`
+        }));
+    } catch (error) {
+        console.error('Error creating lobby:', error);
+        ws.send(JSON.stringify({
+            messageId,
+            success: false,
+            error: 'Error creating lobby'
+        }));
+    }
+}
 
 // Listen on port 3000
 app.listen(3000, () => {

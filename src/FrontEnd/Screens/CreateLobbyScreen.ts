@@ -14,6 +14,7 @@ import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 import Slider from "../MenuObjects/Slider";
+import WebManager from "../WebManager";
 
 export default class CreateLobbyScreen implements Menu {
     
@@ -34,7 +35,7 @@ export default class CreateLobbyScreen implements Menu {
 
         //This is where the menu buttons will be defined
         this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.20, "Return", 0.05, 0.2, 50*0.25, 255);
-        let genericButton = new MenuButton(this.sketch, 0.5, 0.80, "Test", 0.05, 0.2, 50*0.25, 255);
+        let genericButton = new MenuButton(this.sketch, 0.5, 0.80, "Create", 0.05, 0.2, 50*0.25, 255);
         let slider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize()/2, getCanvasSize()/2, 5, 0, 100, 10, 50, "LevelSize");
 
 
@@ -55,8 +56,38 @@ export default class CreateLobbyScreen implements Menu {
         const selectedPhrase = (this.lobbyNav.getCurrentlySelected() as MenuButton).getText();
             if (selectedPhrase === 'Return') {
                 GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
+            } else if (selectedPhrase == 'Create') {
+                WebManager.initiateConnectionIfNotEstablished();
+
+                // Use a default level size since we can't directly access the slider's value
+                const levelSize = 10; // Default level size
+                
+                // Generate a unique lobby name
+                const lobbyName = `lobby_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                
+                // Create a unique player ID
+                const playerID = `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                
+                // Create the lobby
+                WebManager.createLobby(
+                    lobbyName,
+                    2, // Default to 2 players
+                    levelSize,
+                    3, // Default grid size of 3x3
+                    "Player1", // Default player name
+                    playerID
+                ).then(success => {
+                    console.log(`Lobby creation ${success ? 'successful' : 'failed'}: ${lobbyName}`);
+                    // Store the lobby information for later use
+                    localStorage.setItem('currentLobby', lobbyName);
+                    localStorage.setItem('playerID', playerID);
+                }).catch(error => {
+                    console.error('Error creating lobby:', error);
+                });
+                
+                GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
             } else {
-                GuiManager.changeScreen(Screens.START_SCREEN, this.sketch);
+                GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch); 
             }
     }
 
@@ -97,7 +128,7 @@ export default class CreateLobbyScreen implements Menu {
                 this.lobbyNav.selectClosest(180);
             } else if (keypress === KEY_EVENTS.SELECT) {
                 this.lobbyNav.confirm();
-                // this.transition_out_active = true;
+                this.transition_out_active = true;
                 this.keylistener.deactivate();
             }
         }
