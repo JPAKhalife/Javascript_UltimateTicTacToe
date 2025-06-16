@@ -71,7 +71,7 @@ export default class RedisManager {
     /**
      * @method createLobby
      * @description This method is meant to create a lobby for a game.
-     * @params lobbyName The name of the lobby to be created
+     * @params lobbyID The ID of the lobby to be created
      * @params lobbyData The data to be stored in the lobby
      * @returns A boolean representing whether or not the lobby was created successfully
      */
@@ -147,26 +147,109 @@ export default class RedisManager {
     }
 
     /**
+     * @method removeLobby
+     * @description This method removes a lobby from the database. This will occur when there are no longer any players connected to the lobby.
+     * @params lobbyID
+     * @returns A boolean that states whether or not the deletion was successsful
+     */
+    public async removeLobby(lobbyID: string): Promise<boolean> {
+        
+        // Check if lobby already exists
+        const lobbyExists = await this.redisClient.exists(lobbyID);
+        if (!lobbyExists) {
+            console.log(`Lobby ${lobbyID} does not exist`);
+            return false;
+        }
+
+        try {
+            // Retrieve lobby data
+            const lobbyJson = await this.redisClient.get(lobbyID);
+            if (!lobbyJson) {
+                console.log(`Failed to retrieve lobby data for ${lobbyID}`);
+                return false;
+            }
+
+            // Parse lobby data
+            const lobbyObject = JSON.parse(lobbyJson);
+
+            //Check if there are any players in the lobbyJson
+            if (lobbyObject.players) {
+                console.log('Error removing lobby ' + lobbyID + ': There are still players left in the lobby')
+                return false;
+            }
+
+            // Remove the lobby from Redis
+            await this.redisClient.del(lobbyID);
+            console.log(`Lobby ${lobbyID} removed successfully`);
+        } catch (error) {
+            console.error(`Error removing lobby ${lobbyID}:`, error);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @method removePlayer
+     * @description This method removes a player from the database. They must already not be in a lobby in order to be removed.
+     * @params playerID
+     * @returns A boolean indicating whether or not the deletion was successful.
+     */
+    public async removePlayer(playerID: string) {
+        //Check if the player already exists
+        let playersObject;
+        try {
+            let playersJson = await this.redisClient.get(playerID);
+            playersObject = playersJson ? JSON.parse(playersJson) : null;
+        } catch (error) {
+            console.log("There was an error retrieving Players data while attempting to delete player " + playerID);
+        }
+
+        if (playersObject) {
+            if (!playersObject[playerID]) {
+                console.log(`Player ${playerID} does not exist.`);
+                return false;
+            }
+            if (playersObject[playerID].lobbyID) {
+                console.log('Player ' + playerID + 'is still in a lobby.');
+            }
+        }
+
+        try {
+            const multi = this.redisClient.multi();
+            delete playersObject[playerID];
+            multi.set("Players", JSON.stringify(playersObject));
+            await multi.exec();
+            console.log(`Player ${playerID} removed successfully`);
+            return true;
+        } catch (error) {
+            console.error(`Error removing player ${playerID}:`, error);
+            return false;
+        }
+    }
+
+
+
+    /**
      * @method addPlayer
      * @description This method adds a player to a lobby and therefore puts them in multiplayer mode.
-     * @params lobbyName The name of the lobby to add the player to
+     * @params lobbyID The is of the lobby to add the player to
      * @params playerName The name of the player to add to the lobby
      * @params playerID The ID of the player to add to the lobby
      * @return A boolean representing whether or not the player was added successfully
      */
-    public async addPlayer(lobbyName: string, playerName: string, playerID: string): Promise<boolean> {
+    public async addPlayer(lobbyID: string, playerName: string, playerID: string): Promise<boolean> {
         try {
             // Check if lobby exists
-            const lobbyExists = await this.redisClient.exists(lobbyName);
+            const lobbyExists = await this.redisClient.exists(lobbyID);
             if (!lobbyExists) {
-                console.log(`Lobby ${lobbyName} does not exist`);
+                console.log(`Lobby ${lobbyID} does not exist`);
                 return false;
             }
 
             // Get lobby data
-            const lobbyJson = await this.redisClient.get(lobbyName);
+            const lobbyJson = await this.redisClient.get(lobbyID);
             if (!lobbyJson) {
-                console.log(`Failed to retrieve lobby data for ${lobbyName}`);
+                console.log(`Failed to retrieve lobby data for ${lobbyID}`);
                 return false;
             }
 
@@ -174,13 +257,13 @@ export default class RedisManager {
 
             // Check if lobby is full
             if (lobbyObject.playersJoined >= lobbyObject.playerNum) {
-                console.log(`Lobby ${lobbyName} is full`);
+                console.log(`Lobby ${lobbyID} is full`);
                 return false;
             }
 
             // Check if player is already in the lobby
             if (lobbyObject.players.includes(playerID)) {
-                console.log(`Player ${playerID} is already in lobby ${lobbyName}`);
+                console.log(`Player ${playerID} is already in lobby ${lobbyID}`);
                 return false;
             }
 
@@ -196,7 +279,7 @@ export default class RedisManager {
                 lobbyObject.lobbyState = "ready";
             }
 
-            multi.set(lobbyName, JSON.stringify(lobbyObject));
+            multi.set(lobbyID, JSON.stringify(lobbyObject));
 
             // Update player data
             const playersJson = await this.redisClient.get("Players");
@@ -204,7 +287,7 @@ export default class RedisManager {
                 const playersObject = JSON.parse(playersJson);
                 playersObject[playerID] = {
                     playerName: playerName,
-                    lobbyName: lobbyName
+                    lobbyName: lobbyID
                 };
                 multi.set("Players", JSON.stringify(playersObject));
             } else {
@@ -212,17 +295,17 @@ export default class RedisManager {
                 const playersObject: any = {};
                 playersObject[playerID] = {
                     playerName: playerName,
-                    lobbyName: lobbyName
+                    lobbyName: lobbyID
                 };
                 multi.set("Players", JSON.stringify(playersObject));
             }
 
             // Execute transaction
             await multi.exec();
-            console.log(`Player ${playerID} added to lobby ${lobbyName} successfully`);
+            console.log(`Player ${playerID} added to lobby ${lobbyID} successfully`);
             return true;
         } catch (error) {
-            console.error(`Error adding player ${playerID} to lobby ${lobbyName}:`, error);
+            console.error(`Error adding player ${playerID} to lobby ${lobbyID}:`, error);
             return false;
         }
     }
