@@ -24,6 +24,10 @@ export default class CreateLobbyScreen implements Menu {
     //Buttons
     private returnToOnlineScreen: MenuButton;
     private lobbyNav: MenuNav;
+    //Sliders
+    private levelSizeSlider: Slider;
+    private slotNumSlider: Slider;
+    private playerNumSlider: Slider;
 
     //Transition varaibles
     private transition_in_active: boolean = false;
@@ -35,14 +39,18 @@ export default class CreateLobbyScreen implements Menu {
 
         //This is where the menu buttons will be defined
         this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.20, "Return", 0.05, 0.2, 50*0.25, 255);
-        let genericButton = new MenuButton(this.sketch, 0.5, 0.80, "Create", 0.05, 0.2, 50*0.25, 255);
-        let slider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize()/2, getCanvasSize()/2, 5, 0, 100, 10, 50, "LevelSize");
+        let createLobbyButton = new MenuButton(this.sketch, 0.5, 0.80, "Create", 0.05, 0.2, 50*0.25, 255);
+        this.levelSizeSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.35, getCanvasSize()/2, 5, 1, 9, 1, 2, "Level Size");
+        this.slotNumSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.65, getCanvasSize()/2, 5, 1, 9, 1, 3, "Slot Number");
+        this.playerNumSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.50, getCanvasSize()/2, 5, 2, 10, 1, 2, "Player Number");
 
 
         this.lobbyNav = new MenuNav([
             this.returnToOnlineScreen,
-            slider,
-            genericButton,
+            this.levelSizeSlider,
+            this.slotNumSlider,
+            createLobbyButton,
+            this.playerNumSlider
         ], this.sketch);
         
     }
@@ -71,10 +79,9 @@ export default class CreateLobbyScreen implements Menu {
                 // Create the lobby
                 WebManager.createLobby(
                     lobbyName,
-                    2, // Default to 2 players
-                    levelSize,
-                    3, // Default grid size of 3x3
-                    "Player1", // Default player name
+                    this.playerNumSlider.getValue(),
+                    this.levelSizeSlider.getValue(),
+                    this.slotNumSlider.getValue(), // Default grid size of 3x3
                     playerID
                 ).then(success => {
                     console.log(`Lobby creation ${success ? 'successful' : 'failed'}: ${lobbyName}`);

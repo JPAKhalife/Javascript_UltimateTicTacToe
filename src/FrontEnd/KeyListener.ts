@@ -17,6 +17,7 @@ export enum KEY_EVENTS {
     LEFT = "LEFT",
     SELECT = "SELECT",
     ESCAPE = "ESCAPE",
+    ENTER = "ENTER",
     NONE = "NONE"
 }
 
@@ -35,6 +36,7 @@ export const KEY_CODES: { [key: string]: KEY_EVENTS } = {
     "37": KEY_EVENTS.LEFT,
     "32": KEY_EVENTS.SELECT,
     "27": KEY_EVENTS.ESCAPE,
+    "13": KEY_EVENTS.ENTER,
     "-1": KEY_EVENTS.NONE
 };
 

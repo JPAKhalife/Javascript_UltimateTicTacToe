@@ -103,7 +103,7 @@ export default class Slider implements MenuItem {
             this.sketch.text(this.text,this.x,this.y - 50);
             //Center text underneath the slider
             this.sketch.strokeWeight(1);
-            this.sketch.text(this.currentValue,this.x, this.y + 50)
+            this.sketch.text(this.currentValue,this.x, this.y + 35)
 
         this.sketch.pop();
 
@@ -146,6 +146,15 @@ export default class Slider implements MenuItem {
             this.currentValue = this.minValue;
         }
         //TODO: Add an animation for the slider to move between points - initiate that animation here.
+    }
+
+    /**
+     * @method getValue
+     * @description This method returns the current value that the slider is set to.
+     * @returns number
+     */
+    public getValue(): number {
+        return this.currentValue;
     }
 
     

@@ -16,7 +16,6 @@ type LobbyData = {
 
 type PlayerData = {
     playerNum: number;
-    playerName: string;
     playerID: string;
 }
 
@@ -114,7 +113,6 @@ export default class RedisManager {
                 // Create new Players object if it doesn't exist
                 const playersObject: any = {};
                 playersObject[playerData.playerID] = {
-                    playerName: playerData.playerName,
                     lobbyName: lobbyName
                 };
                 multi.set("Players", JSON.stringify(playersObject));
@@ -124,7 +122,6 @@ export default class RedisManager {
                 if (playersJson) {
                     const playersObject = JSON.parse(playersJson);
                     playersObject[playerData.playerID] = {
-                        playerName: playerData.playerName,
                         lobbyName: lobbyName
                     };
                     multi.set("Players", JSON.stringify(playersObject));

@@ -73,7 +73,6 @@ export default class WebManager {
         playerNum: number,
         levelSize: number,
         gridSize: number,
-        playerName: string,
         playerID: string
     ): Promise<boolean> {
         return new Promise((resolve, reject) => {
@@ -99,7 +98,6 @@ export default class WebManager {
                     },
                     playerData: {
                         playerNum: 1, // First player is always player 1
-                        playerName,
                         playerID
                     }
                 }
