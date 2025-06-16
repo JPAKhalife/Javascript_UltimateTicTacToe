@@ -75,17 +75,25 @@ export default class RedisManager {
      * @params lobbyData The data to be stored in the lobby
      * @returns A boolean representing whether or not the lobby was created successfully
      */
-    public async createLobby(lobbyName: string, lobbyData: LobbyData, playerData: PlayerData): Promise<boolean> {
+    public async createLobby(lobbyID: string, lobbyData: LobbyData, playerData: PlayerData): Promise<boolean> {
         try {
             // Check if lobby already exists
-            const lobbyExists = await this.redisClient.exists(lobbyName);
+            const lobbyExists = await this.redisClient.exists(lobbyID);
             if (lobbyExists) {
-                console.log(`Lobby ${lobbyName} already exists`);
+                console.log(`Lobby ${lobbyID} already exists`);
+                return false;
+            }
+
+            //Check if player already exists
+            const playerExists = await this.redisClient.exists(playerData.playerID);
+            //If the player already exists, then they must be in a game.
+            if (playerExists) {
+                console.log('Player ' + playerData.playerID + ' already exists');
                 return false;
             }
 
             // Create game state array based on gridSize
-            const gameStateSize = lobbyData.gridSize * lobbyData.gridSize;
+            const gameStateSize = (lobbyData.gridSize * lobbyData.gridSize) ^ lobbyData.levelSize;
             const gameState = new Array(gameStateSize).fill(0);
 
             // Create lobby object
@@ -104,7 +112,7 @@ export default class RedisManager {
             const multi = this.redisClient.multi();
 
             // Store lobby data
-            multi.set(lobbyName, JSON.stringify(lobbyObject));
+            multi.set(lobbyID, JSON.stringify(lobbyObject));
 
             // Check if Players object exists
             const playersExists = await this.redisClient.exists("Players");
@@ -113,7 +121,7 @@ export default class RedisManager {
                 // Create new Players object if it doesn't exist
                 const playersObject: any = {};
                 playersObject[playerData.playerID] = {
-                    lobbyName: lobbyName
+                    lobbyName: lobbyID
                 };
                 multi.set("Players", JSON.stringify(playersObject));
             } else {
@@ -122,7 +130,7 @@ export default class RedisManager {
                 if (playersJson) {
                     const playersObject = JSON.parse(playersJson);
                     playersObject[playerData.playerID] = {
-                        lobbyName: lobbyName
+                        lobbyName: lobbyID
                     };
                     multi.set("Players", JSON.stringify(playersObject));
                 }
@@ -130,10 +138,10 @@ export default class RedisManager {
 
             // Execute transaction
             await multi.exec();
-            console.log(`Lobby ${lobbyName} created successfully`);
+            console.log(`Lobby ${lobbyID} created successfully`);
             return true;
         } catch (error) {
-            console.error(`Error creating lobby ${lobbyName}:`, error);
+            console.error(`Error creating lobby ${lobbyID}:`, error);
             return false;
         }
     }

@@ -60,7 +60,7 @@ export default class WebManager {
     /**
      * @method createLobby
      * @description Sends a request to the server to create a new lobby
-     * @param lobbyName Name of the lobby to create
+     * @param lobbyID Name of the lobby to create
      * @param playerNum Number of players allowed in the lobby
      * @param levelSize Size of the level
      * @param gridSize Size of the grid
@@ -69,7 +69,7 @@ export default class WebManager {
      * @returns Promise that resolves with the result of the lobby creation
      */
     public static createLobby(
-        lobbyName: string,
+        lobbyID: string,
         playerNum: number,
         levelSize: number,
         gridSize: number,
@@ -90,7 +90,7 @@ export default class WebManager {
                 type: 'createLobby',
                 messageId,
                 data: {
-                    lobbyName,
+                    lobbyID,
                     lobbyData: {
                         playerNum,
                         levelSize,

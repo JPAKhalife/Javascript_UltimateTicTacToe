@@ -119,18 +119,18 @@ async function handleCreateLobby(ws: any, data: any) {
     try {
         messageId = data.messageId;
         const { data: lobbyData } = data;
-        const { lobbyName, lobbyData: lobby, playerData } = lobbyData;
+        const { lobbyID, lobbyData: lobby, playerData } = lobbyData;
 
-        console.log(`Creating lobby ${lobbyName} with data:`, lobby, playerData);
+        console.log(`Creating lobby ${lobbyID} with data:`, lobby, playerData);
 
         // Call RedisManager to create the lobby
-        const success = await redis.createLobby(lobbyName, lobby, playerData);
+        const success = await redis.createLobby(lobbyID, lobby, playerData);
 
         // Send response back to client
         ws.send(JSON.stringify({
             messageId,
             success,
-            message: success ? `Lobby ${lobbyName} created successfully` : `Failed to create lobby ${lobbyName}`
+            message: success ? `Lobby ${lobbyID} created successfully` : `Failed to create lobby ${lobbyID}`
         }));
     } catch (error) {
         console.error('Error creating lobby:', error);
