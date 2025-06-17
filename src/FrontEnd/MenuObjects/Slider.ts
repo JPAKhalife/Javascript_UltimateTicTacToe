@@ -24,7 +24,8 @@ export default class Slider implements MenuItem {
     private increment: number;
     private currentValue: number;
     private keylistener: KeyListener;
-    private text: string
+    private text: string;
+    private opacity: number = 255;
     
     constructor(sketch: p5, keylistener: KeyListener, x: number, y: number, width: number, strokeWidth: number, minValue: number, maxValue: number, increment: number, defaultValue?: number, text?: string) {
         this.sketch = sketch;
@@ -156,7 +157,50 @@ export default class Slider implements MenuItem {
     public getValue(): number {
         return this.currentValue;
     }
-
     
-
+    /**
+     * @method setOpacity
+     * @description Sets the opacity of the slider
+     * @param opacity {number} - The opacity value (0-255)
+     */
+    public setOpacity(opacity: number): void {
+        this.opacity = opacity;
+    }
+    
+    /**
+     * @method getOpacity
+     * @description Gets the opacity of the slider
+     * @returns {number} - The opacity value
+     */
+    public getOpacity(): number {
+        return this.opacity;
+    }
+    
+    /**
+     * @method fade
+     * @description Reduces the opacity of the slider by the specified amount
+     * @param amount {number} - The amount to reduce opacity by
+     */
+    public fade(amount: number): void {
+        this.opacity -= amount;
+        if (this.opacity < 0) this.opacity = 0;
+    }
+    
+    /**
+     * @method setX
+     * @description Sets the x-coordinate of the slider
+     * @param x {number} - The new x-coordinate
+     */
+    public setX(x: number): void {
+        this.x = x;
+    }
+    
+    /**
+     * @method setY
+     * @description Sets the y-coordinate of the slider
+     * @param y {number} - The new y-coordinate
+     */
+    public setY(y: number): void {
+        this.y = y;
+    }
 }

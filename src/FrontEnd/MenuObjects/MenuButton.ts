@@ -336,4 +336,12 @@ export class MenuButton implements MenuItem
     public getY(): number {
         return this.y;
     }
+    
+    public setX(x: number): void {
+        this.x = x;
+    }
+    
+    public setY(y: number): void {
+        this.y = y;
+    }
 }

@@ -22,4 +22,13 @@ export default interface MenuItem {
     getY(): number;
     //All menuitems should have a draw method - that can also optionnaly take in a keyevent if needed.
     draw(keyEvent: KEY_EVENTS): void;
+    
+    // Animation and transition methods
+    setOpacity(opacity: number): void;
+    getOpacity(): number;
+    fade(amount: number): void;
+    
+    // Movement methods
+    setX(x: number): void;
+    setY(y: number): void;
 }

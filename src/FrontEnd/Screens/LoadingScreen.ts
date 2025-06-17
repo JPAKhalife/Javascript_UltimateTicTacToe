@@ -33,10 +33,12 @@ export default class LoadingScreen implements Menu {
     private transitionInActive: boolean;
     private transitionOutActive: boolean;
     private transitionTimer: number;
+    private webManager: WebManager;
 
     constructor(sketch: p5) {
         this.sketch = sketch;
         this.keylistener = new KeyListener(this.sketch);
+        this.webManager = WebManager.getInstance();
 
         // Spinner properties
         this.spinner = new Img(whiteTicTac, getCanvasSize() * 0.10, getCanvasSize() * 0.10, this.sketch,0, 0);
@@ -91,7 +93,7 @@ export default class LoadingScreen implements Menu {
         } else {
             //When the transition in is complete, activate the websocket connection
             this.keylistener.activate();
-            WebManager.initiateWebsocketConnection();
+            this.webManager.initiateWebsocketConnection();
             this.transitionInActive = false;
         }
     }
@@ -146,7 +148,7 @@ export default class LoadingScreen implements Menu {
 
         //Check for the transition Timer to start the transition out
         if (this.transitionTimer <= 0) {
-           if (WebManager.socket.readyState === WebManager.socket.OPEN) {
+           if (this.webManager.isConnected()) {
                 //If the connection has been established, start the transition out   
                 this.transitionOutActive = true;
                 this.keylistener.deactivate();
@@ -154,7 +156,7 @@ export default class LoadingScreen implements Menu {
            } else {
                 //If the connection has not been established, keep loading.
                 this.transitionTimer = FRAMERATE * 3;
-                WebManager.initiateWebsocketConnection();
+                this.webManager.initiateWebsocketConnection();
            }
         }
 

@@ -241,4 +241,50 @@ export default class LobbyDot implements MenuItem {
             this.sketch.strokeWeight(2);
         this.sketch.pop();
     }
+    
+    /**
+     * @method setOpacity
+     * @description Sets the opacity of the lobby dot
+     * @param opacity {number} - The opacity value (0-255)
+     */
+    public setOpacity(opacity: number): void {
+        this.opacity = opacity;
+    }
+    
+    /**
+     * @method getOpacity
+     * @description Gets the opacity of the lobby dot
+     * @returns {number} - The opacity value
+     */
+    public getOpacity(): number {
+        return this.opacity;
+    }
+    
+    /**
+     * @method fade
+     * @description Reduces the opacity of the lobby dot by the specified amount
+     * @param amount {number} - The amount to reduce opacity by
+     */
+    public fade(amount: number): void {
+        this.opacity -= amount;
+        if (this.opacity < 0) this.opacity = 0;
+    }
+    
+    /**
+     * @method setX
+     * @description Sets the x-coordinate of the lobby dot
+     * @param x {number} - The new x-coordinate
+     */
+    public setX(x: number): void {
+        this.x = x;
+    }
+    
+    /**
+     * @method setY
+     * @description Sets the y-coordinate of the lobby dot
+     * @param y {number} - The new y-coordinate
+     */
+    public setY(y: number): void {
+        this.y = y;
+    }
 }
