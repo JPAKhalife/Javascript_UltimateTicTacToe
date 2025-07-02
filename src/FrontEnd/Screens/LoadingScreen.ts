@@ -37,9 +37,9 @@ export default class LoadingScreen implements Menu {
     private proceed: boolean;
     private nextScreen: Screens;
     private titleText: string;
-    private args: any
+    private args: any[];
 
-    constructor(sketch: p5, nextScreen?: Screens, titleText?: string, loadingAction?: () => void, proceedCondition?: () => boolean, ...args) {
+    constructor(sketch: p5, nextScreen?: Screens, titleText?: string, loadingAction?: () => void, proceedCondition?: () => boolean, ...args: any[]) {
         this.sketch = sketch;
         this.args = args;
         this.keylistener = new KeyListener(this.sketch);
