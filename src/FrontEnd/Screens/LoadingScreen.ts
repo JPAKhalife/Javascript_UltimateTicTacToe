@@ -34,14 +34,21 @@ export default class LoadingScreen implements Menu {
     private transitionOutActive: boolean;
     private transitionTimer: number;
     private webManager: WebManager;
+    private proceed: boolean;
+    private nextScreen: Screens;
+    private titleText: string;
+    private args: any
 
-    constructor(sketch: p5) {
+    constructor(sketch: p5, nextScreen?: Screens, titleText?: string, loadingAction?: () => void, proceedCondition?: () => boolean, ...args) {
         this.sketch = sketch;
+        this.args = args;
         this.keylistener = new KeyListener(this.sketch);
         this.webManager = WebManager.getInstance();
+        this.titleText = titleText || HEADER.LOADING_SCREEN_TITLE_MESSAGES[0];
+        this.nextScreen = nextScreen || Screens.START_SCREEN;
 
         // Spinner properties
-        this.spinner = new Img(whiteTicTac, getCanvasSize() * 0.10, getCanvasSize() * 0.10, this.sketch,0, 0);
+        this.spinner = new Img(whiteTicTac, getCanvasSize() * 0.10, getCanvasSize() * 0.10, this.sketch, 0, 0);
         this.spinner.setRectOrientation(this.sketch.CENTER);
         this.spinner.setImageOrientation(this.sketch.CENTER);
         this.spinner.setAngleMode(this.sketch.RADIANS);
@@ -50,7 +57,7 @@ export default class LoadingScreen implements Menu {
         this.spinnerOpacity = 0;
 
         // Title properties
-        this.title = new Text(HEADER.LOADING_SCREEN_TITLE_MESSAGES[0] + HEADER.DOTS[0], getCanvasSize() / 2, getCanvasSize() / 5, this.sketch, getCanvasSize() * 0.07, fontRobot, this.sketch.color(255, 255, 255));
+        this.title = new Text(this.titleText + HEADER.DOTS[0], getCanvasSize() / 2, getCanvasSize() / 5, this.sketch, getCanvasSize() * 0.07, fontRobot, this.sketch.color(255, 255, 255));
         this.title.setFill(this.sketch.color(255, 255, 255, 0));
         this.title.setTextOrientation(this.sketch.CENTER, this.sketch.CENTER);
         this.titleOpacity = 0;
@@ -64,7 +71,7 @@ export default class LoadingScreen implements Menu {
         this.loadingMessage.setTextBox(getCanvasSize(), getCanvasSize());
         this.loadingMessageIndex = 0;
 
-        //Transition markers
+        // Transition markers
         this.transitionInActive = false;
         this.transitionOutActive = false;
 
@@ -75,6 +82,24 @@ export default class LoadingScreen implements Menu {
         // Start transition in animation
         this.keylistener.deactivate();
         this.startTransitionIn();
+
+        if (loadingAction) {
+            loadingAction();
+        }
+
+        this.proceed = true;
+        // If proceedCondition is provided, use it to determine when to proceed
+        if (proceedCondition) {
+            this.proceed = false;
+            const checkProceed = () => {
+                if (proceedCondition()) {
+                    this.proceed = true;
+                } else {
+                    setTimeout(checkProceed, 100); // Check again after 100ms
+                }
+            };
+            checkProceed();
+        }
     }
 
     private startTransitionIn(): void {
@@ -111,7 +136,7 @@ export default class LoadingScreen implements Menu {
         if (this.titleOpacity <= 0 && this.spinner.getTX() <= 0 - this.spinner.getWidth()) {
             this.transitionOutActive = false;
             this.keylistener.activate();
-            GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
+            GuiManager.changeScreen(this.nextScreen, this.sketch, this.args);
         }
     }
 
@@ -124,7 +149,7 @@ export default class LoadingScreen implements Menu {
 
         if ((this.frameCounter / 3) % 60 === 0) {
             this.titleDotIndex++;
-            this.title.setText(HEADER.LOADING_SCREEN_TITLE_MESSAGES[0] + HEADER.DOTS[this.titleDotIndex % HEADER.DOTS.length]);
+            this.title.setText(this.titleText + HEADER.DOTS[this.titleDotIndex % HEADER.DOTS.length]);
         }
 
         if ((this.frameCounter / 3) % 240 === 0) {
@@ -148,16 +173,10 @@ export default class LoadingScreen implements Menu {
 
         //Check for the transition Timer to start the transition out
         if (this.transitionTimer <= 0) {
-           if (this.webManager.isConnected()) {
                 //If the connection has been established, start the transition out   
                 this.transitionOutActive = true;
                 this.keylistener.deactivate();
                 this.transitionTimer = FRAMERATE * 3;
-           } else {
-                //If the connection has not been established, keep loading.
-                this.transitionTimer = FRAMERATE * 3;
-                this.webManager.initiateWebsocketConnection();
-           }
         }
 
         //Check for the transitions
@@ -165,7 +184,7 @@ export default class LoadingScreen implements Menu {
             this.animateTransitionIn();
         } else if (this.transitionOutActive) {
             this.animateTransitionOut();
-        } else {
+        } else if (this.proceed) {
             this.transitionTimer--;
         }
         this.animateLoading();

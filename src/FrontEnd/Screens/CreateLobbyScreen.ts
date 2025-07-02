@@ -73,35 +73,41 @@ export default class CreateLobbyScreen implements Menu {
             if (this.selectedButton === 'Return') {
                 GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
             } else if (this.selectedButton == 'Create') {
-                this.webManager.initiateConnectionIfNotEstablished().then(connected => {
-                    if (connected) {
-                        // Generate a unique lobby name
-                        const lobbyName = `lobby_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-                        
-                        // Create a unique player ID
-                        const playerID = `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-                        
-                        // Create the lobby
-                        this.webManager.createLobby(
-                            lobbyName,
-                            this.playerNumSlider.getValue(),
-                            this.levelSizeSlider.getValue(),
-                            this.slotNumSlider.getValue(),
-                            playerID
-                        ).then(success => {
-                            console.log(`Lobby creation ${success ? 'successful' : 'failed'}: ${lobbyName}`);
-                            // Store the lobby information for later use
-                            localStorage.setItem('currentLobby', lobbyName);
-                            localStorage.setItem('playerID', playerID);
-                        }).catch(error => {
-                            console.error('Error creating lobby:', error);
-                        });
-                    } else {
-                        console.error('Failed to establish WebSocket connection');
-                    }
-                });
-                
-                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch);
+                const action = () => {
+                    this.webManager.initiateConnectionIfNotEstablished().then(connected => {
+                        if (connected) {
+                            // Generate a unique lobby name
+                            const lobbyName = `lobby_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                            
+                            // Create a unique player ID
+                            const playerID = `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                            
+                            // Create the lobby
+                            this.webManager.createLobby(
+                                lobbyName,
+                                this.playerNumSlider.getValue(),
+                                this.levelSizeSlider.getValue(),
+                                this.slotNumSlider.getValue(),
+                                playerID
+                            ).then(success => {
+                                console.log(`Lobby creation ${success ? 'successful' : 'failed'}: ${lobbyName}`);
+                                // Store the lobby information for later use
+                                localStorage.setItem('currentLobby', lobbyName);
+                                localStorage.setItem('playerID', playerID);
+                            }).catch(error => {
+                                console.error('Error creating lobby:', error);
+                            });
+                        } else {
+                            console.error('Failed to establish WebSocket connection');
+                        }
+                    });    
+                }
+
+                const condition = () => {
+                    return true;   
+                }
+
+                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.GAME_SCREEN, "Creating Lobby", action, condition);
             }
             this.transitionComplete = true;
         }

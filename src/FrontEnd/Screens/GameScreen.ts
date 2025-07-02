@@ -28,7 +28,7 @@ export default class GameScreen implements Menu {
     private currentPlayer: Text;
     private info: ShapeGroup;
 
-    constructor(sketch: p5 ,gameType = GameType.LOCAL, gridSize = 3, gridLevels = 2) {
+    constructor(sketch: p5, gameType = GameType.LOCAL, gridSize = 3, gridLevels = 2) {
         this.keylistener = new KeyListener(sketch);
         this.sketch = sketch;
         //Create a game given the parameters passed to the function.
@@ -57,6 +57,10 @@ export default class GameScreen implements Menu {
         // * The number of spectators
         // * Your opponent (maybe shown in a you vs opponent title)
         // * The current player.
+        if (gameType == GameType.ONLINE) {
+
+        }
+       
     }
 
     public draw(): void {

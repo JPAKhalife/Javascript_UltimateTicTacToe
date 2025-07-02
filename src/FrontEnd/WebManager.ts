@@ -96,6 +96,7 @@ export default class WebManager {
      * @returns {boolean} True if connected, false otherwise
      */
     public isConnected(): boolean {
+        console.log("Is connected? " + (!!this.socket && this.socket.readyState === WebSocket.OPEN));
         return !!this.socket && this.socket.readyState === WebSocket.OPEN;
     }
 
