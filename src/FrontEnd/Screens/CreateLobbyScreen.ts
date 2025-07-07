@@ -15,6 +15,7 @@ import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 import Slider from "../MenuObjects/Slider";
 import WebManager from "../WebManager";
+import { LobbyInfo } from "../MenuObjects/LobbyDot";
 
 export default class CreateLobbyScreen implements Menu {
     
@@ -39,6 +40,9 @@ export default class CreateLobbyScreen implements Menu {
     private lineOpacity: number = 255;
     private selectedButton: string = "";
 
+    //Lobby list
+    // private lobbyList: LobbyInfo[];
+
     constructor(sketch: p5) {
         this.sketch = sketch;
         this.keylistener = new KeyListener(sketch);
@@ -59,6 +63,9 @@ export default class CreateLobbyScreen implements Menu {
             createLobbyButton,
             this.playerNumSlider
         ], this.sketch);
+
+        //Retrieve A list of lobbies
+        // this.lobbyList = List();
         
     }
 
@@ -179,5 +186,13 @@ export default class CreateLobbyScreen implements Menu {
 
     public resize(): void{
         
+    }
+
+    /**
+     * @method getLobbyList
+     * @description Queries the database to get a list of available lobbies and their info.
+     */
+    private getLobbyList() {
+        this.webManager.getLobbyList({});
     }
 }

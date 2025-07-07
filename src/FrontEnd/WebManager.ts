@@ -6,6 +6,8 @@
  * @updated 2024-06-23
  */
 
+import { time } from "console";
+
 export default class WebManager {
     private static instance: WebManager | null = null;
     private socket: WebSocket | null = null;
@@ -138,21 +140,11 @@ export default class WebManager {
         gridSize: number,
         playerID: string
     ): Promise<boolean> {
-        return new Promise((resolve, reject) => {
-            // Check if WebSocket is connected
-            if (!this.isConnected()) {
-                reject(new Error('WebSocket connection not established'));
-                return;
-            }
-
-            // Generate a unique message ID
-            const messageId = `createLobby_${this.messageIdCounter++}`;
-
+        try {
             // Create message payload
             const message = {
                 type: 'createLobby',
-                messageId,
-                data: {
+                parameters: {
                     lobbyID,
                     lobbyData: {
                         playerNum,
@@ -166,28 +158,15 @@ export default class WebManager {
                 }
             };
 
-            // Register callback for this message
-            this.messageCallbacks.set(messageId, (response) => {
-                if (response.success) {
-                    resolve(true);
-                } else {
-                    console.error('Failed to create lobby:', response.error);
-                    resolve(false);
-                }
-            });
-
-            // Send the message
-            this.socket?.send(JSON.stringify(message));
+            // Use the sendRequest method to create the lobby
+            const response = await this.sendRequest<{ success: boolean }>(message, 'createLobby');
             
-            // Add a timeout for the response
-            setTimeout(() => {
-                if (this.messageCallbacks.has(messageId)) {
-                    this.messageCallbacks.delete(messageId);
-                    console.error('Lobby creation request timed out');
-                    resolve(false);
-                }
-            }, 10000); // 10 second timeout
-        });
+            // Return true if the lobby was created successfully
+            return response && response.success === true;
+        } catch (error) {
+            console.error('Error creating lobby:', error);
+            return false;
+        }
     }
 
     /**
@@ -222,49 +201,6 @@ export default class WebManager {
         return this.initiateWebsocketConnection();
     }
     
-    /**
-     * @method sendMessage
-     * @description Send a message to the server with a specific type
-     * @param type The message type
-     * @param data The message data
-     * @returns Promise that resolves with the server response
-     */
-    public async sendMessage<T, R>(type: string, data: T): Promise<R> {
-        return new Promise(async (resolve, reject) => {
-            // Ensure connection is established
-            const connected = await this.initiateConnectionIfNotEstablished();
-            if (!connected) {
-                reject(new Error('Failed to establish WebSocket connection'));
-                return;
-            }
-            
-            // Generate a unique message ID
-            const messageId = `${type}_${this.messageIdCounter++}`;
-            
-            // Create message payload
-            const message = {
-                type,
-                messageId,
-                data
-            };
-            
-            // Register callback for this message
-            this.messageCallbacks.set(messageId, (response) => {
-                resolve(response as R);
-            });
-            
-            // Send the message
-            this.socket?.send(JSON.stringify(message));
-            
-            // Add a timeout for the response
-            setTimeout(() => {
-                if (this.messageCallbacks.has(messageId)) {
-                    this.messageCallbacks.delete(messageId);
-                    reject(new Error(`Request timed out: ${type}`));
-                }
-            }, 10000); // 10 second timeout
-        });
-    }
     
     /**
      * @method closeConnection
@@ -276,4 +212,100 @@ export default class WebManager {
             this.socket = null;
         }
     }
+
+    /**
+     * @method getLobbyList
+     * @description Get a list of lobbies on the server
+     * @param playerNum: number of players who can play the game
+     * @param lobbyID: The ID of the lobby
+     * @param levelSize: The number of layers in the tictac
+     * @param gridSize: The number of slots in a tictac
+     * @param joinedPlayers: The number of players who have joined the lobby (spectators included)
+     * @returns Promise<LobbyInfo[]> a promise that resolves to an array of lobbies and their info
+     */
+    public async getLobbyList(parameters: {lobbyID?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number}): Promise<any[]> {
+        try {
+            // Create the message payload
+            const message = {
+                type: 'searchLobbies',
+                parameters: {
+                    lobbyID: parameters.lobbyID,
+                    playerNum: parameters.playerNum,
+                    levelSize: parameters.levelSize,
+                    gridSize: parameters.gridSize,
+                    joinedPlayers: parameters.joinedPlayers,
+                    maxListLength: parameters.maxListLength
+                }
+            };
+            
+            // Use the sendRequest method to get the lobby list
+            return await this.sendRequest<any[]>(message, 'searchLobbies');
+        } catch (error) {
+            console.error('Error getting lobby list:', error);
+            return [];
+        }
+    }
+
+    /**
+     * @method sendRequest
+     * @description This is the method used by all methods that interact with the server to send requests.
+     * @param message the message content being sent
+     * @param action the action being taken
+     */
+    public sendRequest<T = any>(message: any, action: string): Promise<T> {
+        return new Promise((resolve, reject) => {
+            // Check if WebSocket is connected
+            if (!this.isConnected()) {
+                reject(new Error('WebSocket connection not established'));
+                return;
+            }
+
+            //Generate a messageID for callbacks
+            const messageID = this.generateMessageID(action);
+            
+            // Add the messageID to the message if it doesn't have one
+            if (!message.messageId) {
+                message.messageId = messageID;
+            }
+
+            //Register callbacks for the message
+            this.messageCallbacks.set(messageID, (response) => {
+                // Store the response for future reference
+                console.log(`Received response for ${action}:`, response);
+                
+                if (response.success) {
+                    // Return the actual response data instead of just a boolean
+                    resolve(response.data as T);
+                } else {
+                    console.error('Failed to ' + action +':', response.error);
+                    reject(new Error(response.error || `Failed to ${action}`));
+                }
+            });
+
+            // Send the message
+            this.socket?.send(JSON.stringify(message));
+            
+            // Add a timeout for the response
+            setTimeout(() => {
+                if (this.messageCallbacks.has(messageID)) {
+                    this.messageCallbacks.delete(messageID);
+                    console.error(action + ' request timed out');
+                    reject(new Error(`${action} request timed out`));
+                }
+            }, 10000); // 10 second timeout
+        });
+    }
+
+    /**
+     * @method generateMethodID
+     * @description This method is used to automatically generate a message ID
+     * This is done with the format action_time_messagenum
+     * @param action a string that describes the action being requested by the message
+     * @returns a string representing the message ID
+     */
+    private generateMessageID(action: string): string {
+        const now = new Date();
+        return action + "_" + now.toISOString() + "_" + this.messageIdCounter++;
+    }
+
 }
