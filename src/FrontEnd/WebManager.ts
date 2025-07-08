@@ -8,6 +8,21 @@
 
 import { time } from "console";
 
+/**
+ * Interface representing lobby information
+ */
+export interface LobbyInfo {
+    lobbyID: string;
+    playerNum: number;
+    levelSize: number;
+    gridSize: number;
+    playersJoined: number;
+    creator: string;
+    lobbyState: string;
+    gameState: number[];
+    players: string[];
+}
+
 export default class WebManager {
     private static instance: WebManager | null = null;
     private socket: WebSocket | null = null;
@@ -217,13 +232,12 @@ export default class WebManager {
      * @method getLobbyList
      * @description Get a list of lobbies on the server
      * @param playerNum: number of players who can play the game
-     * @param lobbyID: The ID of the lobby
      * @param levelSize: The number of layers in the tictac
      * @param gridSize: The number of slots in a tictac
      * @param joinedPlayers: The number of players who have joined the lobby (spectators included)
      * @returns Promise<LobbyInfo[]> a promise that resolves to an array of lobbies and their info
      */
-    public async getLobbyList(parameters: {lobbyID?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number}): Promise<any[]> {
+    public async getLobbyList(parameters: {lobbyID?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number}): Promise<LobbyInfo[]> {
         try {
             // Create the message payload
             const message = {
@@ -239,7 +253,24 @@ export default class WebManager {
             };
             
             // Use the sendRequest method to get the lobby list
-            return await this.sendRequest<any[]>(message, 'searchLobbies');
+            const response = await this.sendRequest<any[]>(message, 'searchLobbies');
+            
+            // Parse the response into LobbyInfo objects
+            if (response && Array.isArray(response)) {
+                return response.map(lobby => ({
+                    lobbyID: lobby.lobbyID,
+                    playerNum: lobby.playerNum,
+                    levelSize: lobby.levelSize,
+                    gridSize: lobby.gridSize,
+                    playersJoined: lobby.playersJoined,
+                    creator: lobby.creator,
+                    lobbyState: lobby.lobbyState,
+                    gameState: lobby.gameState,
+                    players: lobby.players
+                }));
+            }
+            
+            return [];
         } catch (error) {
             console.error('Error getting lobby list:', error);
             return [];

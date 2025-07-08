@@ -14,8 +14,8 @@ import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 import Slider from "../MenuObjects/Slider";
-import WebManager from "../WebManager";
-import { LobbyInfo } from "../MenuObjects/LobbyDot";
+import WebManager, { LobbyInfo as WebManagerLobbyInfo } from "../WebManager";
+import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
 
 export default class CreateLobbyScreen implements Menu {
     
@@ -41,7 +41,7 @@ export default class CreateLobbyScreen implements Menu {
     private selectedButton: string = "";
 
     //Lobby list
-    // private lobbyList: LobbyInfo[];
+    private lobbyList: LobbyDotInfo[] = [];
 
     constructor(sketch: p5) {
         this.sketch = sketch;
@@ -65,7 +65,7 @@ export default class CreateLobbyScreen implements Menu {
         ], this.sketch);
 
         //Retrieve A list of lobbies
-        // this.lobbyList = List();
+        this.fetchLobbyList();
         
     }
 
@@ -184,15 +184,32 @@ export default class CreateLobbyScreen implements Menu {
         }
     }
 
-    public resize(): void{
-        
+    /**
+     * @method fetchLobbyList
+     * @description Fetches the list of lobbies from the server and converts them to LobbyDotInfo format
+     */
+    private async fetchLobbyList(): Promise<void> {
+        try {
+            // Await the promise from getLobbyList
+            const webManagerLobbies = await this.webManager.getLobbyList({maxListLength: 2});
+            
+            // Convert WebManagerLobbyInfo objects to LobbyDotInfo objects
+            this.lobbyList = webManagerLobbies.map(lobby => {
+                return new LobbyDotInfo(
+                    lobby.lobbyID,
+                    lobby.lobbyState,
+                    lobby.playersJoined,
+                    lobby.gridSize,
+                    lobby.levelSize
+                );
+            });
+        } catch (error) {
+            console.error('Error fetching lobby list:', error);
+            this.lobbyList = [];
+        }
     }
 
-    /**
-     * @method getLobbyList
-     * @description Queries the database to get a list of available lobbies and their info.
-     */
-    private getLobbyList() {
-        this.webManager.getLobbyList({});
+    public resize(): void{
+        
     }
 }

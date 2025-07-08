@@ -51,18 +51,24 @@ export function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
 async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Promise<object> {
     try {
         //Deconstruct the object
-        const { lobbyID, playerNum, levelSize, gridSize, joinedPlayers, maxListLength } = parameters;
+        const { playerNum, levelSize, gridSize, joinedPlayers, maxListLength, searchListLength } = parameters;
+        const lobbySearchResults = await Lobby.getLobbies(redis, playerNum, levelSize, gridSize, joinedPlayers, maxListLength, searchListLength);
 
+        // Convert each lobby to its JSON representation
+        const lobbies = lobbySearchResults.map(lobby => lobby.toJSON());
 
+        return {
+            success: true,
+            lobbies: lobbies,
+            count: lobbies.length
+        };
     } catch (error) {
         console.error('Error searching lobbies:', error);
         return {
             success: false,
-            error: 'Error creating lobby'
+            error: 'Error searching lobbies'
         };
     }
-
-    return {};
 }
 
 
