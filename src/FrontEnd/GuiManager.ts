@@ -35,10 +35,10 @@ export default class GuiManager {
      * @function changeScreen Changes the current screen.
      * @param {number} screen - The index of the screen to be set as the current screen.
      */
-    static changeScreen(screen: Screens,sketch: p5) {
+    static changeScreen(screen: Screens,sketch: p5, ...args: any[]) {
         for (let i = 0 ; i < GuiManager.screens.length ; i++) {
             if (screen == GuiManager.screens[i][1]) {
-                GuiManager.currentScreen = new GuiManager.screens[i][0](sketch);
+                GuiManager.currentScreen = new GuiManager.screens[i][0](sketch, ...args);
             }
         }
     }

@@ -23,23 +23,27 @@ const PULSE_ANIMATION_TIME = FRAMERATE * 2;
  * When a user is looking at a lobby.
  */
 export class LobbyInfo {
-    public lobbyName: string;
+    public lobbyID: string;
     public state: string;
     public players: number;
+    public joinedPlayers: number;
     public gridsize: number;
     public levelsize: number;
 
     constructor(
-        lobbyName: string = "defaultLobby",
-        state: string = "DNE", 
-        players: number = 0,
-        gridsize: number = 3,
-        levelsize: number = 2) {
-        this.lobbyName = lobbyName;
+        lobbyID: string,
+        state: string, 
+        players: number,
+        gridsize: number,
+        levelsize: number,
+        joinedPlayers: number) {
+        this.lobbyID = lobbyID;
         this.state = state;
         this.players = players;
         this.gridsize = gridsize;
         this.levelsize = levelsize;
+        this.joinedPlayers = joinedPlayers;
+
     }
 }
 
@@ -55,7 +59,7 @@ export default class LobbyDot implements MenuItem {
     private opacity: number;
     private size: number;
     //Information about the object
-    private info: any;
+    private info: LobbyInfo;
     private selected: boolean = false;
     private confirmed: boolean = false;
     //Transition variables
@@ -73,7 +77,7 @@ export default class LobbyDot implements MenuItem {
     private pulseInterval: number = 0;
 
     //TODO: Make a specific object for lobby info
-    constructor(sketch: p5, x: number, y: number, size: number, lifetime: number, info: any, menuNav: MenuNav, boxX: number, boxY: number) {
+    constructor(sketch: p5, x: number, y: number, size: number, lifetime: number, info: LobbyInfo, menuNav: MenuNav, boxX: number, boxY: number) {
         this.sketch = sketch;
         this.opacity = 0;
         this.x = x;
@@ -81,7 +85,7 @@ export default class LobbyDot implements MenuItem {
         this.boxX = boxX;
         this.boxY = boxY;
         this.size = size;
-        this.info = 0;
+        this.info = info;
         this.doTransitionIn = true;
         this.lifeTime = lifetime;
         this.navMenu = menuNav;
@@ -98,7 +102,7 @@ export default class LobbyDot implements MenuItem {
 
         if (this.doTransitionIn) {
             this.transitionIn();   
-        } else if (this.doTransitionOut) { 
+        } else if (this.doTransitionOut && !this.isSelected()) { 
             this.transitionOut();
         } else {
             this.pulse();
@@ -240,5 +244,77 @@ export default class LobbyDot implements MenuItem {
             this.sketch.fill(0);
             this.sketch.strokeWeight(2);
         this.sketch.pop();
+    }
+    
+    /**
+     * @method setOpacity
+     * @description Sets the opacity of the lobby dot
+     * @param opacity {number} - The opacity value (0-255)
+     */
+    public setOpacity(opacity: number): void {
+        this.opacity = opacity;
+    }
+    
+    /**
+     * @method getOpacity
+     * @description Gets the opacity of the lobby dot
+     * @returns {number} - The opacity value
+     */
+    public getOpacity(): number {
+        return this.opacity;
+    }
+    
+    /**
+     * @method fade
+     * @description Reduces the opacity of the lobby dot by the specified amount
+     * @param amount {number} - The amount to reduce opacity by
+     */
+    public fade(amount: number): void {
+        this.opacity -= amount;
+        if (this.opacity < 0) this.opacity = 0;
+    }
+    
+    /**
+     * @method setX
+     * @description Sets the x-coordinate of the lobby dot
+     * @param x {number} - The new x-coordinate
+     */
+    public setX(x: number): void {
+        this.x = x;
+    }
+    
+    /**
+     * @method setY
+     * @description Sets the y-coordinate of the lobby dot
+     * @param y {number} - The new y-coordinate
+     */
+    public setY(y: number): void {
+        this.y = y;
+    }
+
+    /**
+     * @method activateFade
+     * @description begins the fade out animation and removes itself from the menuNav
+     */
+    public activateFade(): void {
+        this.doTransitionOut = true;
+    }
+
+    /**
+     * @method getLobbyInfo
+     * @description Used by the multiplayerLobby class to easiliy access a lobby's info.
+     * @returns A LobbyInfo Object
+     */
+    public getLobbyInfo() {
+        return this.info;
+    }
+
+    /**
+     * @method selectedLobbyInfo
+     * @description Used by the multiplayerLobby class to update a lobbydot's info.
+     * @param lobbyInfo - A LobbyInfo object that the lobbyDot will take on.
+     */
+    public setLobbyInfo(lobbyInfo: LobbyInfo) {
+        this.info = lobbyInfo;
     }
 }

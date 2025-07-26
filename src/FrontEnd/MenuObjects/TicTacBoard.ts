@@ -30,6 +30,7 @@ export default class TicTacBoard implements MenuItem {
     //MenuItem variables
     private selected: boolean;
     private isConfirmed: boolean;
+    private opacity: number = 255;
 
     public static readonly BOARD_SHRINK_CONSTANT: number = 0.8;
     public static readonly ICON_SHRINK_CONSTANT: number = 0.6;
@@ -353,6 +354,50 @@ export default class TicTacBoard implements MenuItem {
     public getY(): number {
         return this.y;
     }
+    
+    /**
+     * @method setOpacity
+     * @description Sets the opacity of the TicTacBoard
+     * @param opacity {number} - The opacity value (0-255)
+     */
+    public setOpacity(opacity: number): void {
+        this.opacity = opacity;
+    }
+    
+    /**
+     * @method getOpacity
+     * @description Gets the opacity of the TicTacBoard
+     * @returns {number} - The opacity value
+     */
+    public getOpacity(): number {
+        return this.opacity;
+    }
+    
+    /**
+     * @method fade
+     * @description Reduces the opacity of the TicTacBoard by the specified amount
+     * @param amount {number} - The amount to reduce opacity by
+     */
+    public fade(amount: number): void {
+        this.opacity -= amount;
+        if (this.opacity < 0) this.opacity = 0;
+    }
+    
+    /**
+     * @method setX
+     * @description Sets the x-coordinate of the TicTacBoard
+     * @param x {number} - The new x-coordinate
+     */
+    public setX(x: number): void {
+        this.x = x;
+    }
+    
+    /**
+     * @method setY
+     * @description Sets the y-coordinate of the TicTacBoard
+     * @param y {number} - The new y-coordinate
+     */
+    public setY(y: number): void {
+        this.y = y;
+    }
 }
-
-

@@ -15,6 +15,7 @@ import MenuNav from "../MenuObjects/MenuNav";
 import {MenuButton} from "../MenuObjects/MenuButton";
 import {Text, Rectangle } from "../ShapeWrapper";
 import { whiteTicTac, getCanvasSize, HEADER, fontPointless } from "../sketch";
+import WebManager from "../WebManager";
 
 export const STROKEWEIGHT = 15;
 const SETUP_SCREEN_ANIMATION_TIME = 120;
@@ -123,7 +124,13 @@ export default class SetupScreen implements Menu {
             this.keylistener.activate();
             const selectedPhrase = (this.multiplayer_MenuButton_list.getCurrentlySelected() as MenuButton).getText();
             if (selectedPhrase === 'Online') {
-                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch);
+                const loadingAction = () => {
+                    WebManager.getInstance().initiateWebsocketConnection();
+                };
+                const proceedCondition = () => {
+                    return WebManager.getInstance().isConnected();
+                };
+                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.MULTIPLAYER_SCREEN, "Connecting to Server", loadingAction, proceedCondition );
             } else if (selectedPhrase === 'Local') {
                 GuiManager.changeScreen(Screens.GAME_SCREEN, this.sketch);
             } else if (selectedPhrase === 'Controls') {
