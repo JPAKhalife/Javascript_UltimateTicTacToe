@@ -94,7 +94,7 @@ export default class MultiplayerScreen implements Menu {
         //Add a third line along the left side of the screen
         this.sketch.line(getCanvasSize()/4,getCanvasSize() / 4,getCanvasSize() / 4,getCanvasSize() / 4 * 3);
 
-        // Draw all MenuItem objects
+        // Draw all BaseMenuItem objects
         this.lobbyNav.drawAll();
 
         //Lobby dot timer
