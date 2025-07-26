@@ -1,5 +1,6 @@
 # Javascript UltimateTicTacToe
 
-This is a javascript version of the bigtactoe game I made in C++. It will hopefully be better coded. After the game is finished, I will work on converting it to online multiplayer game hosted on my webserver. 
+An Ultimate tictactoe game that allows for as large a grid and as many grid levels as desired.
+It is multiplayer or singleplayer.
 
-Here is the website it was on: https://miraclesheep.github.io/Javascript_UltimateTicTacToe/
+OLD VERSION (basic ultimate tictactoe, no multiplayer): https://miraclesheep.github.io/Javascript_UltimateTicTacToe/
