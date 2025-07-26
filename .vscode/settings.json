@@ -1,5 +1,7 @@
 {
     "files.exclude": {
         "**/.git": false
-    }
+    },
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true
 }
