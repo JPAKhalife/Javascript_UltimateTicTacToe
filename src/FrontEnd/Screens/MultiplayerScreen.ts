@@ -9,15 +9,17 @@
 import p5 from "p5";
 import Menu, { Screens } from "../Menu";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
-import { getCanvasSize, getRandomInt } from "../sketch";
+import { getCanvasSize, getRandomInt } from '../sketch';
 import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
-import LobbyDot from "../MenuObjects/LobbyDot";
+import LobbyDot, { LobbyInfo } from "../MenuObjects/LobbyDot";
 import { FRAMERATE } from "../Constants";
+import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
+import WebManager from '../WebManager'; 
 
 const LOBBY_REFRESH_TIME = 3 * FRAMERATE; // 3 seconds
-const DEFAULT_LOBBY_NUM = 1; // Default number of lobbies to display at a time
+const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
 
 export default class MultiplayerScreen implements Menu {
     
@@ -40,10 +42,16 @@ export default class MultiplayerScreen implements Menu {
     private YMIN: number;
     private YMAX: number;
 
+    private webManager: WebManager;
+    private lobbyList:  LobbyInfo[];
+
 
     constructor(sketch: p5) {
         this.sketch = sketch;
         this.keylistener = new KeyListener(sketch);
+        this.webManager = WebManager.getInstance();
+        this.lobbyList = [];
+        this.fetchLobbyList(DEFAULT_LOBBY_DISPLAY_NUM)
 
         // Initialize bounds
         this.XMIN = getCanvasSize() / 4;
@@ -91,13 +99,17 @@ export default class MultiplayerScreen implements Menu {
 
         //Lobby dot timer
         if (this.lobbyRefreshTime <= 0) {
-            this.handleMutiplayerLobbies(DEFAULT_LOBBY_NUM);
-            this.lobbyRefreshTime = LOBBY_REFRESH_TIME;
+            this.displayMutiplayerLobby();
+            this.lobbyRefreshTime = LOBBY_REFRESH_TIME;   
+            if (this.lobbyList.length <= 0) {
+                this.fetchLobbyList(DEFAULT_LOBBY_DISPLAY_NUM);
+            }
         } else {
             this.lobbyRefreshTime--;
         }
 
-        // TODO: Add some stats to show how many lobbies are open / players online
+        // Display lobby information on the left panel
+        this.displayLobbyInfo();
 
 
         // Check for transition out
@@ -134,21 +146,156 @@ export default class MultiplayerScreen implements Menu {
     }
 
     /**
-     * @method handleMutiplayerLobbies
+     * @method displayMutiplayerLobbies
      * @description This method is used to access any multiplayer lobbies that exist, and display them in the empty space in the middle of the screen.
      * @param number {number} The number of multiplayer lobbies to search for
      */
-    handleMutiplayerLobbies(lobbyNum: number): void {
-        // const isPointWithinBounds = (x: number, y: number, bounds: { xMin: number, xMax: number, yMin: number, yMax: number }): boolean => {
-        //     return x >= bounds.xMin && x <= bounds.xMax && y >= bounds.yMin && y <= bounds.yMax;
-        // };
-        for (let i = 0 ; i < lobbyNum ; i++) {
-            // Generate our x and y coordinates
-            let x = getRandomInt(this.XMIN, this.XMAX);
-            let y = getRandomInt(this.YMIN, this.YMAX);
+    displayMutiplayerLobby(): void {
+        for (let i = 0 ; i < this.lobbyNav.getLength() ; i++) {
+            if (this.lobbyNav.getAtIndex(i) instanceof LobbyDot) {
+                let lobbyDot = (this.lobbyNav.getAtIndex(i) as LobbyDot);
+                if(this.lobbyList.at(0)?.lobbyID == lobbyDot.getLobbyInfo().lobbyID) {
+                    lobbyDot.setLobbyInfo(this.lobbyList.shift() ?? (() => { throw new Error("Lobby list is empty"); })())
+                    return;
+                }
+            }
+        }
 
-            // Create a new lobbyDot
-            this.lobbyNav.addItem(new LobbyDot(this.sketch, x, y, 5, getRandomInt(3,15) * FRAMERATE, 0, this.lobbyNav,getCanvasSize()/4, getCanvasSize()/2));
+        // Generate our x and y coordinates
+        let x = getRandomInt(this.XMIN, this.XMAX);
+        let y = getRandomInt(this.YMIN, this.YMAX);
+
+        // Create a new LobbyDot and add it to the lobbyNav
+            this.lobbyNav.addItem(new LobbyDot(
+                this.sketch,
+                x,
+                y,
+                5,
+                getRandomInt(3, 15) * FRAMERATE,
+                this.lobbyList.shift() ?? (() => { throw new Error("Lobby list is empty"); })(),
+                this.lobbyNav,
+                getCanvasSize() / 4,
+                getCanvasSize() / 2,
+            ));
+    }
+
+        /**
+     * @method fetchLobbyList
+     * @description Fetches the list of lobbies from the server and converts them to LobbyDotInfo format
+     */
+    private async fetchLobbyList(maxListLength: number): Promise<void> {
+        try {
+            // Await the promise from getLobbyList
+            const webManagerLobbies = await this.webManager.getLobbyList({maxListLength: maxListLength});
+            // Convert WebManagerLobbyInfo objects to LobbyDotInfo objects
+            webManagerLobbies.map(lobby => {
+                this.lobbyList.push(new LobbyDotInfo(
+                    lobby.lobbyID,
+                    lobby.lobbyState,
+                    lobby.playersJoined,
+                    lobby.gridSize,
+                    lobby.levelSize,
+                    lobby.playersJoined,
+                ));
+            });
+        } catch (error) {
+            console.error('Error fetching lobby list:', error);
+            this.lobbyList = [];
+        }
+    }
+
+    /**
+     * @method displayLobbyInfo
+     * @description Displays lobby information on the left side of the screen
+     */
+    private displayLobbyInfo(): void {
+        // Set text properties
+        this.sketch.fill(255); // White text
+        this.sketch.noStroke();
+        this.sketch.textAlign(this.sketch.CENTER, this.sketch.TOP);
+        
+        const leftPanelX = getCanvasSize() / 8; // Center of left panel
+        const topMargin = getCanvasSize() / 4 + 30; // Start below the top line with some margin
+        const lineHeight = 30; // Space between lines
+        
+        // Display header
+        this.sketch.textSize(24);
+        this.sketch.text("LOBBY INFO", leftPanelX, topMargin);
+        
+        // Check if a lobby is selected
+        if (this.lobbyNav.getCurrentlySelected() instanceof LobbyDot) {
+            // Get selected lobby info
+            const selectedLobbyInfo = (this.lobbyNav.getCurrentlySelected() as LobbyDot).getLobbyInfo();
+            
+            // Display detailed lobby information
+            this.sketch.textSize(18);
+            this.sketch.text("ID: " + selectedLobbyInfo.lobbyID, leftPanelX, topMargin + lineHeight * 2);
+            
+            this.sketch.textSize(16);
+            this.sketch.text("Status: " + selectedLobbyInfo.state, leftPanelX, topMargin + lineHeight * 3.5);
+            this.sketch.text("Players: " + selectedLobbyInfo.joinedPlayers + "/" + selectedLobbyInfo.players, 
+                leftPanelX, topMargin + lineHeight * 4.5);
+            
+            // Draw a divider
+            this.sketch.stroke(255);
+            this.sketch.strokeWeight(1);
+            this.sketch.line(
+                leftPanelX - getCanvasSize() / 12, 
+                topMargin + lineHeight * 5.5, 
+                leftPanelX + getCanvasSize() / 12, 
+                topMargin + lineHeight * 5.5
+            );
+            this.sketch.noStroke();
+            
+            // Game configuration
+            this.sketch.textSize(18);
+            this.sketch.text("GAME CONFIG", leftPanelX, topMargin + lineHeight * 6.5);
+            
+            this.sketch.textSize(16);
+            this.sketch.text("Grid Size: " + selectedLobbyInfo.gridsize + "×" + selectedLobbyInfo.gridsize, 
+                leftPanelX, topMargin + lineHeight * 8);
+            this.sketch.text("Level Size: " + selectedLobbyInfo.levelsize, 
+                leftPanelX, topMargin + lineHeight * 9);
+            
+            // Instructions
+            this.sketch.textSize(14);
+            this.sketch.text("Press ENTER to join", leftPanelX, topMargin + lineHeight * 11);
+        } else {
+            // Display general lobby information
+            this.sketch.textSize(18);
+            this.sketch.text("AVAILABLE LOBBIES", leftPanelX, topMargin + lineHeight * 2);
+            
+            // Count lobby dots
+            let lobbyCount = 0;
+            for (let i = 0; i < this.lobbyNav.getLength(); i++) {
+                if (this.lobbyNav.getAtIndex(i) instanceof LobbyDot) {
+                    lobbyCount++;
+                }
+            }
+            
+            this.sketch.textSize(16);
+            this.sketch.text("Open Lobbies: " + lobbyCount, leftPanelX, topMargin + lineHeight * 3.5);
+            
+            // Draw a divider
+            this.sketch.stroke(255);
+            this.sketch.strokeWeight(1);
+            this.sketch.line(
+                leftPanelX - getCanvasSize() / 12, 
+                topMargin + lineHeight * 5, 
+                leftPanelX + getCanvasSize() / 12, 
+                topMargin + lineHeight * 5
+            );
+            this.sketch.noStroke();
+            
+            // Instructions
+            this.sketch.textSize(16);
+            this.sketch.text("INSTRUCTIONS", leftPanelX, topMargin + lineHeight * 6);
+            
+            this.sketch.textSize(14);
+            this.sketch.text("Use arrow keys to", leftPanelX, topMargin + lineHeight * 7.5);
+            this.sketch.text("navigate between lobbies", leftPanelX, topMargin + lineHeight * 8.5);
+            this.sketch.text("Select a lobby to", leftPanelX, topMargin + lineHeight * 10);
+            this.sketch.text("view details", leftPanelX, topMargin + lineHeight * 11);
         }
     }
 }

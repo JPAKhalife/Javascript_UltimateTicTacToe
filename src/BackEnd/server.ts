@@ -62,7 +62,7 @@ app.get('/', (req: any, res: any) => {
 });
 
 //Websocket 
-expressWsApp.app.ws('/', handleWebsocketRequest)
+expressWsApp.app.ws('/', (ws: any, req: any) => handleWebsocketRequest(ws, req, redis));
 
 // Listen on port 3000
 app.listen(3000, () => {

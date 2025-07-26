@@ -27,9 +27,9 @@ export default class WebManager {
     private static instance: WebManager | null = null;
     private socket: WebSocket | null = null;
     private messageCallbacks: Map<string, (response: any) => void> = new Map();
-    private messageIdCounter: number = 0;
+    private messageIDCounter: number = 0;
     private reconnectAttempts: number = 0;
-    private maxReconnectAttempts: number = 5;
+    private maxReconnectAttempts: number = -1;
     private reconnectDelay: number = 1000; // Base delay in ms
     
     /**
@@ -72,18 +72,18 @@ export default class WebManager {
             this.socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('Message from server:', data.message);
-                    
-                    // Handle response messages with messageId
-                    if (data.messageId && this.messageCallbacks.has(data.messageId)) {
-                        const callback = this.messageCallbacks.get(data.messageId);
+                    console.log('Message from server:', data);
+                    // Handle response messages with messageID
+                    if (data.messageID && this.messageCallbacks.has(data.messageID)) {
+                        const callback = this.messageCallbacks.get(data.messageID);
                         if (callback) {
                             callback(data);
-                            this.messageCallbacks.delete(data.messageId);
+                            this.messageCallbacks.delete(data.messageID);
                         }
                     }
                 } catch (error) {
                     console.error('Error processing message:', error);
+                    return
                 }
             };
         
@@ -113,7 +113,6 @@ export default class WebManager {
      * @returns {boolean} True if connected, false otherwise
      */
     public isConnected(): boolean {
-        console.log("Is connected? " + (!!this.socket && this.socket.readyState === WebSocket.OPEN));
         return !!this.socket && this.socket.readyState === WebSocket.OPEN;
     }
 
@@ -123,9 +122,9 @@ export default class WebManager {
      * @private
      */
     private scheduleReconnect(): void {
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        if (this.reconnectAttempts < this.maxReconnectAttempts || this.maxReconnectAttempts < 0) {
             this.reconnectAttempts++;
-            const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+            const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 120000);
             
             console.log(`Scheduling reconnection attempt ${this.reconnectAttempts} in ${delay}ms`);
             
@@ -175,8 +174,9 @@ export default class WebManager {
 
             // Use the sendRequest method to create the lobby
             const response = await this.sendRequest<{ success: boolean }>(message, 'createLobby');
-            
-            // Return true if the lobby was created successfully
+            console.log("Response received: ", response);
+
+            // Return the success status from the response
             return response && response.success === true;
         } catch (error) {
             console.error('Error creating lobby:', error);
@@ -253,11 +253,11 @@ export default class WebManager {
             };
             
             // Use the sendRequest method to get the lobby list
-            const response = await this.sendRequest<any[]>(message, 'searchLobbies');
+            const response = await this.sendRequest<{ success: boolean; lobbies: any[] }>(message, 'searchLobbies');
             
             // Parse the response into LobbyInfo objects
-            if (response && Array.isArray(response)) {
-                return response.map(lobby => ({
+            if (response && response.success && Array.isArray(response.lobbies)) {
+                return response.lobbies.map(lobby => ({
                     lobbyID: lobby.lobbyID,
                     playerNum: lobby.playerNum,
                     levelSize: lobby.levelSize,
@@ -295,8 +295,8 @@ export default class WebManager {
             const messageID = this.generateMessageID(action);
             
             // Add the messageID to the message if it doesn't have one
-            if (!message.messageId) {
-                message.messageId = messageID;
+            if (!message.messageID) {
+                message.messageID = messageID;
             }
 
             //Register callbacks for the message
@@ -305,8 +305,8 @@ export default class WebManager {
                 console.log(`Received response for ${action}:`, response);
                 
                 if (response.success) {
-                    // Return the actual response data instead of just a boolean
-                    resolve(response.data as T);
+                    // Return the entire response object since it contains all the data we need
+                    resolve(response as T);
                 } else {
                     console.error('Failed to ' + action +':', response.error);
                     reject(new Error(response.error || `Failed to ${action}`));
@@ -336,7 +336,7 @@ export default class WebManager {
      */
     private generateMessageID(action: string): string {
         const now = new Date();
-        return action + "_" + now.toISOString() + "_" + this.messageIdCounter++;
+        return action + "_" + now.toISOString() + "_" + this.messageIDCounter++;
     }
 
 }

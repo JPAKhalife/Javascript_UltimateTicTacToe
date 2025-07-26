@@ -15,7 +15,7 @@ import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 import Slider from "../MenuObjects/Slider";
 import WebManager, { LobbyInfo as WebManagerLobbyInfo } from "../WebManager";
-import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
+
 
 export default class CreateLobbyScreen implements Menu {
     
@@ -40,9 +40,6 @@ export default class CreateLobbyScreen implements Menu {
     private lineOpacity: number = 255;
     private selectedButton: string = "";
 
-    //Lobby list
-    private lobbyList: LobbyDotInfo[] = [];
-
     constructor(sketch: p5) {
         this.sketch = sketch;
         this.keylistener = new KeyListener(sketch);
@@ -64,8 +61,6 @@ export default class CreateLobbyScreen implements Menu {
             this.playerNumSlider
         ], this.sketch);
 
-        //Retrieve A list of lobbies
-        this.fetchLobbyList();
         
     }
 
@@ -98,9 +93,14 @@ export default class CreateLobbyScreen implements Menu {
                                 playerID
                             ).then(success => {
                                 console.log(`Lobby creation ${success ? 'successful' : 'failed'}: ${lobbyName}`);
-                                // Store the lobby information for later use
-                                localStorage.setItem('currentLobby', lobbyName);
-                                localStorage.setItem('playerID', playerID);
+                                if (success) {
+                                    // Store the lobby information for later use
+                                    localStorage.setItem('currentLobby', lobbyName);
+                                    localStorage.setItem('playerID', playerID);
+                                } else {
+                                    console.error(`Lobby creation failed: ${lobbyName}`);
+                                    // Show an error message or handle the failure
+                                }
                             }).catch(error => {
                                 console.error('Error creating lobby:', error);
                             });
@@ -184,30 +184,7 @@ export default class CreateLobbyScreen implements Menu {
         }
     }
 
-    /**
-     * @method fetchLobbyList
-     * @description Fetches the list of lobbies from the server and converts them to LobbyDotInfo format
-     */
-    private async fetchLobbyList(): Promise<void> {
-        try {
-            // Await the promise from getLobbyList
-            const webManagerLobbies = await this.webManager.getLobbyList({maxListLength: 2});
-            
-            // Convert WebManagerLobbyInfo objects to LobbyDotInfo objects
-            this.lobbyList = webManagerLobbies.map(lobby => {
-                return new LobbyDotInfo(
-                    lobby.lobbyID,
-                    lobby.lobbyState,
-                    lobby.playersJoined,
-                    lobby.gridSize,
-                    lobby.levelSize
-                );
-            });
-        } catch (error) {
-            console.error('Error fetching lobby list:', error);
-            this.lobbyList = [];
-        }
-    }
+
 
     public resize(): void{
         

@@ -117,8 +117,10 @@ export default class Lobby {
             }
 
             // Create game state array based on gridSize
-            const gameStateSize = (lobbyData.gridSize * lobbyData.gridSize) ^ lobbyData.levelSize;
+            // Use ** for exponentiation instead of ^ (which is bitwise XOR)
+            const gameStateSize = Math.pow(lobbyData.gridSize * lobbyData.gridSize, lobbyData.levelSize);
             const gameState = new Array(gameStateSize).fill(0);
+            console.log(`Created game state array with size ${gameStateSize}`);
 
             // Create lobby object with version for optimistic locking
             const lobbyObject = {
@@ -460,31 +462,46 @@ export default class Lobby {
         maxListLength?: number,
         searchListLength?: number
     ): Promise<Lobby[]> {
-        // Define a Lua script for searching lobbies
+        // Define a Lua script for searching lobbies with improved error handling and efficiency
         const luaScript = `
-            -- Get the list of all lobbies
-            local lobbyList = redis.call('LRANGE', 'LobbyList', 0, ARGV[7] or -1)
+            -- Set default values for parameters if they are empty or nil
+            local maxListLength = tonumber(ARGV[1]) or 20
+            local searchListLength = tonumber(ARGV[6]) or 100
+            
+            -- Get the list of all lobbies with a limit to prevent timeout
+            local lobbyList = redis.call('LRANGE', 'LobbyList', 0, searchListLength)
             local matchingLobbies = {}
             local matchingKeys = {}
             local addedElements = 0
 
+            -- Convert filter parameters to numbers if they exist, otherwise nil
+            local playerNumFilter = ARGV[2] ~= "" and tonumber(ARGV[2]) or nil
+            local levelSizeFilter = ARGV[3] ~= "" and tonumber(ARGV[3]) or nil
+            local gridSizeFilter = ARGV[4] ~= "" and tonumber(ARGV[4]) or nil
+            local joinedPlayersFilter = ARGV[5] ~= "" and tonumber(ARGV[5]) or nil
+
             for _, lobbyKey in ipairs(lobbyList) do
+                -- Check if we've reached the maximum number of lobbies to return
+                if addedElements >= maxListLength then
+                    break
+                end
+                
                 local lobbyJson = redis.call('GET', lobbyKey)
                 if lobbyJson then
-                    local lobbyObject = cjson.decode(lobbyJson)
-
-                    -- Apply filters
-                    if (not ARGV[3] or tonumber(lobbyObject.playerNum) == tonumber(ARGV[3])) and
-                       (not ARGV[4] or tonumber(lobbyObject.levelSize) == tonumber(ARGV[4])) and
-                       (not ARGV[5] or tonumber(lobbyObject.gridSize) == tonumber(ARGV[5])) and
-                       (not ARGV[6] or tonumber(lobbyObject.playersJoined) == tonumber(ARGV[6])) then
-                        table.insert(matchingLobbies, lobbyJson)
-                        table.insert(matchingKeys, lobbyKey)
-                        addedElements = addedElements + 1
-                    end
-
-                    if (addedElements >= ARGV[1]) then
-                        break
+                    local success, lobbyObject = pcall(cjson.decode, lobbyJson)
+                    
+                    if success then
+                        -- Apply filters with proper nil checks
+                        local playerNumMatch = playerNumFilter == nil or tonumber(lobbyObject.playerNum) == playerNumFilter
+                        local levelSizeMatch = levelSizeFilter == nil or tonumber(lobbyObject.levelSize) == levelSizeFilter
+                        local gridSizeMatch = gridSizeFilter == nil or tonumber(lobbyObject.gridSize) == gridSizeFilter
+                        local joinedPlayersMatch = joinedPlayersFilter == nil or tonumber(lobbyObject.playersJoined) == joinedPlayersFilter
+                        
+                        if playerNumMatch and levelSizeMatch and gridSizeMatch and joinedPlayersMatch then
+                            table.insert(matchingLobbies, lobbyJson)
+                            table.insert(matchingKeys, lobbyKey)
+                            addedElements = addedElements + 1
+                        end
                     end
                 end
             end
@@ -493,16 +510,16 @@ export default class Lobby {
         `;
 
         try {
-            // Execute the Lua script
+            // Execute the Lua script with improved default values
             const result = await redisClient.eval(
                 luaScript,
                 0, // No keys are passed
-                maxListLength?.toString() || "-1", // ARGV[1]: Max list length
-                playerNum?.toString() || "", // ARGV[3]: Player number filter
-                levelSize?.toString() || "", // ARGV[4]: Level size filter
-                gridSize?.toString() || "", // ARGV[5]: Grid size filter
-                joinedPlayers?.toString() || "", // ARGV[6]: Joined players filter
-                searchListLength?.toString() || "", // ARGV[7]: the length of the list to retrieve
+                maxListLength?.toString() || "20", // ARGV[1]: Max list length (default 20)
+                playerNum?.toString() || "", // ARGV[2]: Player number filter
+                levelSize?.toString() || "", // ARGV[3]: Level size filter
+                gridSize?.toString() || "", // ARGV[4]: Grid size filter
+                joinedPlayers?.toString() || "", // ARGV[5]: Joined players filter
+                searchListLength?.toString() || "100", // ARGV[6]: the length of the list to retrieve (default 100)
             );
             
 
@@ -520,7 +537,13 @@ export default class Lobby {
             }
             return lobbies;
         } catch (error) {
-            throw Error("There was an error calling getLobbies: " + error);
+            console.error("Error in getLobbies:", error);
+            // Provide more detailed error information
+            if (error instanceof Error) {
+                throw new Error(`There was an error calling getLobbies: ${error.message}`);
+            } else {
+                throw new Error(`There was an error calling getLobbies: ${error}`);
+            }
         }
     }
 

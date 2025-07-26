@@ -128,10 +128,9 @@ export default class SetupScreen implements Menu {
                     WebManager.getInstance().initiateWebsocketConnection();
                 };
                 const proceedCondition = () => {
-                    console.log("Being called")
                     return WebManager.getInstance().isConnected();
                 };
-                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, "Connecting to Server", loadingAction, proceedCondition );
+                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.MULTIPLAYER_SCREEN, "Connecting to Server", loadingAction, proceedCondition );
             } else if (selectedPhrase === 'Local') {
                 GuiManager.changeScreen(Screens.GAME_SCREEN, this.sketch);
             } else if (selectedPhrase === 'Controls') {
