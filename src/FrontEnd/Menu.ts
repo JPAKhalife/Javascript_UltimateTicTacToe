@@ -16,6 +16,7 @@ export enum Screens {
     GAME_SCREEN,
     MULTIPLAYER_SCREEN,
     CREATE_LOBBY_SCREEN,
+    USERNAME_SCREEN, // New screen for entering username
     TEST_SCREEN,
 };
 

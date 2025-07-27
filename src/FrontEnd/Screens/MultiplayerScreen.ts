@@ -151,6 +151,7 @@ export default class MultiplayerScreen implements Menu {
      * @param number {number} The number of multiplayer lobbies to search for
      */
     displayMutiplayerLobby(): void {
+        if (this.lobbyList.length <= 0) {return;}
         for (let i = 0 ; i < this.lobbyNav.getLength() ; i++) {
             if (this.lobbyNav.getAtIndex(i) instanceof LobbyDot) {
                 let lobbyDot = (this.lobbyNav.getAtIndex(i) as LobbyDot);

@@ -124,13 +124,21 @@ export default class SetupScreen implements Menu {
             this.keylistener.activate();
             const selectedPhrase = (this.multiplayer_MenuButton_list.getCurrentlySelected() as MenuButton).getText();
             if (selectedPhrase === 'Online') {
+                // Navigate to multiplayer screen with loading screen in between
                 const loadingAction = () => {
                     WebManager.getInstance().initiateWebsocketConnection();
                 };
                 const proceedCondition = () => {
                     return WebManager.getInstance().isConnected();
                 };
-                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.MULTIPLAYER_SCREEN, "Connecting to Server", loadingAction, proceedCondition );
+                GuiManager.changeScreen(
+                    Screens.LOADING_SCREEN, 
+                    this.sketch, 
+                    Screens.USERNAME_SCREEN, 
+                    "Connecting to Server", 
+                    loadingAction, 
+                    proceedCondition
+                );
             } else if (selectedPhrase === 'Local') {
                 GuiManager.changeScreen(Screens.GAME_SCREEN, this.sketch);
             } else if (selectedPhrase === 'Controls') {
