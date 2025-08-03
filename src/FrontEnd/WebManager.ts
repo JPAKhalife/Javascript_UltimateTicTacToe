@@ -339,4 +339,32 @@ export default class WebManager {
         return action + "_" + now.toISOString() + "_" + this.messageIDCounter++;
     }
 
+    /**
+     * @method checkAndRegisterPlayer
+     * @description This method makes a request for a new player to be generated. This allows the
+     * client to join game servers when it receives a player id.
+     * @param username the username that the player chose
+     * @return The playerID, or an empty string.
+     */
+    public async checkAndRegisterPlayer(username: string): Promise<[string, string]> {
+        try {
+            const message = {
+                type: 'registerPlayer',
+                parameters: {
+                    identifier: username,
+                    checkUsername: true
+                }
+            }
+
+            const response = await this.sendRequest<{ success: boolean, message: string, playerID?: string }>(message, 'registerPlayer');
+            console.log("Response received: ", response);
+
+            return [response.playerID ? response.playerID : "", response.message];
+
+        } catch(error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            return ["", errorMessage]
+        }
+    }
+
 }

@@ -1,7 +1,10 @@
 import Redis from 'ioredis';
 import Lobby from './Database/Lobby';
+import Player from './Database/Player';
 
 type ReturnMessage = Record<string, any>
+
+const activeConnections = new Map<string, WebSocket>();
 
 export function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
     console.log("WebSocket connection established from client");
@@ -23,6 +26,8 @@ export function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                 returnMessage = await handleCreateLobby(ws, redis, data.parameters)
             } else if (data.type === 'searchLobbies') {
                 returnMessage = await handleSearchLobbies(ws, redis, data.parameters);
+            } else if (data.type === 'registerPlayer') {
+                return message = await handleRegisterPlayer(ws, redis, data.parameters);
             } else {
                 returnMessage = {
                     messageID: data.messageID,
@@ -158,4 +163,54 @@ async function handleCreateLobby(ws: any, redis: Redis, parameters: any): Promis
             error: 'Error creating lobby'
         };
     }
+}
+
+/**
+ * @function handleRegisterPlayer
+ * @description This method handles the registering of a player.
+ * @param ws Websocket connection
+ * @param redis redis connection
+ * @param paremeters: any
+ */
+async function handleRegisterPlayer(ws: WebSocket, redis: Redis, parameters: any): Promise<object> {
+        //Deconstruct the data
+        const { identifier, checkUsername } = parameters
+        console.log("Checking if player " + identifier + " exists.")
+
+    try {
+        let newPlayer = await Player.createPlayer(redis, identifier);
+        if (newPlayer) {
+
+            return {
+                success: true,
+                message: "The player " + newPlayer?.getUsername() + "was registered",
+                playerID: newPlayer?.getPlayerID()
+            }
+        }
+        
+    } catch(error) {
+        return {
+            success: false,
+            message: "There was an error attemtping to check the existence of the player: " + error,
+        }
+    }
+    return {
+        success: true,
+        message: "The player already exists",
+    }
+
+    
+}
+
+/**
+ * @function checkValue
+ * @description Checks that a number is within tha appropriate range
+ */
+function checkValue<T extends string | number>(value: T, maxValue: number, minValue: number = 1): boolean {
+    if (typeof value === 'string') {
+        return value.length <= maxValue && value.length >= minValue;
+    } else if (typeof value === 'number') {
+        return value <= maxValue && value >= minValue;
+    }
+    return false;
 }

@@ -32,6 +32,13 @@ export default class Field extends BaseMenuItem {
     private editingBorderColor: number;
     private selectedBorderColor: number;
     private timeSinceEnter: number;
+    private errorMessage: string;
+    
+    // Shake animation properties
+    private isShaking: boolean;
+    private shakeIntensity: number;
+    private shakeDuration: number;
+    private shakeTimer: number;
 
     constructor(
         sketch: p5, 
@@ -46,6 +53,7 @@ export default class Field extends BaseMenuItem {
         super(sketch, x * getCanvasSize(), y * getCanvasSize(), 255);
         
         this.text = "";
+        this.errorMessage = "";
         this.maxLength = maxLength;
         this.width = width * getCanvasSize();
         this.height = height * getCanvasSize();
@@ -65,6 +73,12 @@ export default class Field extends BaseMenuItem {
         this.borderColor = 100;        // Gray border
         this.selectedBorderColor = 200; // Light gray when selected
         this.editingBorderColor = 255;  // White when editing
+        
+        // Initialize shake animation properties
+        this.isShaking = false;
+        this.shakeIntensity = 0;
+        this.shakeDuration = 0;
+        this.shakeTimer = 0;
     }
     
     /**
@@ -93,6 +107,25 @@ export default class Field extends BaseMenuItem {
             this.cursorVisible = !this.cursorVisible;
         }
         
+        // Update shake animation if active
+        let shakeOffsetX = 0;
+        if (this.isShaking) {
+            // Calculate shake offset using sine function for smooth back-and-forth motion
+            // Intensity decreases as the animation progresses
+            const progress = this.shakeTimer / this.shakeDuration;
+            const decayFactor = 1 - progress; // Animation intensity decreases over time
+            shakeOffsetX = Math.sin(this.shakeTimer * 0.8) * this.shakeIntensity * decayFactor;
+            
+            // Update shake timer
+            this.shakeTimer++;
+            
+            // End shake animation when duration is reached
+            if (this.shakeTimer >= this.shakeDuration) {
+                this.isShaking = false;
+                this.shakeTimer = 0;
+            }
+        }
+        
         // Draw field
         sketch.push();
         
@@ -109,27 +142,54 @@ export default class Field extends BaseMenuItem {
         // Draw background
         sketch.fill(this.backgroundColor, this.getOpacity());
         sketch.rectMode(sketch.CENTER);
-        sketch.rect(this.getX(), this.getY(), this.width, this.height);
+        
+        // Apply shake offset if shaking
+        if (this.isShaking) {
+            sketch.rect(this.getX() + shakeOffsetX, this.getY(), this.width, this.height);
+        } else {
+            sketch.rect(this.getX(), this.getY(), this.width, this.height);
+        }
         
         // Draw label if provided
         if (this.label) {
+            sketch.stroke(this.borderColor, this.getOpacity());
             sketch.fill(this.textColor, this.getOpacity());
             sketch.textAlign(sketch.CENTER, sketch.BOTTOM);
             sketch.textSize(this.fontSize * 0.8);
-            sketch.text(this.label, this.getX(), this.getY() - this.height/2 - 5);
+            
+            // Apply shake offset to label if shaking
+            if (this.isShaking) {
+                sketch.text(this.label, this.getX() + shakeOffsetX, this.getY() - this.height/2 - 5);
+            } else {
+                sketch.text(this.label, this.getX(), this.getY() - this.height/2 - 5);
+            }
         }
+        
         
         // Draw text
         sketch.fill(this.textColor, this.getOpacity());
         sketch.textAlign(sketch.LEFT, sketch.CENTER);
         sketch.textSize(this.fontSize);
-        
+        sketch.stroke(this.borderColor, this.getOpacity());
+
+
+
         // Calculate text position (left-aligned with padding)
-        const textX = this.getX() - this.width/2 + this.padding;
+        let textX = this.getX() - this.width/2 + this.padding;
         const textY = this.getY();
+        
+        // Apply shake offset to text position if shaking
+        if (this.isShaking) {
+            textX += shakeOffsetX;
+        }
         
         // Draw text within the field boundaries
         sketch.text(this.text, textX, textY);
+        //Error message
+        sketch.push();
+            sketch.textAlign(sketch.CENTER);
+            sketch.text(this.errorMessage, this.getX(), this.getY() + this.height);
+        sketch.pop();
         
         // Draw cursor when editing and cursor is visible
         if (this.isEditing && this.cursorVisible) {
@@ -138,7 +198,13 @@ export default class Field extends BaseMenuItem {
             const cursorX = textX + sketch.textWidth(textBeforeCursor);
             
             // Ensure cursor stays within field boundaries
-            const maxCursorX = this.getX() + this.width/2 - this.padding;
+            let maxCursorX = this.getX() + this.width/2 - this.padding;
+            
+            // Apply shake offset to cursor boundaries if shaking
+            if (this.isShaking) {
+                maxCursorX += shakeOffsetX;
+            }
+            
             const clampedCursorX = Math.min(cursorX, maxCursorX);
             
             sketch.stroke(this.textColor, this.getOpacity());
@@ -150,7 +216,13 @@ export default class Field extends BaseMenuItem {
         if (this.isEditing) {
             sketch.fill(this.editingBorderColor, this.getOpacity() * 0.5);
             sketch.noStroke();
-            sketch.circle(this.getX() + this.width/2 - 10, this.getY() - this.height/2 + 10, 8);
+            
+            // Apply shake offset to editing indicator if shaking
+            if (this.isShaking) {
+                sketch.circle(this.getX() + this.width/2 - 10 + shakeOffsetX, this.getY() - this.height/2 + 10, 8);
+            } else {
+                sketch.circle(this.getX() + this.width/2 - 10, this.getY() - this.height/2 + 10, 8);
+            }
         }
         
         sketch.pop();
@@ -431,4 +503,35 @@ export default class Field extends BaseMenuItem {
     public getLabel(): string {
         return this.label;
     }
+    
+    /**
+     * @method shake
+     * @description Triggers a shaking animation for the field
+     * @param intensity The intensity of the shake (default: 5)
+     * @param duration The duration of the shake in frames (default: 30)
+     */
+    public shake(intensity: number = 5, duration: number = 30): void {
+        this.isShaking = true;
+        this.shakeIntensity = intensity;
+        this.shakeDuration = duration;
+        this.shakeTimer = 0;
+    }
+    
+    /**
+     * @method isShaking
+     * @description Checks if the field is currently shaking
+     * @returns True if the field is shaking, false otherwise
+     */
+    public getIsShaking(): boolean {
+        return this.isShaking;
+    }
+
+    /**
+     * @method setError
+     * @description Displays the given text below the field.
+     * @param error 
+     */
+    public setError(error: string) {
+        this.errorMessage = error;
+    }   
 }

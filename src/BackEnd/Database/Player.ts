@@ -6,10 +6,16 @@
  * @updated 2024-06-23
  */
 
+import Redis from "ioredis";
+
 
 /** 
     Player structure
-    PlayerList {
+
+    //PlayerID - player object hash
+    //Username - PlayerID hash for registering new users
+
+    PlayerHash {
     {
         playerID: xxx,
         username: xxx,
@@ -23,6 +29,7 @@
 interface PlayerData {
     playerID: string;
     username: string;
+    address: string;
     lobbyID?: string;
 }
 
@@ -33,53 +40,49 @@ interface PlayersObject {
 }
 
 export default class Player {
-    playerID: string;
-    username: string;
-    lobbyID?: string;
+    private playerID: string;
+    private username: string;
+    private lobbyID: string;
+    private address: string;
 
-    constructor(playerID: string, username: string, lobbyID?: string) {
+    constructor(playerID: string, username: string, address?: string, lobbyID?: string) {
         this.playerID = playerID;
         this.username = username;
-        this.lobbyID = lobbyID;
+        this.lobbyID = lobbyID ?? "";
+        this.address = address ?? ""
     }
 
     /**
      * @method getPlayer
-     * @description This method retrieves a player from the database by their ID.
+     * @description This method retrieves a player from the database by their ID or username.
      * @param redisClient The Redis client to use for database operations
-     * @param playerID The ID of the player to retrieve
+     * @param identifier The ID or username of the player to retrieve
+     * @param byUsername A boolean indicating whether to search by username (default: false)
      * @returns A Player object if found
-     * @throws Error if player not found or database operation fails
+     * @throws Error database operation fails
      */
-    static async getPlayer(redisClient: any, playerID: string): Promise<Player> {
+    static async getPlayer(redisClient: Redis, identifier: string, byUsername: boolean = false): Promise<Player | null> {
         try {
-            // Get the Players object
-            const playersJson = await redisClient.get("Players");
-            if (!playersJson) {
-                throw new Error("Players object does not exist");
+            if (byUsername) {
+                //Check the existence of the usernames hash
+                let doesUserNamesExist = await redisClient.exists("usernames");
+                if (doesUserNamesExist) {
+                let playerID = await redisClient.hget("usernames", identifier);
+                if (playerID) {
+                        let retrievedPlayer = await redisClient.hgetall(playerID);
+                        return new Player(retrievedPlayer.playerID, retrievedPlayer.username, retrievedPlayer.address, retrievedPlayer.lobbyID)
+                }
+                } 
+            } else {
+                let retrievedPlayer = await redisClient.hgetall(identifier);
+                if (retrievedPlayer) {
+                    return new Player(retrievedPlayer.playerID, retrievedPlayer.username, retrievedPlayer.address, retrievedPlayer.lobbyID)
+                }
             }
-
-            const playersObject: PlayersObject = JSON.parse(playersJson);
-
-            // Check if playerList exists
-            if (!playersObject.playerList || !Array.isArray(playersObject.playerList)) {
-                throw new Error("Player list does not exist or is not an array");
-            }
-
-            // Find player in the list
-            const playerData = playersObject.playerList.find(p => p.playerID === playerID);
-            if (!playerData) {
-                throw new Error(`Player ${playerID} not found`);
-            }
-
-            // Return a new Player instance
-            return new Player(playerData.playerID, playerData.username, playerData.lobbyID);
         } catch (error) {
-            if (error instanceof Error) {
-                throw error;
-            }
-            throw new Error(`Error getting player ${playerID}: ${error}`);
-        }
+            throw new Error("There was an error with database operations: " + error);
+        } 
+        return null;
     }
 
     /**
@@ -198,7 +201,7 @@ export default class Player {
      * @return A Player object representing the added player
      * @throws Error if lobby doesn't exist, is full, player already in lobby, or database operation fails
      */
-    static async addPlayer(redisClient: any, lobbyID: string, playerName: string, playerID: string): Promise<Player> {
+    static async addPlayer(redisClient: Redis, lobbyID: string, playerName: string, playerID: string): Promise<Player> {
         // Maximum number of retries for optimistic locking
         const MAX_RETRIES = 3;
         let retries = 0;
@@ -275,7 +278,8 @@ export default class Player {
                 const newPlayer: PlayerData = {
                     playerID: playerID,
                     username: playerName,
-                    lobbyID: lobbyID
+                    lobbyID: lobbyID,
+                    address: "blah"
                 };
 
                 // Add player to the list
@@ -314,4 +318,106 @@ export default class Player {
         
         throw new Error(`Failed to add player ${playerID} to lobby ${lobbyID} after ${MAX_RETRIES} retries`);
     }
+
+    /**
+     * @method createPlayer
+     * @description This method creates a player and adds it to the playerList
+     * @param redisClient The Redis client to use for database operations
+     * @param username The name of the player to add to the lobby
+     * @param address The address of the person registering
+     * @param lobbyID The ID of the lobby the player is currently in. null or zero means not joined.
+     */
+    static async createPlayer(redisClient: Redis, username: string, address?: string, lobbyID?: string): Promise<Player | null> {
+        const MAX_RETRIES = 3;
+        let retries = 0;
+        try {
+            //First check if the player already exists.
+            if (await Player.getPlayer(redisClient,username,true)) {
+                console.log("player exists")
+                return null;
+            }
+        } catch (error) {
+            throw Error("There was an error checking the existence of the player: " + error);
+        }
+
+        //If the player does not exist, then it can be created.
+        // Create new player data
+        while (retries < MAX_RETRIES) {
+            try {
+                console.log("Transaction started")
+                // Start a Redis transaction
+                const multi = redisClient.multi();
+                //Set the player
+                let newPlayerID = `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                multi.hset(
+                    newPlayerID,
+                    {
+                        'username': username,
+                        'address': address ?? "none",
+                        'lobbyID': lobbyID,
+                        'version': 0,
+                    }
+                )
+                //Set the player's username hash
+                multi.hset("usernames", username, newPlayerID);
+                    
+                // Execute transaction
+                console.log("Execute transaction")
+                const results = await multi.exec();
+                // If results are null, the transaction failed due to watched keys changing
+                if (results === null) {
+                    if (retries < MAX_RETRIES - 1) {
+                        retries++;
+                        continue;
+                    }
+                    throw new Error(`Concurrent modification detected for lobby ${lobbyID}, retry limit reached`);
+                }
+
+                return this.getPlayer(redisClient, newPlayerID, false)
+            } catch (error) {
+                throw Error("There was an error creating the player.");
+            }
+        }
+        return null;
+    }
+
+    //Getter methods
+    /**
+     * @method getLobbyID
+     * @description Returns the lobbyID of the player
+     * @returns Lobby id as a string, or an empty string.
+     */
+    public getLobbyID(): string {
+        return this.lobbyID ?? "";
+    }
+
+    /**
+     * @method getPlayerID
+     * @description Returns the playerID of the player
+     * @returns playerID as a string
+     */
+    public getPlayerID(): string {
+        return this.playerID
+    }
+
+    /**
+     * @method getAddress
+     * @description Returns the Address of the player
+     * @returns Address as a string, or an empty string.
+     */
+    public getAddress(): string {
+        return this.address
+    }
+
+    /**
+     * @method getUsername
+     * @description Returns the Username of the player
+     * @returns Username as a string
+     */
+    public getUsername(): string {
+        return this.username;
+    }
+
+
+
 }

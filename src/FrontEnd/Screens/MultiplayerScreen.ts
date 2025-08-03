@@ -18,7 +18,7 @@ import { FRAMERATE } from "../Constants";
 import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
 import WebManager from '../WebManager'; 
 
-const LOBBY_REFRESH_TIME = 3 * FRAMERATE; // 3 seconds
+const LOBBY_REFRESH_TIME = 7 * FRAMERATE; // 3 seconds
 const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
 
 export default class MultiplayerScreen implements Menu {

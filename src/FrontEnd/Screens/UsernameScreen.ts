@@ -9,22 +9,24 @@
 import p5 from "p5";
 import Menu, { Screens } from "../Menu";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
-import { getCanvasSize, fontPointless, HEADER } from "../sketch";
+import { getCanvasSize, fontPointless, HEADER, whiteTicTac } from "../sketch";
 import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 import Field from "../MenuObjects/Field";
-import { Text, Rectangle } from "../ShapeWrapper";
-import WebManager from "../WebManager";
+import { Text, Rectangle, Img } from "../ShapeWrapper";
+import WebManager from '../WebManager';
 
 // Animation constants
 const ANIMATION_TIME = 60; // 1 second at 60fps
 const STROKEWEIGHT = 15;
+const LOADING_TIME = ANIMATION_TIME*2;
 
 export default class UsernameScreen implements Menu {
     private sketch: p5;
     private keylistener: KeyListener;
-    
+    private webManager: WebManager;
+
     // UI Elements
     private title: Text;
     private subtitle: Text;
@@ -38,18 +40,25 @@ export default class UsernameScreen implements Menu {
     private transitionOutActive: boolean;
     private opacity: number;
     private borderPos: number;
-    private selectedButton: string;
+    private showLoadingIcon: boolean;
+    private rotationAngle: number;
+    private iconX: number;
+    private iconY: number;
     
     constructor(sketch: p5) {
         this.sketch = sketch;
         this.keylistener = new KeyListener(sketch);
+        this.webManager = WebManager.getInstance();
         
         // Initialize animation variables
         this.transitionInActive = true;
         this.transitionOutActive = false;
         this.opacity = 0;
         this.borderPos = 0;
-        this.selectedButton = "";
+        this.showLoadingIcon = false;
+        this.rotationAngle = 0;
+        this.iconX = 0;
+        this.iconY = 0;
         
         // Create border rectangle
         this.border = new Rectangle(
@@ -116,6 +125,12 @@ export default class UsernameScreen implements Menu {
             50*0.25, // text size
             0 // start with 0 opacity
         );
+
+        // Store the position for the loading icon
+        //this.confirmButton.getX() + getCanvasSize() * 0.1
+        this.iconX = getCanvasSize()/4; // Position to the right of the button
+        this.iconY = getCanvasSize()/2;
+        
         
         // Create menu navigation
         this.menuNav = new MenuNav([
@@ -163,6 +178,8 @@ export default class UsernameScreen implements Menu {
      * @description Handles the transition out animation and navigation
      */
     private transitionOut(): void {
+        // Note: Rotation is now handled in the draw method
+        
         // Fade out UI elements
         this.confirmButton.fade();
         this.usernameField.setOpacity(this.usernameField.getOpacity() - 255 / (ANIMATION_TIME / 2));
@@ -208,6 +225,22 @@ export default class UsernameScreen implements Menu {
         // Draw menu items (field and button)
         this.menuNav.drawAll();
         
+        // Draw spinning loading icon if needed - using p5's image method directly
+        
+        if (this.showLoadingIcon) {
+            this.sketch.push();            
+            this.sketch.imageMode(this.sketch.CENTER);
+            this.sketch.translate(this.iconX, this.iconY);
+            this.sketch.rotate(this.rotationAngle);
+            this.sketch.fill(255);
+            this.sketch.tint(255,255)
+            this.sketch.image(whiteTicTac, 0, 0, 40, 40);
+            this.sketch.pop();
+            
+            // Increment rotation angle for continuous spinning
+            this.rotationAngle += 4;
+        }
+        
         // Handle transitions
         if (this.transitionInActive) {
             this.transitionIn();
@@ -242,27 +275,23 @@ export default class UsernameScreen implements Menu {
                 } else if (keypress === KEY_EVENTS.SELECT) {
                     // If the confirm button is selected
                     if (this.menuNav.getCurrentlySelected() === this.confirmButton) {
-                        this.selectedButton = "Confirm";
-                        this.menuNav.confirm();
-                        this.transitionOutActive = true;
-                        this.keylistener.deactivate();
-                        console.log("Confirm button pressed, transitioning out");
-                    }
-                    // If the field is selected, toggle edit mode
-                    else if (this.menuNav.getCurrentlySelected() === this.usernameField) {
+                        this.showLoadingIcon = true; // Ensure icon is shown immediately when button is pressed
+                        setTimeout(() => this.checkUsername(), 1000);
+                    } else if (this.menuNav.getCurrentlySelected() === this.usernameField) {
                         console.log("Entering edit mode for username field");
                         this.usernameField.setEditMode(true);
                     }
+                }
                 // } else if (keypress === KEY_EVENTS.ENTER) {
                 //     // Handle ENTER key separately to toggle edit mode
                 //     if (this.menuNav.getCurrentlySelected() === this.usernameField) {
                 //         console.log("ENTER key pressed on username field");
                 //         this.usernameField.setEditMode(true);
                 //     }
-                }
             }
         }
-    }
+        }
+    
     
     /**
      * @method resize
@@ -270,5 +299,29 @@ export default class UsernameScreen implements Menu {
      */
     public resize(): void {
         // Update positions and sizes if needed
+    }
+
+    private checkUsername(): void {
+        if (this.usernameField.getText() == "") {
+            this.usernameField.shake();
+            this.showLoadingIcon = false;
+            return;
+        }
+        let playerIDPromise = this.webManager.checkAndRegisterPlayer(this.usernameField.getText()) as Promise<[string, string]>;
+        playerIDPromise.then(response => {
+            //Valid player ID
+            if (response[0].length > 0) {
+                localStorage["playerID"] = response[0];
+                this.usernameField.setError("");
+                this.keylistener.deactivate();
+                this.transitionOutActive = true;
+                this.confirmButton.setConfirmed(true);
+                this.showLoadingIcon = false;
+            } else {
+                this.usernameField.setError(response[1]);
+                this.usernameField.shake();
+                this.showLoadingIcon = false;
+            }
+        });
     }
 }

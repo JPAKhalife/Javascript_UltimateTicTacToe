@@ -367,7 +367,7 @@ export default class Lobby {
                         const player = await Player.getPlayer(redisClient, playerID);
                         
                         // Only remove the player if they're still in this lobby
-                        if (player.lobbyID === lobbyID) {
+                        if (player && player.getLobbyID() === lobbyID) {
                             await Player.removePlayer(redisClient, playerID);
                         }
                     } catch (error) {
@@ -425,7 +425,9 @@ export default class Lobby {
             for (const playerID of lobbyObject.players) {
                 try {
                     const player = await Player.getPlayer(redisClient, playerID);
-                    players.push(player);
+                    if (player) {
+                        players.push(player);
+                    }
                 } catch (error) {
                     // If a player can't be found, just skip them
                     console.error(`Could not find player ${playerID} in lobby ${lobbyID}`);
