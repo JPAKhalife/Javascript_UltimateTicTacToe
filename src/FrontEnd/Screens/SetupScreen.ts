@@ -126,7 +126,7 @@ export default class SetupScreen implements Menu {
             if (selectedPhrase === 'Online') {
                 // Navigate to multiplayer screen with loading screen in between
                 const loadingAction = () => {
-                    WebManager.getInstance().initiateWebsocketConnection();
+                    WebManager.getInstance().initiateConnectionIfNotEstablished();
                 };
                 const proceedCondition = () => {
                     return WebManager.getInstance().isConnected();

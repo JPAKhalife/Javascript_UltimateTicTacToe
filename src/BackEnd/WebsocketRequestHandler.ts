@@ -1,16 +1,83 @@
 import Redis from 'ioredis';
 import Lobby from './Database/Lobby';
 import Player from './Database/Player';
+import {
+    newConnection, 
+    playerRegistered, 
+    getPlayerID, 
+    removeConnection, 
+    getConnectionByDeviceId, 
+    getWebsocketObject,
+    storeDeviceConnection
+} from './Database/Connections';
+import { URL } from 'url';
+const { v4: uuidv4 } = require('uuid');
+
 
 type ReturnMessage = Record<string, any>
 
-const activeConnections = new Map<string, WebSocket>();
+//This map is for connectionID to ws object.
 
-export function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
+/**
+ * @function handleWebsocketRequest
+ * @description Handles WebSocket connections and requests
+ * @param ws WebSocket object
+ * @param req HTTP request object
+ * @param redis Redis client for regular operations (non-subscriber)
+ */
+export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
     console.log("WebSocket connection established from client");
-
-    // Send a message to the client upon connection
-    ws.send(JSON.stringify({ message: 'Welcome to the WebSocket server!' }));
+    
+    // Extract device ID from URL query parameters if present
+    let deviceId: string | null = null;
+    try {
+        const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+        deviceId = url.searchParams.get('deviceId');
+        if (deviceId) {
+            console.log(`Device ID provided: ${deviceId}`);
+        }
+    } catch (error) {
+        console.error('Error parsing URL:', error);
+    }
+    
+    // Check if this device already has an active connection
+    if (deviceId) {
+        const existingConnectionId = await getConnectionByDeviceId(redis, deviceId);
+        if (existingConnectionId) {
+            console.log(`Device ${deviceId} already has connection ${existingConnectionId}`);
+            
+            // Get the existing websocket object
+            const existingWs = getWebsocketObject(existingConnectionId);
+            if (existingWs) {
+                // Close the existing connection
+                try {
+                    existingWs.send(JSON.stringify({
+                        type: 'system',
+                        message: 'You have connected from another session. This session will be closed.'
+                    }));
+                    existingWs.close(1000, "Replaced by newer connection");
+                    console.log(`Closed existing connection ${existingConnectionId} for device ${deviceId}`);
+                } catch (error) {
+                    console.error(`Error closing existing connection: ${error}`);
+                }
+            }
+            
+            // Clean up the old connection
+            removeConnection(redis, existingConnectionId, deviceId);
+        }
+    }
+    
+    // Assign a unique ID to the websocket connection
+    if (!ws.id) {
+        ws.id = uuidv4();
+        newConnection(redis, ws, ws.id, deviceId || undefined);
+        console.log(`Assigning connection ID: ${ws.id}${deviceId ? ` for device ${deviceId}` : ''}`);
+    }
+    // Handle cleanup when the connection is closed
+    ws.on('close', () => {
+        console.log(`WebSocket connection ${ws.id} closed`);
+        removeConnection(redis, ws.id, deviceId || undefined);
+    });
 
     // Handle incoming messages from the client
     ws.on('message', async (message: any) => {
@@ -21,13 +88,14 @@ export function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
             console.log('Received message from client:', data);
             messageID = data.messageID;
 
+            //TODO: Allow for reconnection of a client to a player.
             // Handle different message types
             if (data.type === 'createLobby') {
                 returnMessage = await handleCreateLobby(ws, redis, data.parameters)
             } else if (data.type === 'searchLobbies') {
                 returnMessage = await handleSearchLobbies(ws, redis, data.parameters);
             } else if (data.type === 'registerPlayer') {
-                return message = await handleRegisterPlayer(ws, redis, data.parameters);
+                returnMessage = await handleRegisterPlayer(ws, redis, data.parameters);
             } else {
                 returnMessage = {
                     messageID: data.messageID,
@@ -44,7 +112,6 @@ export function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
         }
         //Append the MessageID back to the return message before responding.
         if (messageID) {
-            
             returnMessage['messageID'] = messageID;
         }
         
@@ -68,8 +135,10 @@ export function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
 /**
  * @function handleSearchLobbies
  * @description Handles the searchLobbies message from the client
- * @param ws Websocket connection
- * @param data Message data
+ * @param ws WebSocket connection
+ * @param redis Redis client for regular operations
+ * @param parameters Search parameters
+ * @returns Promise resolving to response object
  */
 async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Promise<object> {
     try {
@@ -137,12 +206,21 @@ async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Prom
  * @function handleCreateLobby
  * @description Handles the createLobby message from the client
  * @param ws WebSocket connection
- * @param data Message data
+ * @param redis Redis client for regular operations
+ * @param parameters Lobby creation parameters
+ * @returns Promise resolving to response object
  */
 async function handleCreateLobby(ws: any, redis: Redis, parameters: any): Promise<object> {
     try {
         //Deconstruct the data received
         const { lobbyID, lobbyData, playerData } = parameters;
+        
+        if (!(checkValue(lobbyID, 36))) {
+            return {
+                success: false,
+                message: "The values passed in the request were not valid.",
+            };
+        }
 
         console.log(`Creating lobby ${lobbyID} with data:`, lobbyData, playerData);
 
@@ -167,31 +245,47 @@ async function handleCreateLobby(ws: any, redis: Redis, parameters: any): Promis
 
 /**
  * @function handleRegisterPlayer
- * @description This method handles the registering of a player.
- * @param ws Websocket connection
- * @param redis redis connection
- * @param paremeters: any
+ * @description Handles the registration of a player
+ * @param ws WebSocket connection
+ * @param redis Redis client for regular operations
+ * @param parameters Player registration parameters
+ * @returns Promise resolving to response object
  */
-async function handleRegisterPlayer(ws: WebSocket, redis: Redis, parameters: any): Promise<object> {
-        //Deconstruct the data
-        const { identifier, checkUsername } = parameters
-        console.log("Checking if player " + identifier + " exists.")
+async function handleRegisterPlayer(ws: any, redis: Redis, parameters: any): Promise<object> {
+    //Deconstruct the data
+    const { identifier, checkUsername } = parameters
+    console.log("Checking if player " + identifier + " exists.")
+       
+    //Verify the values passed    
+    if (!(checkValue(identifier, 36) && checkValue(checkUsername))) {
+        return {
+            success: false,
+            message: "The values passed in the request were not valid.",
+        }
+    }
+
+    //Check if the user is already registered.
+    if ((await getPlayerID(redis, ws.id))) {
+        return {
+            success: false,
+            message: "You are already registered to a player.",
+        }
+    }
 
     try {
         let newPlayer = await Player.createPlayer(redis, identifier);
-        if (newPlayer) {
-
+        if (newPlayer != null && newPlayer != undefined) {
+            playerRegistered(redis, ws.id, newPlayer.getPlayerID());
             return {
                 success: true,
-                message: "The player " + newPlayer?.getUsername() + "was registered",
-                playerID: newPlayer?.getPlayerID()
+                message: "The player " + newPlayer.getUsername() + " was registered",
+                playerID: newPlayer.getPlayerID()
             }
         }
-        
     } catch(error) {
         return {
             success: false,
-            message: "There was an error attemtping to check the existence of the player: " + error,
+            message: "There was an error attempting to check the existence of the player: " + error,
         }
     }
     return {
@@ -205,12 +299,17 @@ async function handleRegisterPlayer(ws: WebSocket, redis: Redis, parameters: any
 /**
  * @function checkValue
  * @description Checks that a number is within tha appropriate range
+ * @param value: the value to be checked - any type
+ * @param maxValue the max value or length of th value
+ * @param minValue the min value or length of the value
  */
-function checkValue<T extends string | number>(value: T, maxValue: number, minValue: number = 1): boolean {
+function checkValue<T extends string | number>(value: T, maxValue: number = 0, minValue: number = 1): boolean {
     if (typeof value === 'string') {
         return value.length <= maxValue && value.length >= minValue;
     } else if (typeof value === 'number') {
         return value <= maxValue && value >= minValue;
+    } else if (typeof value === 'boolean') {
+        return true;
     }
     return false;
 }

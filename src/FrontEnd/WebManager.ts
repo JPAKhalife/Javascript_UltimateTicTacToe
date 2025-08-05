@@ -7,6 +7,7 @@
  */
 
 import { time } from "console";
+const { v4: uuidv4 } = require('uuid');
 
 /**
  * Interface representing lobby information
@@ -31,13 +32,40 @@ export default class WebManager {
     private reconnectAttempts: number = 0;
     private maxReconnectAttempts: number = -1;
     private reconnectDelay: number = 1000; // Base delay in ms
+    private deviceId: string;
     
-    /**
-     * Private constructor to enforce singleton pattern
-     */
-    private constructor() {
-        // Private constructor to enforce singleton pattern
+/**
+ * Private constructor to enforce singleton pattern
+ */
+private constructor() {
+    // Private constructor to enforce singleton pattern
+    this.deviceId = this.getOrCreateDeviceId();
+}
+
+/**
+ * @method getOrCreateDeviceId
+ * @description Get the device ID from localStorage or create a new one if it doesn't exist
+ * @returns {string} The device ID
+ * @private
+ */
+private getOrCreateDeviceId(): string {
+    const storedId = localStorage.getItem('device_id');
+    if (!storedId) {
+        const newId = uuidv4();
+        localStorage.setItem('device_id', newId);
+        return newId;
     }
+    return storedId;
+}
+
+/**
+ * @method getDeviceId
+ * @description Get the device ID
+ * @returns {string} The device ID
+ */
+public getDeviceId(): string {
+    return this.deviceId;
+}
     
     /**
      * @method getInstance
@@ -59,8 +87,10 @@ export default class WebManager {
     public async initiateWebsocketConnection(): Promise<boolean> {
         return new Promise((resolve) => {
             const serverAddress = process.env.REMOTE_SERVER_ADDRESS || 'ws://localhost:3000';
+            // Append the device ID as a query parameter
+            const connectionUrl = `${serverAddress}?deviceId=${encodeURIComponent(this.deviceId)}`;
 
-            this.socket = new WebSocket(serverAddress);
+            this.socket = new WebSocket(connectionUrl);
 
             this.socket.onopen = () => {
                 console.log('WebSocket connection established - clientside');
@@ -356,7 +386,7 @@ export default class WebManager {
                 }
             }
 
-            const response = await this.sendRequest<{ success: boolean, message: string, playerID?: string }>(message, 'registerPlayer');
+            const response = await this.sendRequest<{ success: boolean, message: string, playerID: string }>(message, 'registerPlayer');
             console.log("Response received: ", response);
 
             return [response.playerID ? response.playerID : "", response.message];

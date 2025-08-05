@@ -116,9 +116,7 @@ export default class LoadingScreen implements Menu {
             this.loadingMessage.setFill(this.sketch.color(255, 255, 255, this.titleOpacity));
             this.titleOpacity += 255 / (LOADING_TRANSITION_IN / 2);
         } else {
-            //When the transition in is complete, activate the websocket connection
             this.keylistener.activate();
-            this.webManager.initiateWebsocketConnection();
             this.transitionInActive = false;
         }
     }

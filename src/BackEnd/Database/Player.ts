@@ -7,6 +7,8 @@
  */
 
 import Redis from "ioredis";
+const { v4: uuidv4 } = require('uuid');
+
 
 
 /** 
@@ -29,7 +31,6 @@ import Redis from "ioredis";
 interface PlayerData {
     playerID: string;
     username: string;
-    address: string;
     lobbyID?: string;
 }
 
@@ -43,13 +44,17 @@ export default class Player {
     private playerID: string;
     private username: string;
     private lobbyID: string;
-    private address: string;
 
-    constructor(playerID: string, username: string, address?: string, lobbyID?: string) {
+    constructor(playerID: string, username: string, lobbyID?: string) {
+        if (!playerID || playerID.trim() === "") {
+            throw new Error("playerID cannot be empty");
+        }
+        if (!username || username.trim() === "") {
+            throw new Error("username cannot be empty");
+        }
         this.playerID = playerID;
         this.username = username;
         this.lobbyID = lobbyID ?? "";
-        this.address = address ?? ""
     }
 
     /**
@@ -69,14 +74,16 @@ export default class Player {
                 if (doesUserNamesExist) {
                 let playerID = await redisClient.hget("usernames", identifier);
                 if (playerID) {
-                        let retrievedPlayer = await redisClient.hgetall(playerID);
-                        return new Player(retrievedPlayer.playerID, retrievedPlayer.username, retrievedPlayer.address, retrievedPlayer.lobbyID)
+                    let retrievedPlayer = await redisClient.hgetall("player:" + playerID);
+                    if (retrievedPlayer && retrievedPlayer.playerID && retrievedPlayer.username) {
+                        return new Player(retrievedPlayer.playerID, retrievedPlayer.username, retrievedPlayer.lobbyID);
+                    }
                 }
-                } 
+            } 
             } else {
-                let retrievedPlayer = await redisClient.hgetall(identifier);
-                if (retrievedPlayer) {
-                    return new Player(retrievedPlayer.playerID, retrievedPlayer.username, retrievedPlayer.address, retrievedPlayer.lobbyID)
+                let retrievedPlayer = await redisClient.hgetall("player:" + identifier);
+                if (retrievedPlayer && retrievedPlayer.playerID && retrievedPlayer.username) {
+                    return new Player(retrievedPlayer.playerID, retrievedPlayer.username, retrievedPlayer.lobbyID);
                 }
             }
         } catch (error) {
@@ -94,100 +101,41 @@ export default class Player {
      * @returns true if the player was successfully removed
      * @throws Error if player not found, is in a lobby, or database operation fails
      */
-    static async removePlayer(redisClient: any, playerID: string): Promise<boolean> {
+    static async removePlayer(redisClient: Redis, playerID: string): Promise<boolean> {
         // Maximum number of retries for optimistic locking
         const MAX_RETRIES = 3;
         let retries = 0;
 
         while (retries < MAX_RETRIES) {
             try {
-                // Get the Players object
-                const playersJson = await redisClient.get("Players");
-                if (!playersJson) {
-                    throw new Error("Players object does not exist");
-                }
-
-                const playersObject: PlayersObject = JSON.parse(playersJson);
-
-                // Ensure playerList exists and is an array
-                if (!playersObject.playerList || !Array.isArray(playersObject.playerList)) {
-                    playersObject.playerList = [];
-                }
-
-                // Find player in the list
-                const playerIndex = playersObject.playerList.findIndex(p => p.playerID === playerID);
-                
-                // Check if player exists
-                if (playerIndex === -1) {
-                    throw new Error(`Player ${playerID} does not exist`);
-                }
-
-                // Check if player is in a lobby
-                if (playersObject.playerList[playerIndex].lobbyID) {
-                    throw new Error(`Player ${playerID} is still in a lobby`);
-                }
-
-                // Get current version
-                const currentVersion = playersObject.version || 0;
-
-                // Remove player from the list
-                playersObject.playerList.splice(playerIndex, 1);
-
-                // Increment version for optimistic locking
-                playersObject.version = currentVersion + 1;
-
-                // Use Lua script for atomic update with version check
-                const luaScript = `
-                    local playersJson = redis.call('GET', KEYS[1])
-                    if not playersJson then
-                        return 0  -- Players object doesn't exist
-                    end
-                    
-                    local playersObject = cjson.decode(playersJson)
-                    
-                    -- Check version for optimistic locking
-                    if playersObject.version ~= tonumber(ARGV[1]) then
-                        return -1  -- Version mismatch, concurrent modification detected
-                    end
-                    
-                    -- Update Players object
-                    redis.call('SET', KEYS[1], ARGV[2])
-                    
-                    return 1  -- Success
-                `;
-
-                const result = await redisClient.eval(
-                    luaScript,
-                    1, // Number of keys
-                    "Players", // KEYS[1]
-                    currentVersion, // ARGV[1]
-                    JSON.stringify(playersObject) // ARGV[2]
-                );
-
-                if (result === 0) {
-                    throw new Error("Players object does not exist");
-                } else if (result === -1) {
+                //First grab the username of the player
+                const username = await redisClient.hget("usernames", playerID);
+                if (!username) {retries++; continue}
+                //Create multi operation
+                const multi = redisClient.multi();
+                //Remove the username hash entry
+                multi.hdel("usernames",playerID);
+                //Remove the player key entry
+                multi.del("player:" + playerID);
+                //Execute the transaction
+                const results = await multi.exec();
+                // If results is null, the transaction failed due to watched keys changing
+                if (results === null) {
                     if (retries < MAX_RETRIES - 1) {
                         retries++;
                         continue;
                     }
-                    throw new Error(`Concurrent modification detected for Players object, retry limit reached`);
+                    throw new Error(`Concurrent modification detected for player ${playerID}, retry limit reached`);
+                } else {
+                    return true;
                 }
-
-                return true;
-            } catch (error) {
-                if (error instanceof Error && error.message.includes("Concurrent modification")) {
-                    retries++;
-                    continue;
-                }
-                if (error instanceof Error) {
-                    throw error;
-                }
-                throw new Error(`Error removing player ${playerID}: ${error}`);
+            } catch(error) {
+                retries++;
+                console.log("Error detected attempting player removal: " + error + " attempting retry #" + retries)
+                continue;
             }
         }
-
-        throw new Error(`Failed to remove player ${playerID} after ${MAX_RETRIES} retries`);
+        return false;
     }
 
     /**
@@ -278,8 +226,7 @@ export default class Player {
                 const newPlayer: PlayerData = {
                     playerID: playerID,
                     username: playerName,
-                    lobbyID: lobbyID,
-                    address: "blah"
+                    lobbyID: lobbyID
                 };
 
                 // Add player to the list
@@ -324,10 +271,9 @@ export default class Player {
      * @description This method creates a player and adds it to the playerList
      * @param redisClient The Redis client to use for database operations
      * @param username The name of the player to add to the lobby
-     * @param address The address of the person registering
      * @param lobbyID The ID of the lobby the player is currently in. null or zero means not joined.
      */
-    static async createPlayer(redisClient: Redis, username: string, address?: string, lobbyID?: string): Promise<Player | null> {
+    static async createPlayer(redisClient: Redis, username: string, lobbyID?: string): Promise<Player | null> {
         const MAX_RETRIES = 3;
         let retries = 0;
         try {
@@ -348,12 +294,12 @@ export default class Player {
                 // Start a Redis transaction
                 const multi = redisClient.multi();
                 //Set the player
-                let newPlayerID = `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                let newPlayerID = uuidv4();
                 multi.hset(
-                    newPlayerID,
+                    "player:" + newPlayerID,
                     {
+                        'playerID': newPlayerID,
                         'username': username,
-                        'address': address ?? "none",
                         'lobbyID': lobbyID,
                         'version': 0,
                     }
@@ -372,8 +318,8 @@ export default class Player {
                     }
                     throw new Error(`Concurrent modification detected for lobby ${lobbyID}, retry limit reached`);
                 }
-
-                return this.getPlayer(redisClient, newPlayerID, false)
+                console.log("Return new player");
+                return this.getPlayer(redisClient, newPlayerID, false);
             } catch (error) {
                 throw Error("There was an error creating the player.");
             }
@@ -398,15 +344,6 @@ export default class Player {
      */
     public getPlayerID(): string {
         return this.playerID
-    }
-
-    /**
-     * @method getAddress
-     * @description Returns the Address of the player
-     * @returns Address as a string, or an empty string.
-     */
-    public getAddress(): string {
-        return this.address
     }
 
     /**
