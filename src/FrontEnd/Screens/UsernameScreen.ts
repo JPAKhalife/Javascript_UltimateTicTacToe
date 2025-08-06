@@ -277,17 +277,8 @@ export default class UsernameScreen implements Menu {
                     if (this.menuNav.getCurrentlySelected() === this.confirmButton) {
                         this.showLoadingIcon = true; // Ensure icon is shown immediately when button is pressed
                         setTimeout(() => this.checkUsername(), 1000);
-                    } else if (this.menuNav.getCurrentlySelected() === this.usernameField) {
-                        console.log("Entering edit mode for username field");
-                        this.usernameField.setEditMode(true);
                     }
                 }
-                // } else if (keypress === KEY_EVENTS.ENTER) {
-                //     // Handle ENTER key separately to toggle edit mode
-                //     if (this.menuNav.getCurrentlySelected() === this.usernameField) {
-                //         console.log("ENTER key pressed on username field");
-                //         this.usernameField.setEditMode(true);
-                //     }
             }
         }
         }

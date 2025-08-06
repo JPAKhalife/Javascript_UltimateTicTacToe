@@ -234,7 +234,7 @@ export default class Field extends BaseMenuItem {
         // Handle key events if provided
         if (keyEvent) {
             // Check for Enter key in edit mode
-            if (keyEvent === KEY_EVENTS.ENTER && this.isEditing) {
+            if ((keyEvent === KEY_EVENTS.ENTER) && this.isEditing) {
                 this.enterKeyPressed = true;
                 if (this.timeSinceEnter <= 0) {
                     this.setEditMode(false);
@@ -253,8 +253,12 @@ export default class Field extends BaseMenuItem {
      */
     private handleKeyEvent(keyEvent: KEY_EVENTS): void {
         // Toggle editing mode with ENTER when selected
-        if (keyEvent === KEY_EVENTS.ENTER && this.isSelected() && this.timeSinceEnter <= 0) {
-            this.setEditMode(!this.isEditing);
+        if ((keyEvent === KEY_EVENTS.ENTER || keyEvent === KEY_EVENTS.SELECT) && this.isSelected() && this.timeSinceEnter <= 0) {
+            if (keyEvent === KEY_EVENTS.SELECT && !this.isEditing) {
+                this.setEditMode(true);
+            } else if (keyEvent === KEY_EVENTS.ENTER) {
+                this.setEditMode(!this.isEditing);
+            }
             return;
         }
         

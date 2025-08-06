@@ -15,6 +15,7 @@ import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 import Slider from "../MenuObjects/Slider";
 import WebManager, { LobbyInfo as WebManagerLobbyInfo } from "../WebManager";
+import Field from "../MenuObjects/Field";
 
 
 export default class CreateLobbyScreen implements Menu {
@@ -30,6 +31,8 @@ export default class CreateLobbyScreen implements Menu {
     private levelSizeSlider: Slider;
     private slotNumSlider: Slider;
     private playerNumSlider: Slider;
+    //Fields
+    private lobbyNameField: Field;
 
     //Transition varaibles
     private transition_in_active: boolean = false;
@@ -48,6 +51,9 @@ export default class CreateLobbyScreen implements Menu {
         //This is where the menu buttons will be defined
         this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.20, "Return", 0.05, 0.2, 50*0.25, 255);
         let createLobbyButton = new MenuButton(this.sketch, 0.5, 0.80, "Create", 0.05, 0.2, 50*0.25, 255);
+        // Create the lobby name field with proper parameters (using relative positioning like in UsernameScreen)
+        this.lobbyNameField = new Field(this.sketch, 0.5, 0.3, 0.4, 0.08, this.keylistener, 36, "Lobby Name");
+        this.lobbyNameField.setOpacity(255);
         this.levelSizeSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.35, getCanvasSize()/2, 5, 1, 9, 1, 2, "Level Size");
         this.slotNumSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.65, getCanvasSize()/2, 5, 1, 9, 1, 3, "Slot Number");
         this.playerNumSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.50, getCanvasSize()/2, 5, 2, 10, 1, 2, "Player Number");
@@ -57,6 +63,7 @@ export default class CreateLobbyScreen implements Menu {
             this.returnToOnlineScreen,
             this.levelSizeSlider,
             this.slotNumSlider,
+            this.lobbyNameField,
             createLobbyButton,
             this.playerNumSlider
         ], this.sketch);
@@ -151,6 +158,9 @@ export default class CreateLobbyScreen implements Menu {
 
         // Draw the buttons for options
         this.lobbyNav.drawAll();
+        
+        // Explicitly draw the field to ensure it's visible
+        this.lobbyNameField.draw(this.keylistener.listen());
 
         //Check for transitionout
         if (this.transition_out_active && !this.transitionComplete) {
