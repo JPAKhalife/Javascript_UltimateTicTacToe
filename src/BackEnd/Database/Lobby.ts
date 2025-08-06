@@ -10,27 +10,25 @@ import Redis from "ioredis";
 import Player from "./Player";
 
 /*
-example of a lobbyJSON object:
-"lobby1: {
+example of a lobby hash:
+"lobby:<lobbyID> {
+    "lobbyID:"
     "playerNum": 2,
     "playersJoined": 1,
     "levelSize": 2,
     "gridSize": 3
     "creator": "player1",
     "lobbyState": "waiting"
-    "gameState": <any-length list-array of numbers>
-    "players": [playerID, playerID2...]
 }
+
+    "gameState:<lobbyID> ": <any-length list-array of numbers>
+    "lobbyplayers:<lobbyID> : [playerID, playerID2...]
+
+    
 
 All lobby IDs should be appended to a list called LobbyList for retrieveal
 */
 
-// Import PlayerData interface from Player.ts or define a compatible one
-export type PlayerData = {
-    playerID: string;
-    username: string;
-    version?: number; // Added for optimistic locking
-}
 
 export type LobbyData = {
     playerNum: number;
@@ -70,30 +68,37 @@ export default class Lobby {
     }
 
     /**
-     * @method fromRedisObject
-     * @description Constructor that takes a Redis lobby object and creates a Lobby instance
+     * @method fromRedisData
+     * @description Constructor that takes Redis data and creates a Lobby instance
      * @param lobbyID The ID of the lobby
-     * @param redisObject The Redis object representing the lobby
+     * @param lobbyHash The Redis hash data representing the lobby
+     * @param gameState The game state array
+     * @param players The players array
      * @returns A new Lobby instance
      */
-    private static fromRedisObject(lobbyID: string, redisObject: any): Lobby {
+    private static fromRedisData(
+        lobbyID: string,
+        lobbyHash: Record<string, string>,
+        gameState: number[],
+        players: string[]
+    ): Lobby {
         const lobby = new Lobby(
             lobbyID,
             {
-                playerNum: redisObject.playerNum,
-                levelSize: redisObject.levelSize,
-                gridSize: redisObject.gridSize,
-                version: redisObject.version
+                playerNum: parseInt(lobbyHash.playerNum),
+                levelSize: parseInt(lobbyHash.levelSize),
+                gridSize: parseInt(lobbyHash.gridSize),
+                version: lobbyHash.version ? parseInt(lobbyHash.version) : undefined
             },
-            redisObject.creator
+            lobbyHash.creator
         );
-        
-        // Set additional properties from Redis object
-        lobby.playersJoined = redisObject.playersJoined;
-        lobby.lobbyState = redisObject.lobbyState;
-        lobby.gameState = redisObject.gameState;
-        lobby.players = redisObject.players;
-        
+
+        // Set additional properties from Redis data
+        lobby.playersJoined = parseInt(lobbyHash.playersJoined);
+        lobby.lobbyState = lobbyHash.lobbyState;
+        lobby.gameState = gameState;
+        lobby.players = players;
+
         return lobby;
     }
 
@@ -108,83 +113,87 @@ export default class Lobby {
      * @returns A Lobby object representing the created lobby
      * @throws Error if lobby creation fails or player addition fails
      */
-    static async createLobby(redisClient: Redis, lobbyID: string, lobbyData: LobbyData, playerData: PlayerData): Promise<Lobby> {
+    static async createLobby(redisClient: Redis, lobbyID: string, lobbyData: LobbyData, playerID: string): Promise<Lobby> {
         try {
             // Check if lobby already exists
-            const lobbyExists = await redisClient.exists(lobbyID);
+            const lobbyKey = `lobby:${lobbyID}`;
+            const lobbyExists = await redisClient.exists(lobbyKey);
             if (lobbyExists) {
                 throw new Error(`Lobby ${lobbyID} already exists`);
             }
 
             // Create game state array based on gridSize
-            // Use ** for exponentiation instead of ^ (which is bitwise XOR)
             const gameStateSize = Math.pow(lobbyData.gridSize * lobbyData.gridSize, lobbyData.levelSize);
             const gameState = new Array(gameStateSize).fill(0);
             console.log(`Created game state array with size ${gameStateSize}`);
 
-            // Create lobby object with version for optimistic locking
-            const lobbyObject = {
-                playerNum: lobbyData.playerNum,
-                playersJoined: 0, // Start with 0 players, will be updated by Player.addPlayer
-                levelSize: lobbyData.levelSize,
-                gridSize: lobbyData.gridSize,
-                creator: playerData.playerID,
+            // Create lobby hash fields
+            const lobbyHash = {
+                playerNum: lobbyData.playerNum.toString(),
+                playersJoined: "0", // Start with 0 players, will be updated by Player.addPlayer
+                levelSize: lobbyData.levelSize.toString(),
+                gridSize: lobbyData.gridSize.toString(),
+                creator: playerID,
                 lobbyState: "waiting",
-                gameState: gameState,
-                players: [], // Start with empty players array, will be updated by Player.addPlayer
-                version: 1 // Initial version
+                version: "1" // Initial version
             };
 
-            // Lua script for lobby creation only (no player manipulation)
-            const luaScript = `
-                -- Check if lobby exists
-                if redis.call('EXISTS', KEYS[1]) == 1 then
-                    return 0  -- Lobby exists
-                end
-                
-                -- Store lobby data
-                redis.call('SET', KEYS[1], ARGV[1])
-                
-                -- Add to lobby list
-                redis.call('RPUSH', 'LobbyList', KEYS[1])
-                
-                return 1  -- Success
-            `;
+            // Use a transaction to create the lobby
+            const multi = redisClient.multi();
 
-            // Execute the Lua script
-            const result = await redisClient.eval(
-                luaScript,
-                1, // Number of keys
-                lobbyID, // KEYS[1]
-                JSON.stringify(lobbyObject) // ARGV[1]
-            );
+            // Store lobby data as a hash
+            multi.hset(lobbyKey, lobbyHash);
 
-            if (result === 0) {
-                throw new Error(`Lobby ${lobbyID} already exists`);
+            // Store game state as a separate list
+            const gameStateKey = `gamestate:${lobbyID}`;
+            if (gameState.length > 0) {
+                multi.del(gameStateKey); // Ensure the list is empty
+                multi.rpush(gameStateKey, ...gameState.map(val => val.toString()));
             }
+
+            // Create empty players list
+            const playersKey = `lobbyplayers:${lobbyID}`;
+            multi.del(playersKey);
+
+            // Add to lobby list
+            multi.rpush('LobbyList', lobbyID);
+
+            // Execute the transaction
+            await multi.exec();
 
             // Now add the player to the lobby using Player.addPlayer
             try {
-                await Player.addPlayer(redisClient, lobbyID, playerData.username, playerData.playerID);
+                await Player.addPlayer(redisClient, lobbyID, playerID);
             } catch (error) {
                 // If player addition fails, clean up by removing the lobby
-                await redisClient.del(lobbyID);
-                await redisClient.lrem('LobbyList', 0, lobbyID);
-                
+                const cleanupMulti = redisClient.multi();
+                cleanupMulti.del(lobbyKey);
+                cleanupMulti.del(gameStateKey);
+                cleanupMulti.del(playersKey);
+                cleanupMulti.lrem('LobbyList', 0, lobbyID);
+                await cleanupMulti.exec();
+
                 if (error instanceof Error) {
                     throw error;
                 }
                 throw new Error(`Failed to add player to lobby: ${error}`);
             }
 
-            // Get the updated lobby object from Redis
-            const updatedLobbyJson = await redisClient.get(lobbyID);
-            if (!updatedLobbyJson) {
+            // Get the updated lobby data from Redis
+            const [lobbyHashData, gameStateData, playersData] = await Promise.all([
+                redisClient.hgetall(lobbyKey),
+                redisClient.lrange(gameStateKey, 0, -1),
+                redisClient.lrange(playersKey, 0, -1)
+            ]);
+
+            if (!lobbyHashData || Object.keys(lobbyHashData).length === 0) {
                 throw new Error(`Failed to retrieve updated lobby data for ${lobbyID}`);
             }
-            
-            const updatedLobbyObject = JSON.parse(updatedLobbyJson);
-            return Lobby.fromRedisObject(lobbyID, updatedLobbyObject);
+
+            // Convert game state strings to numbers
+            const gameStateArray = gameStateData.map(val => parseInt(val));
+
+            return Lobby.fromRedisData(lobbyID, lobbyHashData, gameStateArray, playersData);
         } catch (error) {
             if (error instanceof Error) {
                 throw error;
@@ -196,7 +205,7 @@ export default class Lobby {
     /**
      * @method removeLobby
      * @description This method removes a lobby from the database. This will occur when there are no longer any players connected to the lobby.
-     * Uses a Lua script to ensure atomicity of the check and delete operations.
+     * Uses a transaction to ensure atomicity of the check and delete operations.
      * @param redisClient The Redis client to use for database operations
      * @param lobbyID The ID of the lobby to remove
      * @returns true if the lobby was successfully removed
@@ -204,50 +213,30 @@ export default class Lobby {
      */
     public async removeLobby(redisClient: Redis, lobbyID: string): Promise<boolean> {
         try {
-            // Lua script for atomic lobby removal
-            const luaScript = `
-                -- Check if lobby exists
-                if redis.call('EXISTS', KEYS[1]) == 0 then
-                    return 0  -- Lobby doesn't exist
-                end
-                
-                -- Get lobby data
-                local lobbyJson = redis.call('GET', KEYS[1])
-                if not lobbyJson then
-                    return -1  -- Failed to retrieve lobby data
-                end
-                
-                -- Parse lobby data
-                local lobbyObject = cjson.decode(lobbyJson)
-                
-                -- Check if there are any players in the lobby
-                if lobbyObject.players and #lobbyObject.players > 0 then
-                    return -2  -- Players still in lobby
-                end
-                
-                -- Remove the lobby from Redis
-                redis.call('DEL', KEYS[1])
-                
-                -- Remove from lobby list
-                redis.call('LREM', 'LobbyList', 0, KEYS[1])
-                
-                return 1  -- Success
-            `;
+            const lobbyKey = `lobby:${lobbyID}`;
+            const gameStateKey = `gamestate:${lobbyID}`;
+            const playersKey = `lobbyplayers:${lobbyID}`;
 
-            // Execute the Lua script
-            const result = await redisClient.eval(
-                luaScript,
-                1, // Number of keys
-                lobbyID // KEYS[1]
-            );
-
-            if (result === 0) {
+            // Check if lobby exists
+            const lobbyExists = await redisClient.exists(lobbyKey);
+            if (!lobbyExists) {
                 throw new Error(`Lobby ${lobbyID} does not exist`);
-            } else if (result === -1) {
-                throw new Error(`Failed to retrieve lobby data for ${lobbyID}`);
-            } else if (result === -2) {
+            }
+
+            // Check if there are any players in the lobby
+            const playerCount = await redisClient.llen(playersKey);
+            if (playerCount > 0) {
                 throw new Error(`Error removing lobby ${lobbyID}: There are still players left in the lobby`);
             }
+
+            // Use a transaction to remove the lobby and related data
+            const multi = redisClient.multi();
+            multi.del(lobbyKey);
+            multi.del(gameStateKey);
+            multi.del(playersKey);
+            multi.lrem('LobbyList', 0, lobbyID);
+
+            await multi.exec();
 
             return true;
         } catch (error) {
@@ -268,8 +257,9 @@ export default class Lobby {
      */
     static async doesLobbyExist(redisClient: Redis, lobbyID: string): Promise<boolean> {
         try {
-            return (await redisClient.exists(lobbyID)) > 0;
-        } catch(error) {
+            const lobbyKey = `lobby:${lobbyID}`;
+            return (await redisClient.exists(lobbyKey)) > 0;
+        } catch (error) {
             if (error instanceof Error) {
                 throw error;
             }
@@ -288,22 +278,18 @@ export default class Lobby {
      */
     static async removePlayerFromLobby(redisClient: Redis, lobbyID: string, playerID: string): Promise<boolean> {
         try {
+            const lobbyKey = `lobby:${lobbyID}`;
+            const playersKey = `lobbyplayers:${lobbyID}`;
+
             // Check if lobby exists
-            const lobbyExists = await redisClient.exists(lobbyID);
+            const lobbyExists = await redisClient.exists(lobbyKey);
             if (!lobbyExists) {
                 throw new Error(`Lobby ${lobbyID} does not exist`);
             }
 
-            // Get lobby data
-            const lobbyJson = await redisClient.get(lobbyID);
-            if (!lobbyJson) {
-                throw new Error(`Failed to retrieve lobby data for ${lobbyID}`);
-            }
-
-            const lobbyObject = JSON.parse(lobbyJson);
-
             // Check if player is in the lobby
-            if (!lobbyObject.players.includes(playerID)) {
+            const isPlayerInLobby = await redisClient.lpos(playersKey, playerID);
+            if (isPlayerInLobby === null) {
                 throw new Error(`Player ${playerID} is not in lobby ${lobbyID}`);
             }
 
@@ -313,41 +299,40 @@ export default class Lobby {
 
             while (retries < MAX_RETRIES) {
                 try {
-                    // Watch the lobby key for changes
-                    await redisClient.watch(lobbyID);
+                    // Watch the lobby hash and players list for changes
+                    await redisClient.watch(lobbyKey, playersKey);
 
                     // Get the current version of the lobby
-                    const currentLobbyJson = await redisClient.get(lobbyID);
-                    if (!currentLobbyJson) {
+                    const version = await redisClient.hget(lobbyKey, 'version');
+                    if (!version) {
                         await redisClient.unwatch();
-                        throw new Error(`Lobby ${lobbyID} no longer exists`);
+                        throw new Error(`Lobby ${lobbyID} no longer exists or is missing version`);
                     }
 
-                    const currentLobbyObject = JSON.parse(currentLobbyJson);
-                    
-                    // Remove player from the lobby
-                    const playerIndex = currentLobbyObject.players.indexOf(playerID);
-                    if (playerIndex === -1) {
+                    // Get current players joined count
+                    const playersJoined = await redisClient.hget(lobbyKey, 'playersJoined');
+                    if (!playersJoined) {
                         await redisClient.unwatch();
-                        throw new Error(`Player ${playerID} is not in lobby ${lobbyID}`);
+                        throw new Error(`Failed to get players joined count for lobby ${lobbyID}`);
                     }
 
-                    currentLobbyObject.players.splice(playerIndex, 1);
-                    currentLobbyObject.playersJoined -= 1;
-                    
-                    // Update lobby state
-                    if (currentLobbyObject.playersJoined === 0) {
-                        currentLobbyObject.lobbyState = "empty";
-                    } else {
-                        currentLobbyObject.lobbyState = "waiting";
-                    }
-
-                    // Increment version for optimistic locking
-                    currentLobbyObject.version = (currentLobbyObject.version || 0) + 1;
+                    // Calculate new values
+                    const newPlayersJoined = Math.max(0, parseInt(playersJoined) - 1);
+                    const newLobbyState = newPlayersJoined === 0 ? "empty" : "waiting";
+                    const newVersion = parseInt(version) + 1;
 
                     // Start a transaction
                     const multi = redisClient.multi();
-                    multi.set(lobbyID, JSON.stringify(currentLobbyObject));
+
+                    // Update lobby hash
+                    multi.hset(lobbyKey, {
+                        playersJoined: newPlayersJoined.toString(),
+                        lobbyState: newLobbyState,
+                        version: newVersion.toString()
+                    });
+
+                    // Remove player from players list
+                    multi.lrem(playersKey, 0, playerID);
 
                     // Execute the transaction
                     const results = await multi.exec();
@@ -365,7 +350,7 @@ export default class Lobby {
                     try {
                         // Get the player first to check if they're still in this lobby
                         const player = await Player.getPlayer(redisClient, playerID);
-                        
+
                         // Only remove the player if they're still in this lobby
                         if (player && player.getLobbyID() === lobbyID) {
                             await Player.removePlayer(redisClient, playerID);
@@ -406,23 +391,21 @@ export default class Lobby {
      */
     static async getPlayersInLobby(redisClient: Redis, lobbyID: string): Promise<Player[]> {
         try {
+            const lobbyKey = `lobby:${lobbyID}`;
+            const playersKey = `lobbyplayers:${lobbyID}`;
+
             // Check if lobby exists
-            const lobbyExists = await redisClient.exists(lobbyID);
+            const lobbyExists = await redisClient.exists(lobbyKey);
             if (!lobbyExists) {
                 throw new Error(`Lobby ${lobbyID} does not exist`);
             }
 
-            // Get lobby data
-            const lobbyJson = await redisClient.get(lobbyID);
-            if (!lobbyJson) {
-                throw new Error(`Failed to retrieve lobby data for ${lobbyID}`);
-            }
-
-            const lobbyObject = JSON.parse(lobbyJson);
+            // Get players from the separate list
+            const playerIDs = await redisClient.lrange(playersKey, 0, -1);
 
             // Get all players in the lobby
             const players: Player[] = [];
-            for (const playerID of lobbyObject.players) {
+            for (const playerID of playerIDs) {
                 try {
                     const player = await Player.getPlayer(redisClient, playerID);
                     if (player) {
@@ -443,111 +426,6 @@ export default class Lobby {
         }
     }
 
-    /**
-     * @method getLobbies
-     * @description This method is intended to be used in order to fetch a list of lobbies based on search parameters
-     * @param gridSize - the number of slots in a single grid (one axis)
-     * @param joinedPlayers - the number of players who are in the game (or spectating)
-     * @param playerNum - the nnumber of players who can play the game
-     * @param levelSize - the number of levels to the tictac grid
-     * @param maxListLength - the maximum length of the list 
-     * @param searchListLength - the number of spots on the list that will be searched (can be used to limit function time)
-     * @param redisClient - The redis client being interacted with
-     * @returns a list of lobby objects
-     */
-    static async getLobbies(
-        redisClient: Redis,
-        playerNum?: number,
-        levelSize?: number,
-        gridSize?: number,
-        joinedPlayers?: number,
-        maxListLength?: number,
-        searchListLength?: number
-    ): Promise<Lobby[]> {
-        // Define a Lua script for searching lobbies with improved error handling and efficiency
-        const luaScript = `
-            -- Set default values for parameters if they are empty or nil
-            local maxListLength = tonumber(ARGV[1]) or 20
-            local searchListLength = tonumber(ARGV[6]) or 100
-            
-            -- Get the list of all lobbies with a limit to prevent timeout
-            local lobbyList = redis.call('LRANGE', 'LobbyList', 0, searchListLength)
-            local matchingLobbies = {}
-            local matchingKeys = {}
-            local addedElements = 0
-
-            -- Convert filter parameters to numbers if they exist, otherwise nil
-            local playerNumFilter = ARGV[2] ~= "" and tonumber(ARGV[2]) or nil
-            local levelSizeFilter = ARGV[3] ~= "" and tonumber(ARGV[3]) or nil
-            local gridSizeFilter = ARGV[4] ~= "" and tonumber(ARGV[4]) or nil
-            local joinedPlayersFilter = ARGV[5] ~= "" and tonumber(ARGV[5]) or nil
-
-            for _, lobbyKey in ipairs(lobbyList) do
-                -- Check if we've reached the maximum number of lobbies to return
-                if addedElements >= maxListLength then
-                    break
-                end
-                
-                local lobbyJson = redis.call('GET', lobbyKey)
-                if lobbyJson then
-                    local success, lobbyObject = pcall(cjson.decode, lobbyJson)
-                    
-                    if success then
-                        -- Apply filters with proper nil checks
-                        local playerNumMatch = playerNumFilter == nil or tonumber(lobbyObject.playerNum) == playerNumFilter
-                        local levelSizeMatch = levelSizeFilter == nil or tonumber(lobbyObject.levelSize) == levelSizeFilter
-                        local gridSizeMatch = gridSizeFilter == nil or tonumber(lobbyObject.gridSize) == gridSizeFilter
-                        local joinedPlayersMatch = joinedPlayersFilter == nil or tonumber(lobbyObject.playersJoined) == joinedPlayersFilter
-                        
-                        if playerNumMatch and levelSizeMatch and gridSizeMatch and joinedPlayersMatch then
-                            table.insert(matchingLobbies, lobbyJson)
-                            table.insert(matchingKeys, lobbyKey)
-                            addedElements = addedElements + 1
-                        end
-                    end
-                end
-            end
-
-            return {matchingLobbies, matchingKeys}
-        `;
-
-        try {
-            // Execute the Lua script with improved default values
-            const result = await redisClient.eval(
-                luaScript,
-                0, // No keys are passed
-                maxListLength?.toString() || "20", // ARGV[1]: Max list length (default 20)
-                playerNum?.toString() || "", // ARGV[2]: Player number filter
-                levelSize?.toString() || "", // ARGV[3]: Level size filter
-                gridSize?.toString() || "", // ARGV[4]: Grid size filter
-                joinedPlayers?.toString() || "", // ARGV[5]: Joined players filter
-                searchListLength?.toString() || "100", // ARGV[6]: the length of the list to retrieve (default 100)
-            );
-            
-
-            // Parse the result into Lobby objects
-            const lobbies: Lobby[] = [];
-            const lobbyJsons = (result as any)[0];
-            const lobbyKeys = (result as any)[1];
-            
-            for (let i = 0; i < lobbyJsons.length; i++) {
-                const lobbyJson = lobbyJsons[i];
-                const lobbyKey = lobbyKeys[i];
-                const lobbyObject = JSON.parse(lobbyJson);
-                // Use the fromRedisObject method to create a Lobby instance
-                lobbies.push(Lobby.fromRedisObject(lobbyKey, lobbyObject));
-            }
-            return lobbies;
-        } catch (error) {
-            console.error("Error in getLobbies:", error);
-            // Provide more detailed error information
-            if (error instanceof Error) {
-                throw new Error(`There was an error calling getLobbies: ${error.message}`);
-            } else {
-                throw new Error(`There was an error calling getLobbies: ${error}`);
-            }
-        }
-    }
 
     /**
      * @method toJSON
@@ -578,23 +456,217 @@ export default class Lobby {
      */
     static async getLobby(redisClient: Redis, lobbyID: string): Promise<Lobby | null> {
         try {
+            const lobbyKey = `lobby:${lobbyID}`;
+            const gameStateKey = `gamestate:${lobbyID}`;
+            const playersKey = `lobbyplayers:${lobbyID}`;
+            
             // Check if the lobby exists
-            const doesLobbyExist = await redisClient.exists(lobbyID);
+            const doesLobbyExist = await redisClient.exists(lobbyKey);
             if (doesLobbyExist === 0) {
                 return null;
             }
 
             // Get the lobby data from Redis
-            const lobbyJson = await redisClient.get(lobbyID);
-            if (!lobbyJson) {
+            const [lobbyHashData, gameStateData, playersData] = await Promise.all([
+                redisClient.hgetall(lobbyKey),
+                redisClient.lrange(gameStateKey, 0, -1),
+                redisClient.lrange(playersKey, 0, -1)
+            ]);
+
+            if (!lobbyHashData || Object.keys(lobbyHashData).length === 0) {
                 return null;
             }
-
-            // Parse the JSON and create a Lobby object
-            const lobbyObject = JSON.parse(lobbyJson);
-            return Lobby.fromRedisObject(lobbyID, lobbyObject);
-        } catch(error) {
+            
+            // Convert game state strings to numbers
+            const gameStateArray = gameStateData.map(val => parseInt(val));
+            
+            return Lobby.fromRedisData(lobbyID, lobbyHashData, gameStateArray, playersData);
+        } catch (error) {
             throw new Error(`There was an error calling getLobby: ${error}`);
+        }
+    }
+
+    /**
+     * @method getSortedLobbies
+     * @description Get lobbies sorted by a specified attribute
+     * @param redisClient - The Redis client to use for database operations
+     * @param sortBy - The attribute to sort by (playerNum, levelSize, gridSize, playersJoined, creator, lobbyState)
+     * @param sortOrder - The sort order (asc or desc)
+     * @param maxResults - The maximum number of results to return
+     * @param searchListLength - The number of lobbies to search from the beginning of the list
+     * @returns A list of sorted lobby objects
+     */
+    static async getSortedLobbies(
+        redisClient: Redis,
+        sortBy: 'playerNum' | 'levelSize' | 'gridSize' | 'playersJoined' | 'creator' | 'lobbyState',
+        sortOrder: 'asc' | 'desc' = 'asc',
+        maxResults: number = 20,
+        searchListLength: number = 100
+    ): Promise<Lobby[]> {
+        try {
+            // Get the list of all lobbies with a limit to prevent timeout
+            const lobbyIDs = await redisClient.lrange('LobbyList', 0, searchListLength);
+            
+            if (lobbyIDs.length === 0) {
+                return [];
+            }
+
+            // Get all lobby data in parallel
+            const lobbies: Lobby[] = [];
+            const lobbyPromises = lobbyIDs.map(async (lobbyID) => {
+                try {
+                    const lobby = await Lobby.getLobby(redisClient, lobbyID);
+                    if (lobby) {
+                        lobbies.push(lobby);
+                    }
+                } catch (error) {
+                    console.error(`Error getting lobby ${lobbyID}:`, error);
+                    // Skip this lobby if there's an error
+                }
+            });
+
+            await Promise.all(lobbyPromises);
+
+            // Sort the lobbies based on the specified attribute
+            lobbies.sort((a, b) => {
+                let valueA: any;
+                let valueB: any;
+
+                // Extract the values to compare based on the sortBy parameter
+                switch (sortBy) {
+                    case 'playerNum':
+                        valueA = a.playerNum;
+                        valueB = b.playerNum;
+                        break;
+                    case 'levelSize':
+                        valueA = a.levelSize;
+                        valueB = b.levelSize;
+                        break;
+                    case 'gridSize':
+                        valueA = a.gridSize;
+                        valueB = b.gridSize;
+                        break;
+                    case 'playersJoined':
+                        valueA = a.playersJoined;
+                        valueB = b.playersJoined;
+                        break;
+                    case 'creator':
+                        valueA = a.creator;
+                        valueB = b.creator;
+                        break;
+                    case 'lobbyState':
+                        valueA = a.lobbyState;
+                        valueB = b.lobbyState;
+                        break;
+                    default:
+                        valueA = 0;
+                        valueB = 0;
+                }
+
+                // For string values, use localeCompare
+                if (typeof valueA === 'string' && typeof valueB === 'string') {
+                    return sortOrder === 'asc' 
+                        ? valueA.localeCompare(valueB) 
+                        : valueB.localeCompare(valueA);
+                }
+
+                // For numeric values, use subtraction
+                return sortOrder === 'asc' ? valueA - valueB : valueB - valueA;
+            });
+
+            // Return only the requested number of results
+            return lobbies.slice(0, maxResults);
+        } catch (error) {
+            console.error("Error in getSortedLobbies:", error);
+            if (error instanceof Error) {
+                throw new Error(`There was an error calling getSortedLobbies: ${error.message}`);
+            } else {
+                throw new Error(`There was an error calling getSortedLobbies: ${error}`);
+            }
+        }
+    }
+
+    /**
+     * @method getFilteredLobbies
+     * @description Get lobbies that match specific filter criteria
+     * @param redisClient - The Redis client to use for database operations
+     * @param filters - An object containing filter criteria
+     * @param maxResults - The maximum number of results to return
+     * @param searchListLength - The number of lobbies to search from the beginning of the list
+     * @returns A list of filtered lobby objects
+     */
+    static async getFilteredLobbies(
+        redisClient: Redis,
+        filters: {
+            playerNum?: number,
+            levelSize?: number,
+            gridSize?: number,
+            playersJoined?: number,
+            lobbyState?: string,
+            creator?: string
+        },
+        maxResults: number = 20,
+        searchListLength: number = 100
+    ): Promise<Lobby[]> {
+        try {
+            // Get the list of all lobbies with a limit to prevent timeout
+            const lobbyIDs = await redisClient.lrange('LobbyList', 0, searchListLength);
+            
+            if (lobbyIDs.length === 0) {
+                return [];
+            }
+
+            // Get all lobby data in parallel
+            const lobbies: Lobby[] = [];
+            const lobbyPromises = lobbyIDs.map(async (lobbyID) => {
+                try {
+                    const lobby = await Lobby.getLobby(redisClient, lobbyID);
+                    if (lobby) {
+                        lobbies.push(lobby);
+                    }
+                } catch (error) {
+                    console.error(`Error getting lobby ${lobbyID}:`, error);
+                    // Skip this lobby if there's an error
+                }
+            });
+
+            await Promise.all(lobbyPromises);
+
+            // Filter the lobbies based on the specified criteria
+            const filteredLobbies = lobbies.filter(lobby => {
+                // Check each filter criterion
+                if (filters.playerNum !== undefined && lobby.playerNum !== filters.playerNum) {
+                    return false;
+                }
+                if (filters.levelSize !== undefined && lobby.levelSize !== filters.levelSize) {
+                    return false;
+                }
+                if (filters.gridSize !== undefined && lobby.gridSize !== filters.gridSize) {
+                    return false;
+                }
+                if (filters.playersJoined !== undefined && lobby.playersJoined !== filters.playersJoined) {
+                    return false;
+                }
+                if (filters.lobbyState !== undefined && lobby.lobbyState !== filters.lobbyState) {
+                    return false;
+                }
+                if (filters.creator !== undefined && lobby.creator !== filters.creator) {
+                    return false;
+                }
+                
+                // If all criteria pass, include this lobby
+                return true;
+            });
+
+            // Return only the requested number of results
+            return filteredLobbies.slice(0, maxResults);
+        } catch (error) {
+            console.error("Error in getFilteredLobbies:", error);
+            if (error instanceof Error) {
+                throw new Error(`There was an error calling getFilteredLobbies: ${error.message}`);
+            } else {
+                throw new Error(`There was an error calling getFilteredLobbies: ${error}`);
+            }
         }
     }
 }

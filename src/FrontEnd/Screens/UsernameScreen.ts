@@ -311,7 +311,7 @@ export default class UsernameScreen implements Menu {
         playerIDPromise.then(response => {
             //Valid player ID
             if (response[0].length > 0) {
-                localStorage["playerID"] = response[0];
+                localStorage.setItem("playerID", response[0]);
                 this.usernameField.setError("");
                 this.keylistener.deactivate();
                 this.transitionOutActive = true;

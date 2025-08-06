@@ -195,10 +195,7 @@ public getDeviceId(): string {
                         levelSize,
                         gridSize
                     },
-                    playerData: {
-                        playerNum: 1, // First player is always player 1
-                        playerID
-                    }
+                    playerID: playerID
                 }
             };
 
@@ -267,7 +264,7 @@ public getDeviceId(): string {
      * @param joinedPlayers: The number of players who have joined the lobby (spectators included)
      * @returns Promise<LobbyInfo[]> a promise that resolves to an array of lobbies and their info
      */
-    public async getLobbyList(parameters: {lobbyID?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number}): Promise<LobbyInfo[]> {
+    public async getLobbyList(parameters: {lobbyID?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number, lobbyState?: string, creator?: string}): Promise<LobbyInfo[]> {
         try {
             // Create the message payload
             const message = {
@@ -277,6 +274,8 @@ public getDeviceId(): string {
                     playerNum: parameters.playerNum,
                     levelSize: parameters.levelSize,
                     gridSize: parameters.gridSize,
+                    creator: parameters.creator,
+                    lobbyState: parameters.lobbyState,
                     joinedPlayers: parameters.joinedPlayers,
                     maxListLength: parameters.maxListLength
                 }

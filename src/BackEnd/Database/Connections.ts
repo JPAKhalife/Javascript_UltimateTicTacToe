@@ -11,6 +11,7 @@ const activeWebsockets = new Map<string, any>(); // Map of connection IDs to Web
 const deviceConnections = new Map<string, string>(); // Map of device IDs to connection IDs
 
 import Redis from "ioredis";
+import Player from "./Player";
 const EXPIRE_TIME = Math.floor(3600 / 4); // Ensure integer value for Redis expiration time
 
 /**
@@ -94,10 +95,13 @@ export async function getPlayerID(redisClient: Redis, connectionID: string): Pro
  * @param connectionID Connection ID to remove
  * @param deviceID Optional device ID associated with this connection
  */
-export function removeConnection(redisClient: Redis, connectionID: string, deviceID?: string): void {
+export async function removeConnection(redisClient: Redis, connectionID: string, deviceID?: string): Promise<void> {
+    const playerID = await getPlayerID(redisClient, connectionID);
+    if (playerID) {
+        Player.removePlayer(redisClient, playerID);
+    }
     redisClient.del(`connection:${connectionID}`);
     activeWebsockets.delete(connectionID);
-    
     // If a device ID is provided, remove the device-to-connection mapping
     if (deviceID) {
         redisClient.del(`device:${deviceID}`);
@@ -112,6 +116,7 @@ export function removeConnection(redisClient: Redis, connectionID: string, devic
             }
         }
     }
+
 }
 
 /**

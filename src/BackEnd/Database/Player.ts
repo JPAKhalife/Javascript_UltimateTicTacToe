@@ -109,14 +109,19 @@ export default class Player {
         while (retries < MAX_RETRIES) {
             try {
                 //First grab the username of the player
-                const username = await redisClient.hget("usernames", playerID);
+                const username = await redisClient.hget("player:" + playerID, "username");
+                const lobbyID = await redisClient.hget("player:" + playerID, "lobbyID");
                 if (!username) {retries++; continue}
                 //Create multi operation
                 const multi = redisClient.multi();
                 //Remove the username hash entry
-                multi.hdel("usernames",playerID);
+                multi.hdel("usernames", username);
                 //Remove the player key entry
                 multi.del("player:" + playerID);
+                //remove player from playerlobbylist (no point in removing the creator yet)
+                if (lobbyID) {
+                    multi.lrem("lobbyplayers:" + lobbyID, 0, playerID);
+                }
                 //Execute the transaction
                 const results = await multi.exec();
                 // If results is null, the transaction failed due to watched keys changing
@@ -149,40 +154,47 @@ export default class Player {
      * @return A Player object representing the added player
      * @throws Error if lobby doesn't exist, is full, player already in lobby, or database operation fails
      */
-    static async addPlayer(redisClient: Redis, lobbyID: string, playerName: string, playerID: string): Promise<Player> {
+    static async addPlayer(redisClient: Redis, lobbyID: string, playerID: string): Promise<Player> {
         // Maximum number of retries for optimistic locking
         const MAX_RETRIES = 3;
         let retries = 0;
-
+        const lobbyKey = "lobby:" + lobbyID;
+        const lobbyPlayersKey = "lobbyplayers:" + lobbyID
+        const playerKey = "player:" + playerID;
         while(retries < MAX_RETRIES) {
             try {
                 // Watch the keys we're going to modify to detect changes
                 await redisClient.watch(lobbyID, "Players");
 
                 // Check if lobby exists
-                const lobbyExists = await redisClient.exists(lobbyID);
+                const lobbyExists = await redisClient.exists(lobbyKey);
                 if (!lobbyExists) {
                     await redisClient.unwatch();
                     throw new Error(`Lobby ${lobbyID} does not exist`);
                 }
 
+                //Check if the player being added exists
+                if (!(await redisClient.exists(playerKey))) {
+                    throw new Error(`Player ${playerID} does not exist`);
+                }  
+
                 // Get lobby data
-                const lobbyJson = await redisClient.get(lobbyID);
-                if (!lobbyJson) {
+                const lobby = await redisClient.hgetall(lobbyKey);
+                if (!lobby) {
                     await redisClient.unwatch();
                     throw new Error(`Failed to retrieve lobby data for ${lobbyID}`);
                 }
 
-                const lobbyObject = JSON.parse(lobbyJson);
 
                 // Check if lobby is full
-                if (lobbyObject.playersJoined >= lobbyObject.playerNum) {
+                if (lobby.playersJoined >= lobby.playerNum) {
                     await redisClient.unwatch();
                     throw new Error(`Lobby ${lobbyID} is full`);
                 }
 
                 // Check if player is already in the lobby
-                if (lobbyObject.players.includes(playerID)) {
+                const lobbyPlayers = await redisClient.lrange(lobbyPlayersKey, 0, -1);
+                if (lobbyPlayers.includes(playerID)) {
                     await redisClient.unwatch();
                     throw new Error(`Player ${playerID} is already in lobby ${lobbyID}`);
                 }
@@ -191,51 +203,19 @@ export default class Player {
                 const multi = redisClient.multi();
 
                 // Update lobby data with version for optimistic locking
-                lobbyObject.playersJoined += 1;
-                lobbyObject.players.push(playerID);
+                multi.hincrby(lobbyKey, "playersJoined", 1);
+                multi.lpush(lobbyPlayersKey, playerID);
 
                 // Update lobby state if it's now full
-                if (lobbyObject.playersJoined === lobbyObject.playerNum) {
-                    lobbyObject.lobbyState = "ready";
+                if (lobby.playersJoined === lobby.playerNum) {
+                    multi.hset(lobbyKey, "lobbyState", "ready");
                 }
-
                 // Increment version for optimistic locking
-                lobbyObject.version = (lobbyObject.version || 0) + 1;
+                multi.hincrby(lobbyKey, "version", 1);
 
-                multi.set(lobbyID, JSON.stringify(lobbyObject));
-
-                // Update player data
-                const playersJson = await redisClient.get("Players");
-                let playersObject: PlayersObject;
-
-                if (playersJson) {
-                    playersObject = JSON.parse(playersJson);
-                    // Ensure playerList exists and is an array
-                    if (!playersObject.playerList || !Array.isArray(playersObject.playerList)) {
-                        playersObject.playerList = [];
-                    }
-                } else {
-                    // Initialize new Players object with empty list
-                    playersObject = {
-                        version: 0,
-                        playerList: []
-                    };
-                }
-
-                // Create new player data
-                const newPlayer: PlayerData = {
-                    playerID: playerID,
-                    username: playerName,
-                    lobbyID: lobbyID
-                };
-
-                // Add player to the list
-                playersObject.playerList.push(newPlayer);
-
-                // Increment version for optimistic locking
-                playersObject.version = (playersObject.version || 0) + 1;
-
-                multi.set("Players", JSON.stringify(playersObject));
+                //Update player object to have proper lobbyID
+                multi.hset(playerKey, "lobbyID", lobbyID);
+                multi.hincrby(playerKey, "version", 1);
 
                 // Execute transaction
                 const results = await multi.exec();
@@ -250,7 +230,11 @@ export default class Player {
                 }
 
                 // Return a new Player instance
-                return new Player(playerID, playerName, lobbyID);
+                let returnPlayer = await Player.getPlayer(redisClient, playerID);
+                if (!returnPlayer) {
+                    throw new Error(`Failed to retrieve player ${playerID} after adding to lobby ${lobbyID}`);
+                }
+                return returnPlayer;
             } catch (error) {
                 if (error instanceof Error && error.message.includes("Concurrent modification")) {
                     retries++;

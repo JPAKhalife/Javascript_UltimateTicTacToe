@@ -79,11 +79,10 @@ export default class CreateLobbyScreen implements Menu {
                     this.webManager.initiateConnectionIfNotEstablished().then(connected => {
                         if (connected) {
                             // Generate a unique lobby name
-                            const lobbyName = `lobby_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                            const lobbyName = `genericlobby_${Math.floor(Math.random() * 1000)}`;
                             
-                            // Create a unique player ID
-                            const playerID = `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-                            
+                            let playerID = localStorage.getItem("playerID") || "defaultPlayerID";
+
                             // Create the lobby
                             this.webManager.createLobby(
                                 lobbyName,

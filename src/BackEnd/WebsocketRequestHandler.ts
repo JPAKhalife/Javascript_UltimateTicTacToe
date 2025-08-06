@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import Lobby from './Database/Lobby';
+import Lobby, { LobbyData } from './Database/Lobby';
 import Player from './Database/Player';
 import {
     newConnection, 
@@ -147,23 +147,29 @@ async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Prom
             playerNum, 
             levelSize, 
             gridSize, 
-            joinedPlayers, 
-            maxListLength = 20, 
+            joinedPlayers,
+            lobbyState,
+            creator,
+            maxResults = 20, 
             searchListLength = 100 
         } = parameters;
 
         console.log('Searching lobbies with parameters:', {
-            playerNum, levelSize, gridSize, joinedPlayers, maxListLength, searchListLength
+            playerNum, levelSize, gridSize, joinedPlayers, maxResults, searchListLength
         });
 
         // Call getLobbies with the parameters
-        const lobbySearchResults = await Lobby.getLobbies(
+        const lobbySearchResults = await Lobby.getFilteredLobbies(
             redis, 
-            playerNum, 
-            levelSize, 
-            gridSize, 
-            joinedPlayers, 
-            maxListLength, 
+            {
+             playerNum: playerNum, 
+             levelSize: levelSize, 
+             gridSize: gridSize, 
+             playersJoined:  joinedPlayers,
+             creator: creator,
+             lobbyState: lobbyState
+            },
+            maxResults, 
             searchListLength
         );
         console.log(`Found ${lobbySearchResults.length} matching lobbies`);
@@ -213,19 +219,31 @@ async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Prom
 async function handleCreateLobby(ws: any, redis: Redis, parameters: any): Promise<object> {
     try {
         //Deconstruct the data received
-        const { lobbyID, lobbyData, playerData } = parameters;
-        
-        if (!(checkValue(lobbyID, 36))) {
+        const { lobbyID, lobbyData, playerID } = parameters;
+        // Cast lobbyData to a LobbyData object
+        const lobbyDataObj: LobbyData = lobbyData as LobbyData;
+        // Validate lobbyID and playerID
+        if (!(checkValue(lobbyID, 36) && checkValue(playerID, 36))) {
             return {
-                success: false,
-                message: "The values passed in the request were not valid.",
+            success: false,
+            message: "The values passed in the request were not valid.",
             };
         }
 
-        console.log(`Creating lobby ${lobbyID} with data:`, lobbyData, playerData);
+        // Validate all values in lobbyData
+        for (const [key, value] of Object.entries(lobbyDataObj)) {
+            if (!checkValue(value as any, 36)) {
+            return {
+                success: false,
+                message: `Invalid value for ${key} in lobbyData.`,
+            };
+            }
+        }
+
+        console.log(`Creating lobby ${lobbyID} with data:`, lobbyData, playerID);
 
         // Call RedisManager to create the lobby
-        let newLobby = await Lobby.createLobby(redis, lobbyID, lobbyData, playerData);
+        let newLobby = await Lobby.createLobby(redis, lobbyID, lobbyData, playerID);
         console.log(`Lobby ${lobbyID} created successfully`);
 
         // Send response back to client
