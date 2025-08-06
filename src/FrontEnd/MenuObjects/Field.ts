@@ -327,11 +327,9 @@ export default class Field extends BaseMenuItem {
      */
     public handleTextInput(key: string): void {
         if (!this.isEditing) {
-            console.log("Text input received but field is not in edit mode");
             return;
         }
         
-        console.log("Text input received in edit mode:", key);
         
         // Handle backspace
         if (key === "Backspace") {
@@ -383,7 +381,6 @@ export default class Field extends BaseMenuItem {
                        key + 
                        this.text.substring(this.cursorPosition);
             this.cursorPosition++;
-            console.log("Text updated:", this.text);
         }
     }
     
@@ -453,7 +450,6 @@ export default class Field extends BaseMenuItem {
             // Enable text input mode AFTER disabling keys
             this.keyListener.enableTextInput(this.handleTextInput.bind(this));
             
-            console.log("Field entered edit mode");
         } else {
             // Reset the flag
             this.justEnteredEditMode = false;
@@ -471,7 +467,6 @@ export default class Field extends BaseMenuItem {
                 KEY_EVENTS.ENTER
             ]);
             
-            console.log("Field exited edit mode");
         }
         // Set flag to ignore the first Enter key
         this.timeSinceEnter = ENTER_DELAY;
