@@ -18,6 +18,8 @@ export enum KEY_EVENTS {
     SELECT = "SELECT",
     ESCAPE = "ESCAPE",
     ENTER = "ENTER",
+    BACKSPACE = "BACKSPACE",
+    DELETE = "DELETE",
     NONE = "NONE"
 }
 
@@ -37,11 +39,16 @@ export const KEY_CODES: { [key: string]: KEY_EVENTS } = {
     "32": KEY_EVENTS.SELECT,
     "27": KEY_EVENTS.ESCAPE,
     "13": KEY_EVENTS.ENTER,
+    "8": KEY_EVENTS.BACKSPACE,
+    "46": KEY_EVENTS.DELETE,
     "-1": KEY_EVENTS.NONE
 };
 
 //this is input delay, measured in frames
 const INPUT_DELAY = 5;
+
+// Type definition for text input callback
+export type TextInputCallback = (key: string) => void;
 
 //this will listen for keypresses and return an event
 export default class KeyListener 
@@ -55,14 +62,44 @@ export default class KeyListener
     private sketch: p5;
     //A list of disabled keys
     private disabledKeys: KEY_EVENTS[];
+    // Text input mode
+    private textInputMode: boolean;
+    // Text input callback
+    private textInputCallback: TextInputCallback | null;
+    // Last key pressed (for text input)
+    private lastKeyPressed: string;
 
     constructor(sketch: p5, inputdelay: number = INPUT_DELAY)
     {
         this.do_listen = true;
         this.inputdelay = 0;
-        this.setDelay = inputdelay
+        this.setDelay = inputdelay;
         this.sketch = sketch;
         this.disabledKeys = [];
+        this.textInputMode = false;
+        this.textInputCallback = null;
+        this.lastKeyPressed = "";
+        
+        // Set up keyPressed event handler for text input
+        const originalKeyPressed = this.sketch.keyPressed || (() => true);
+        this.sketch.keyPressed = () => {
+            if (this.textInputMode && this.textInputCallback) {
+                // Store the key that was pressed
+                this.lastKeyPressed = this.sketch.key;
+                
+                // Call the callback with the key
+                this.textInputCallback(this.sketch.key);
+                
+                // Prevent default behavior for some keys
+                if (this.sketch.keyCode === 8 || this.sketch.keyCode === 9) {
+                    return false; // Prevent default behavior for backspace and tab
+                }
+                
+                // When in text input mode, don't propagate key events to other handlers
+                return false;
+            }
+            return originalKeyPressed();
+        };
     }
 
     /**
@@ -117,9 +154,16 @@ export default class KeyListener
                 return KEY_EVENTS.NONE;
             }
             if (this.sketch.keyIsPressed && KEY_CODES[this.sketch.keyCode]) {
+                // Check if the key is disabled
+                const keyEvent = KEY_CODES[this.sketch.keyCode];
+                if (this.disabledKeys.includes(keyEvent)) {
+                    this.sketch.keyIsPressed = false;
+                    return KEY_EVENTS.NONE;
+                }
+                
                 this.inputdelay = this.setDelay;
                 this.sketch.keyIsPressed = false; //*This prevents key from being held down
-                return  KEY_CODES[this.sketch.keyCode];
+                return keyEvent;
             }
         }
         if (this.inputdelay > 0) {
@@ -127,5 +171,42 @@ export default class KeyListener
         }
 
         return KEY_EVENTS.NONE;
+    }
+
+    /**
+     * @method enableTextInput
+     * @description Enables text input mode and sets a callback for text input events
+     * @param callback Function to call when text is input
+     */
+    public enableTextInput(callback: TextInputCallback): void {
+        this.textInputMode = true;
+        this.textInputCallback = callback;
+    }
+
+    /**
+     * @method disableTextInput
+     * @description Disables text input mode
+     */
+    public disableTextInput(): void {
+        this.textInputMode = false;
+        this.textInputCallback = null;
+    }
+
+    /**
+     * @method isTextInputMode
+     * @description Checks if text input mode is enabled
+     * @returns True if text input mode is enabled, false otherwise
+     */
+    public isTextInputMode(): boolean {
+        return this.textInputMode;
+    }
+
+    /**
+     * @method getLastKeyPressed
+     * @description Gets the last key that was pressed
+     * @returns The last key that was pressed
+     */
+    public getLastKeyPressed(): string {
+        return this.lastKeyPressed;
     }
 }

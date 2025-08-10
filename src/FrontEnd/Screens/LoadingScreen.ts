@@ -13,6 +13,7 @@ import {Text, Img } from "../ShapeWrapper";
 import { whiteTicTac, getCanvasSize, HEADER, fontRobot, fontminecraft, getRandomInt, fontAldoApache, FRAMERATE } from "../sketch";
 import WebManager from "../WebManager";
 import GuiManager from "../GuiManager";
+import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 
 //Constants for the loading screen
 const LOADING_TRANSITION_IN = 180;
@@ -21,11 +22,9 @@ export default class LoadingScreen implements Menu {
 
     private sketch: p5;
     private keylistener: KeyListener;
-    private spinner: Img;
+    private spinner: LoadingSpinner;
     private title: Text;
     private loadingMessage: Text;
-    private spinnerAngle: number;
-    private spinnerOpacity: number;
     private titleOpacity: number;
     private loadingMessageIndex: number;
     private titleDotIndex: number;
@@ -33,7 +32,6 @@ export default class LoadingScreen implements Menu {
     private transitionInActive: boolean;
     private transitionOutActive: boolean;
     private transitionTimer: number;
-    private webManager: WebManager;
     private proceed: boolean;
     private nextScreen: Screens;
     private titleText: string;
@@ -43,18 +41,13 @@ export default class LoadingScreen implements Menu {
         this.sketch = sketch;
         this.args = args;
         this.keylistener = new KeyListener(this.sketch);
-        this.webManager = WebManager.getInstance();
         this.titleText = titleText || HEADER.LOADING_SCREEN_TITLE_MESSAGES[0];
         this.nextScreen = nextScreen || Screens.START_SCREEN;
 
-        // Spinner properties
-        this.spinner = new Img(whiteTicTac, getCanvasSize() * 0.10, getCanvasSize() * 0.10, this.sketch, 0, 0);
-        this.spinner.setRectOrientation(this.sketch.CENTER);
-        this.spinner.setImageOrientation(this.sketch.CENTER);
-        this.spinner.setAngleMode(this.sketch.RADIANS);
-        this.spinner.translate((getCanvasSize() / 8) * (-1), (getCanvasSize() / 8) * 7);
-        this.spinnerAngle = 0;
-        this.spinnerOpacity = 0;
+        this.spinner = new LoadingSpinner(sketch, (getCanvasSize() / 8) * (-1), (getCanvasSize() / 8) * 7, getCanvasSize() * 0.10, whiteTicTac, (counter: number) => { 
+            this.sketch.angleMode(this.sketch.DEGREES);
+            return 255 / 2 * this.sketch.cos(counter) + 255 / 2; 
+        }, 3);
 
         // Title properties
         this.title = new Text(this.titleText + HEADER.DOTS[0], getCanvasSize() / 2, getCanvasSize() / 5, this.sketch, getCanvasSize() * 0.07, fontRobot, this.sketch.color(255, 255, 255));
@@ -103,22 +96,19 @@ export default class LoadingScreen implements Menu {
     }
 
     private startTransitionIn(): void {
-        this.spinnerOpacity = 0;
         this.titleOpacity = 0;
         this.transitionInActive = true;
     }
 
     private animateTransitionIn(): void {
-        if (this.spinner.getTX() < (getCanvasSize() / 8 * 7)) {
-            this.spinner.setTX(this.spinner.getTX() + (getCanvasSize()) / (LOADING_TRANSITION_IN / 2));
+        if (this.spinner.getX() < (getCanvasSize() / 8 * 7)) {
+            this.spinner.setX(this.spinner.getX() + (getCanvasSize()) / (LOADING_TRANSITION_IN / 2));
         } else if (this.titleOpacity < 255) {
             this.title.setFill(this.sketch.color(255, 255, 255, this.titleOpacity));
             this.loadingMessage.setFill(this.sketch.color(255, 255, 255, this.titleOpacity));
             this.titleOpacity += 255 / (LOADING_TRANSITION_IN / 2);
         } else {
-            //When the transition in is complete, activate the websocket connection
             this.keylistener.activate();
-            this.webManager.initiateWebsocketConnection();
             this.transitionInActive = false;
         }
     }
@@ -130,10 +120,10 @@ export default class LoadingScreen implements Menu {
     private animateTransitionOut(): void 
     {
         this.titleOpacity -= 255 / (LOADING_TRANSITION_IN / 2);
-        this.spinner.setTX(this.spinner.getTX() - (getCanvasSize()) / (LOADING_TRANSITION_IN / 2));
+        this.spinner.setX(this.spinner.getX() - (getCanvasSize()) / (LOADING_TRANSITION_IN / 2));
         this.title.setFill(this.sketch.color(255, 255, 255, this.titleOpacity));
         this.loadingMessage.setFill(this.sketch.color(255, 255, 255, this.titleOpacity));
-        if (this.titleOpacity <= 0 && this.spinner.getTX() <= 0 - this.spinner.getWidth()) {
+        if (this.titleOpacity <= 0 && this.spinner.getX() <= 0 - this.spinner.getWidth()) {
             this.transitionOutActive = false;
             this.keylistener.activate();
             GuiManager.changeScreen(this.nextScreen, this.sketch, this.args);
@@ -141,12 +131,6 @@ export default class LoadingScreen implements Menu {
     }
 
     private animateLoading(): void {
-        this.spinner.setAngleMode(this.sketch.DEGREES);
-        this.spinner.setOrientation(this.spinnerAngle);
-        this.spinner.setTint(this.sketch.color(255,255 / 2 * this.sketch.cos(this.spinnerOpacity) + 255 / 2));
-        this.spinnerOpacity += 2;
-        this.spinnerAngle += 3;
-
         if ((this.frameCounter / 3) % 60 === 0) {
             this.titleDotIndex++;
             this.title.setText(this.titleText + HEADER.DOTS[this.titleDotIndex % HEADER.DOTS.length]);
@@ -167,9 +151,11 @@ export default class LoadingScreen implements Menu {
 
     public draw(): void {
         this.sketch.background(0);
-        this.spinner.render();
+        this.spinner.draw();
         this.title.render();
         this.loadingMessage.render();
+
+       
 
         //Check for the transition Timer to start the transition out
         if (this.transitionTimer <= 0) {
@@ -188,6 +174,7 @@ export default class LoadingScreen implements Menu {
             this.transitionTimer--;
         }
         this.animateLoading();
+        
     }
 
     public resize(): void {

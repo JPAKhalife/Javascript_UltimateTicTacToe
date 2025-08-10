@@ -7,6 +7,7 @@
  */
 
 import { time } from "console";
+const { v4: uuidv4 } = require('uuid');
 
 /**
  * Interface representing lobby information
@@ -31,13 +32,40 @@ export default class WebManager {
     private reconnectAttempts: number = 0;
     private maxReconnectAttempts: number = -1;
     private reconnectDelay: number = 1000; // Base delay in ms
+    private deviceId: string;
     
-    /**
-     * Private constructor to enforce singleton pattern
-     */
-    private constructor() {
-        // Private constructor to enforce singleton pattern
+/**
+ * Private constructor to enforce singleton pattern
+ */
+private constructor() {
+    // Private constructor to enforce singleton pattern
+    this.deviceId = this.getOrCreateDeviceId();
+}
+
+/**
+ * @method getOrCreateDeviceId
+ * @description Get the device ID from localStorage or create a new one if it doesn't exist
+ * @returns {string} The device ID
+ * @private
+ */
+private getOrCreateDeviceId(): string {
+    const storedId = localStorage.getItem('device_id');
+    if (!storedId) {
+        const newId = uuidv4();
+        localStorage.setItem('device_id', newId);
+        return newId;
     }
+    return storedId;
+}
+
+/**
+ * @method getDeviceId
+ * @description Get the device ID
+ * @returns {string} The device ID
+ */
+public getDeviceId(): string {
+    return this.deviceId;
+}
     
     /**
      * @method getInstance
@@ -59,8 +87,10 @@ export default class WebManager {
     public async initiateWebsocketConnection(): Promise<boolean> {
         return new Promise((resolve) => {
             const serverAddress = process.env.REMOTE_SERVER_ADDRESS || 'ws://localhost:3000';
+            // Append the device ID as a query parameter
+            const connectionUrl = `${serverAddress}?deviceId=${encodeURIComponent(this.deviceId)}`;
 
-            this.socket = new WebSocket(serverAddress);
+            this.socket = new WebSocket(connectionUrl);
 
             this.socket.onopen = () => {
                 console.log('WebSocket connection established - clientside');
@@ -165,10 +195,7 @@ export default class WebManager {
                         levelSize,
                         gridSize
                     },
-                    playerData: {
-                        playerNum: 1, // First player is always player 1
-                        playerID
-                    }
+                    playerID: playerID
                 }
             };
 
@@ -237,7 +264,7 @@ export default class WebManager {
      * @param joinedPlayers: The number of players who have joined the lobby (spectators included)
      * @returns Promise<LobbyInfo[]> a promise that resolves to an array of lobbies and their info
      */
-    public async getLobbyList(parameters: {lobbyID?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number}): Promise<LobbyInfo[]> {
+    public async getLobbyList(parameters: {lobbyID?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number, lobbyState?: string, creator?: string}): Promise<LobbyInfo[]> {
         try {
             // Create the message payload
             const message = {
@@ -247,6 +274,8 @@ export default class WebManager {
                     playerNum: parameters.playerNum,
                     levelSize: parameters.levelSize,
                     gridSize: parameters.gridSize,
+                    creator: parameters.creator,
+                    lobbyState: parameters.lobbyState,
                     joinedPlayers: parameters.joinedPlayers,
                     maxListLength: parameters.maxListLength
                 }
@@ -337,6 +366,34 @@ export default class WebManager {
     private generateMessageID(action: string): string {
         const now = new Date();
         return action + "_" + now.toISOString() + "_" + this.messageIDCounter++;
+    }
+
+    /**
+     * @method checkAndRegisterPlayer
+     * @description This method makes a request for a new player to be generated. This allows the
+     * client to join game servers when it receives a player id.
+     * @param username the username that the player chose
+     * @return The playerID, or an empty string.
+     */
+    public async checkAndRegisterPlayer(username: string): Promise<[string, string]> {
+        try {
+            const message = {
+                type: 'registerPlayer',
+                parameters: {
+                    identifier: username,
+                    checkUsername: true
+                }
+            }
+
+            const response = await this.sendRequest<{ success: boolean, message: string, playerID: string }>(message, 'registerPlayer');
+            console.log("Response received: ", response);
+
+            return [response.playerID ? response.playerID : "", response.message];
+
+        } catch(error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            return ["", errorMessage]
+        }
     }
 
 }

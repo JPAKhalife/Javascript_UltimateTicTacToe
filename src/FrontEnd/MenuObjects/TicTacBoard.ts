@@ -10,13 +10,11 @@ import p5 from "p5";
 
 import GameManager from "../GameManager";
 import TicTac, { TicTacState } from "../TicTac";
-import MenuItem from "./MenuItem";
+import BaseMenuItem from "./BaseMenuItem";
 
 //creating the object type smalltictac.
-export default class TicTacBoard implements MenuItem {
+export default class TicTacBoard extends BaseMenuItem {
     private gridSize: number;
-    private x: number;
-    private y: number;
     private GRID_SIZE: number;
     private lineNum: number;
     private cursorRow: number;
@@ -26,11 +24,6 @@ export default class TicTacBoard implements MenuItem {
     private tictac: TicTac;
     private maxLevelSize: number;
     private cache: number[][][];
-    private sketch: p5;
-    //MenuItem variables
-    private selected: boolean;
-    private isConfirmed: boolean;
-    private opacity: number = 255;
 
     public static readonly BOARD_SHRINK_CONSTANT: number = 0.8;
     public static readonly ICON_SHRINK_CONSTANT: number = 0.6;
@@ -45,12 +38,14 @@ export default class TicTacBoard implements MenuItem {
      * @param {*} gridSize 
      */
     constructor(sketch:p5, gameManager: GameManager, x: number,y: number,gridSize: number) {
-        this.isConfirmed = true;
-        this.selected = true;
+        let newGridsize = gridSize*TicTacBoard.BOARD_SHRINK_CONSTANT; 
+        super(sketch, x - newGridsize/2, y - newGridsize /2, 255)
+        this.gridSize = newGridsize;
+
+        this.setConfirmed(true);
+        this.setSelected(true);
         //Size and location
-        this.gridSize = gridSize*TicTacBoard.BOARD_SHRINK_CONSTANT; 
-        this.x = x - this.gridSize/2;
-        this.y = y - this.gridSize /2;
+        
         this.GRID_SIZE = gameManager.getBoard().getGridSize();
         //These variables help with the line sizing.
         this.lineNum = this.GRID_SIZE - 1;
@@ -68,10 +63,6 @@ export default class TicTacBoard implements MenuItem {
         this.cache = Array.from({ length: this.maxLevelSize + 1 },() => [] as any[]);
         //Now we need to cache the points
         this.cachePoints();
-        this.sketch = sketch;
-
-        //These are the relevant variables for MenuItem
-
     }
 
     /**
@@ -82,8 +73,8 @@ export default class TicTacBoard implements MenuItem {
             let space = ((this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - i));
             for (let j = 0 ; j < this.tictac.getArraySize()/space ; j++) {
                 //Set initial coordinates to watchamacallit
-                let x = this.x;
-                let y = this.y;
+                let x = this.getX();
+                let y = this.getY();
                 //Iterate through all current levelsizes to get x and y coordinates
                 for (let z = 0 ; z < i ; z++) {
                     let col =  this.tictac.getCol(z,j*space); //Get the relative column
@@ -104,8 +95,8 @@ export default class TicTacBoard implements MenuItem {
         //*Another loop to draw the smallest symbols
         //*This avoids a number of if checks
         //*The reason is for this is that only larger symbols use negative numbers to signal they should be drawn
-        this.sketch.stroke(255);
-        this.sketch.strokeWeight(1);
+        this.getSketch().stroke(255);
+        this.getSketch().strokeWeight(1);
         //Iterate for larger structures - larger that the smallest unit in the array
         for (let i = 0 ; i < this.maxLevelSize ; i++) {
             let space = ((this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - i)); //represents the number of slots to skip per iteration
@@ -149,10 +140,10 @@ export default class TicTacBoard implements MenuItem {
         let size = this.calculateSize(levelSize);
         let x = this.cache[levelSize][cacheIndex][0];
         let y = this.cache[levelSize][cacheIndex][1];
-        this.sketch.strokeWeight(1);
+        this.getSketch().strokeWeight(1);
         for (let i = 0 ; i < this.lineNum ; i++) {
-            this.sketch.line(x + (size/this.GRID_SIZE)*(i+1),y,x + (size/this.GRID_SIZE)*(i+1),y + size);
-            this.sketch.line(x,y+(size/this.GRID_SIZE)*(i+1),x + size,y + (size/this.GRID_SIZE) * (i+1));
+            this.getSketch().line(x + (size/this.GRID_SIZE)*(i+1),y,x + (size/this.GRID_SIZE)*(i+1),y + size);
+            this.getSketch().line(x,y+(size/this.GRID_SIZE)*(i+1),x + size,y + (size/this.GRID_SIZE) * (i+1));
         }
     }
 
@@ -162,7 +153,7 @@ export default class TicTacBoard implements MenuItem {
         //Get the coordinates from the cache
         let x = this.cache[levelSize][cacheIndex][0];
         let y = this.cache[levelSize][cacheIndex][1];
-        this.sketch.strokeWeight(1);
+        this.getSketch().strokeWeight(1);
         let slot = this.tictac.getSlot(tictacIndex) < 0 ? this.tictac.getSlot(tictacIndex + 1) : this.tictac.getSlot(tictacIndex);
         switch (slot) {
             case 0:
@@ -170,22 +161,22 @@ export default class TicTacBoard implements MenuItem {
             break;
             case 1:
                 //Draw an X
-                this.sketch.stroke(255);
-                this.sketch.line(x,y,x + size,y + size);
-                this.sketch.line(x + size,y,x,y + size);
+                this.getSketch().stroke(255);
+                this.getSketch().line(x,y,x + size,y + size);
+                this.getSketch().line(x + size,y,x,y + size);
             break;
             case 2:
                 //Draw an O
-                this.sketch.stroke(255);
-                this.sketch.noFill();
-                this.sketch.ellipseMode(this.sketch.CENTER)
-                this.sketch.ellipse(x + size/2,y + size/2,size*(TicTacBoard.SMALLEST_BOARD_PERCENT/100),size*(TicTacBoard.SMALLEST_BOARD_PERCENT/100));
+                this.getSketch().stroke(255);
+                this.getSketch().noFill();
+                this.getSketch().ellipseMode(this.getSketch().CENTER)
+                this.getSketch().ellipse(x + size/2,y + size/2,size*(TicTacBoard.SMALLEST_BOARD_PERCENT/100),size*(TicTacBoard.SMALLEST_BOARD_PERCENT/100));
             break;
             default:
                 //Draw the number in the grid instead. (used in case of >2 players)
-                this.sketch.textSize(size);
-                this.sketch.textAlign(this.sketch.CENTER,this.sketch.CENTER);
-                this.sketch.text(slot,x + size/2, y + size/2);
+                this.getSketch().textSize(size);
+                this.getSketch().textAlign(this.getSketch().CENTER,this.getSketch().CENTER);
+                this.getSketch().text(slot,x + size/2, y + size/2);
             break;
         }
 
@@ -294,11 +285,11 @@ export default class TicTacBoard implements MenuItem {
      * This method renders the cursor on the tictac
      */
     private renderCursor() {
-            this.sketch.rectMode(this.sketch.CORNER);
-            this.sketch.noFill();
-            this.sketch.strokeWeight(5);
+            this.getSketch().rectMode(this.getSketch().CORNER);
+            this.getSketch().noFill();
+            this.getSketch().strokeWeight(5);
             let c = this.getCacheIndex();
-            this.sketch.rect(this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
+            this.getSketch().rect(this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
                 this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
                 this.calculateSize(this.tictac.getSelectedLevel()),
                 this.calculateSize(this.tictac.getSelectedLevel()));
@@ -322,82 +313,18 @@ export default class TicTacBoard implements MenuItem {
      * @description This method is responsible for deselecting a TicTac (but is this something you want to do?)
      */
     public deselectTicTac() {
-        this.isConfirmed = false;
+        this.setConfirmed(false);
     }
 
     /**
      * This method is responsible for deleselecting the tictac
      */
     public reset() {
-        this.selected = false;
-        this.isConfirmed = false;
+        this.setSelected(false);
+        this.setConfirmed(false);
     }
-
-    //These are all 
 
     public confirm() {
-        this.isConfirmed = true;
-    }
-
-    public setSelected(status: boolean): void {
-        this.selected = status;
-    }
-
-    public isSelected(): boolean {
-        return this.selected;
-    }
-
-    public getX(): number {
-        return this.x;
-    }
-
-    public getY(): number {
-        return this.y;
-    }
-    
-    /**
-     * @method setOpacity
-     * @description Sets the opacity of the TicTacBoard
-     * @param opacity {number} - The opacity value (0-255)
-     */
-    public setOpacity(opacity: number): void {
-        this.opacity = opacity;
-    }
-    
-    /**
-     * @method getOpacity
-     * @description Gets the opacity of the TicTacBoard
-     * @returns {number} - The opacity value
-     */
-    public getOpacity(): number {
-        return this.opacity;
-    }
-    
-    /**
-     * @method fade
-     * @description Reduces the opacity of the TicTacBoard by the specified amount
-     * @param amount {number} - The amount to reduce opacity by
-     */
-    public fade(amount: number): void {
-        this.opacity -= amount;
-        if (this.opacity < 0) this.opacity = 0;
-    }
-    
-    /**
-     * @method setX
-     * @description Sets the x-coordinate of the TicTacBoard
-     * @param x {number} - The new x-coordinate
-     */
-    public setX(x: number): void {
-        this.x = x;
-    }
-    
-    /**
-     * @method setY
-     * @description Sets the y-coordinate of the TicTacBoard
-     * @param y {number} - The new y-coordinate
-     */
-    public setY(y: number): void {
-        this.y = y;
+        this.setConfirmed(true);
     }
 }

@@ -9,7 +9,7 @@
 import p5 from "p5";
 import {getCanvasSize, getRandomInt } from "../sketch";
 import { FRAMERATE } from "../Constants";
-import MenuItem from "./MenuItem";
+import BaseMenuItem from "./BaseMenuItem";
 import MenuNav from "./MenuNav";
 import { stringify } from "querystring";
 
@@ -50,18 +50,11 @@ export class LobbyInfo {
 //Within a square area, draw a dot at a random location, with a fading circle expanding from it.
 //When the dot is hovered over, a small menu will open up with details of the lobby that the dot represents
 //This is intended to replicate the lobby of crime.net on Payday 2
-export default class LobbyDot implements MenuItem {
+export default class LobbyDot extends BaseMenuItem {
     
-    private sketch: p5;
-    //Constants having to do with physical properties
-    private x: number;
-    private y: number;
-    private opacity: number;
     private size: number;
     //Information about the object
     private info: LobbyInfo;
-    private selected: boolean = false;
-    private confirmed: boolean = false;
     //Transition variables
     private doTransitionIn: boolean = true;
     private doTransitionOut: boolean = false;
@@ -78,10 +71,7 @@ export default class LobbyDot implements MenuItem {
 
     //TODO: Make a specific object for lobby info
     constructor(sketch: p5, x: number, y: number, size: number, lifetime: number, info: LobbyInfo, menuNav: MenuNav, boxX: number, boxY: number) {
-        this.sketch = sketch;
-        this.opacity = 0;
-        this.x = x;
-        this.y = y;
+        super(sketch, x, y, 0)
         this.boxX = boxX;
         this.boxY = boxY;
         this.size = size;
@@ -94,11 +84,11 @@ export default class LobbyDot implements MenuItem {
     public draw(): void 
     {
         //Draw the point on the x or y
-        this.sketch.push();
-            this.sketch.stroke(255,this.opacity);
-            this.sketch.strokeWeight(this.size);
-            this.sketch.point(this.x, this.y);
-        this.sketch.pop();
+        this.getSketch().push();
+            this.getSketch().stroke(255,this.getOpacity());
+            this.getSketch().strokeWeight(this.size);
+            this.getSketch().point(this.getX(), this.getY());
+        this.getSketch().pop();
 
         if (this.doTransitionIn) {
             this.transitionIn();   
@@ -123,56 +113,13 @@ export default class LobbyDot implements MenuItem {
     }
 
     /**
-     * @method isSelected
-     * @description Returns whether or not the button is selected
-     * @returns {number} - The x position of the dot
-     */
-    public isSelected(): boolean {
-        return this.selected;
-    }
-
-    /**
-     * @method setSelected
-     * @description This method is called to set the selected state of the button
-     * @param isSelected {boolean} - The selected state of the button
-     */
-    public setSelected(isSelected: boolean): void {
-        this.selected = isSelected;
-    }
-
-    /**
-     * @method getX
-     * @description Returns the x position of the dot
-     * @returns {number} - The x position of the dot
-     */
-    public getX(): number {
-        return this.x;
-    }
-
-    /**
-     * @method getY
-     * @description Returns the y position of the dot
-     * @returns {number} - The y position of the dot
-     */
-    public getY(): number {
-        return this.y;
-    }
-
-    /**
      * @method reset
      * @description Resets the dot to it's default state
      */
     public reset(): void {
-        this.selected = false;
+        this.setSelected(false);
     }
 
-    /**
-     * @method confirm
-     * @description Confirms the selected dot
-     */
-    public confirm(): void {
-        this.confirmed = true;
-    }
 
     /**
      * @method transitionIn
@@ -180,9 +127,9 @@ export default class LobbyDot implements MenuItem {
      */
     private transitionIn(): void {
         // Increase the opacity
-        this.opacity += 255 / DOT_ENTER_ANIMATION_TIME;
-        if (this.opacity >= 255) {
-            this.opacity = 255;
+        this.setOpacity(this.getOpacity() + 255 / DOT_ENTER_ANIMATION_TIME);
+        if (this.getOpacity() >= 255) {
+            this.setOpacity(255);
             this.doTransitionIn = false;
         }
     }
@@ -193,9 +140,9 @@ export default class LobbyDot implements MenuItem {
      */
     private transitionOut(): void {
         // Increase the opacity
-        this.opacity -= 255 / DOT_ENTER_ANIMATION_TIME;
-        if (this.opacity <= 0) {
-            this.opacity = 0;
+        this.setOpacity(this.getOpacity() - 255 / DOT_ENTER_ANIMATION_TIME);
+        if (this.getOpacity() <= 0) {
+            this.setOpacity(0);
             this.doTransitionOut = false;
             //Remove itself from the lobbyNav
             this.navMenu.removeItem(this);
@@ -211,11 +158,11 @@ export default class LobbyDot implements MenuItem {
         if (this.pulseInterval > 0) {
             this.pulseInterval -= 1;
         } else {
-            this.sketch.push();
-                this.sketch.stroke(255,this.pulseOpacity);
-                this.sketch.noFill();
-                this.sketch.circle(this.x, this.y, this.radius);
-            this.sketch.pop();
+            this.getSketch().push();
+                this.getSketch().stroke(255,this.pulseOpacity);
+                this.getSketch().noFill();
+                this.getSketch().circle(this.getX(), this.getY(), this.radius);
+            this.getSketch().pop();
             //Increase the radius and decrease the opacity
             this.radius += 5;
             this.pulseOpacity -= 255 / PULSE_ANIMATION_TIME;
@@ -237,60 +184,15 @@ export default class LobbyDot implements MenuItem {
      */
     private drawSelected() {
         //Draw a line from the dot to the center of the screen
-        this.sketch.push();
-            this.sketch.strokeWeight(3);
-            this.sketch.stroke(255);
-            this.sketch.line(this.x,this.y, this.boxX, this.boxY);
-            this.sketch.fill(0);
-            this.sketch.strokeWeight(2);
-        this.sketch.pop();
+        this.getSketch().push();
+            this.getSketch().strokeWeight(3);
+            this.getSketch().stroke(255);
+            this.getSketch().line(this.getX(),this.getY(), this.boxX, this.boxY);
+            this.getSketch().fill(0);
+            this.getSketch().strokeWeight(2);
+        this.getSketch().pop();
     }
     
-    /**
-     * @method setOpacity
-     * @description Sets the opacity of the lobby dot
-     * @param opacity {number} - The opacity value (0-255)
-     */
-    public setOpacity(opacity: number): void {
-        this.opacity = opacity;
-    }
-    
-    /**
-     * @method getOpacity
-     * @description Gets the opacity of the lobby dot
-     * @returns {number} - The opacity value
-     */
-    public getOpacity(): number {
-        return this.opacity;
-    }
-    
-    /**
-     * @method fade
-     * @description Reduces the opacity of the lobby dot by the specified amount
-     * @param amount {number} - The amount to reduce opacity by
-     */
-    public fade(amount: number): void {
-        this.opacity -= amount;
-        if (this.opacity < 0) this.opacity = 0;
-    }
-    
-    /**
-     * @method setX
-     * @description Sets the x-coordinate of the lobby dot
-     * @param x {number} - The new x-coordinate
-     */
-    public setX(x: number): void {
-        this.x = x;
-    }
-    
-    /**
-     * @method setY
-     * @description Sets the y-coordinate of the lobby dot
-     * @param y {number} - The new y-coordinate
-     */
-    public setY(y: number): void {
-        this.y = y;
-    }
 
     /**
      * @method activateFade

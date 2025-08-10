@@ -8,24 +8,24 @@
 
 import p5 from 'p5';
 import KeyListener, { KEY_EVENTS } from '../KeyListener';
-import MenuItem from './MenuItem'
+import BaseMenuItem from './BaseMenuItem'
 
 /**
  * @class ButtonNav
  * @description This class is used to create a button navigation system
  */
 export default class MenuNav {
-    private itemArray: MenuItem[];
-    private currentlySelected: MenuItem;
-    private itemDistances: MenuItem[][];
+    private itemArray: BaseMenuItem[];
+    private currentlySelected: BaseMenuItem;
+    private itemDistances: BaseMenuItem[][];
     private keylistener: KeyListener;
     private currentKeyEvent: KEY_EVENTS;
 
     /**
      * @constructor
-     * @param {MenuItem[]} itemArray 
+     * @param {BaseMenuItem[]} itemArray 
      */
-    constructor(itemArray: MenuItem[], sketch: p5) {
+    constructor(itemArray: BaseMenuItem[], sketch: p5) {
         //this is the array of buttons
         this.itemArray = itemArray;
         //currently selected button
@@ -40,9 +40,9 @@ export default class MenuNav {
     /**
      * @method getCurrenlySelected
      * @description This method returns the currently selected button
-     * @returns {MenuItem}
+     * @returns {BaseMenuItem}
      */
-    public getCurrentlySelected(): MenuItem
+    public getCurrentlySelected(): BaseMenuItem
     {
         return this.currentlySelected;
     } 
@@ -69,13 +69,12 @@ export default class MenuNav {
         this.currentlySelected.setSelected(true);
     }
 
-    //this function is meant to confriemd a button
     /**
      * @method confirm
      * @description This method confirms a button
      */
     public confirm(): void {
-        this.currentlySelected.confirm();
+        this.currentlySelected.setConfirmed(true);
     }
 
     //this will find the closest button given a direction
@@ -84,7 +83,7 @@ export default class MenuNav {
      * @description This method finds the closest button given a direction
      * @param {*} direction - a number in degrees
      * */
-    private findClosest(direction: number): MenuItem {
+    private findClosest(direction: number): BaseMenuItem {
         //Find the closest to the currently selected button in a given direction
         if (this.itemArray.length == 0) {
             console.warn("No items in the button navigation array.");
@@ -124,7 +123,7 @@ export default class MenuNav {
     public mapElementLocations(): void {
         this.itemDistances = Array.from({ length: this.itemArray.length }, () => Array(4).fill(0));
         for (let i = 0 ; i < this.itemArray.length; i++) {
-            let allDistancesAndDirections: { distance: number, direction: number, destination: MenuItem }[] = [];
+            let allDistancesAndDirections: { distance: number, direction: number, destination: BaseMenuItem }[] = [];
 
             // Loop through all of the items and find the closest four distances in each direction
             for (let j = 0; j < this.itemArray.length; j++) {
@@ -224,26 +223,26 @@ export default class MenuNav {
      * @description return the item at a given index
      * @param {number} index
      */
-    public getAtIndex(index: number): MenuItem {
+    public getAtIndex(index: number): BaseMenuItem {
         return this.itemArray[index];
     }
 
     /**
      * @method addItem
-     * @description This method adds an item to the MenuItem arra
-     * @param {MenuItem} item
+     * @description This method adds an item to the BaseMenuItem arra
+     * @param {BaseMenuItem} item
      */
-    public addItem(item: MenuItem): void {
+    public addItem(item: BaseMenuItem): void {
         this.itemArray.push(item);
         this.mapElementLocations();
     }
 
     /**
      * @method removeItem
-     * @description This method removes an item from the MenuItem array
-     * @param {MenuItem | number} item
+     * @description This method removes an item from the BaseMenuItem array
+     * @param {BaseMenuItem | number} item
      */
-    public removeItem(item: MenuItem | number): void {
+    public removeItem(item: BaseMenuItem | number): void {
         if (typeof item === 'number') {
             //If the parameter is a number, remove item at that index
             this.itemArray.splice(item,1);

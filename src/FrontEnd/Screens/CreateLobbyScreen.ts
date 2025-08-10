@@ -15,6 +15,8 @@ import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 import Slider from "../MenuObjects/Slider";
 import WebManager, { LobbyInfo as WebManagerLobbyInfo } from "../WebManager";
+import Field from "../MenuObjects/Field";
+import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 
 
 export default class CreateLobbyScreen implements Menu {
@@ -30,6 +32,10 @@ export default class CreateLobbyScreen implements Menu {
     private levelSizeSlider: Slider;
     private slotNumSlider: Slider;
     private playerNumSlider: Slider;
+    //Fields
+    private lobbyNameField: Field;
+    //Icon
+    private loadingIcon: LoadingSpinner;
 
     //Transition varaibles
     private transition_in_active: boolean = false;
@@ -38,7 +44,8 @@ export default class CreateLobbyScreen implements Menu {
     private transitionDuration: number = 60; // 1 second at 60fps
     private transitionComplete: boolean = false;
     private lineOpacity: number = 255;
-    private selectedButton: string = "";
+    private selectedButton: MenuButton;
+    private showLoadingIcon: boolean;
 
     constructor(sketch: p5) {
         this.sketch = sketch;
@@ -46,17 +53,24 @@ export default class CreateLobbyScreen implements Menu {
         this.webManager = WebManager.getInstance();
 
         //This is where the menu buttons will be defined
-        this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.20, "Return", 0.05, 0.2, 50*0.25, 255);
-        let createLobbyButton = new MenuButton(this.sketch, 0.5, 0.80, "Create", 0.05, 0.2, 50*0.25, 255);
-        this.levelSizeSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.35, getCanvasSize()/2, 5, 1, 9, 1, 2, "Level Size");
-        this.slotNumSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.65, getCanvasSize()/2, 5, 1, 9, 1, 3, "Slot Number");
-        this.playerNumSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.50, getCanvasSize()/2, 5, 2, 10, 1, 2, "Player Number");
-
+        this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.13, "Return", 0.05, 0.2, 50*0.25, 255);
+        let createLobbyButton = new MenuButton(this.sketch, 0.5, 0.86, "Create", 0.05, 0.2, 50*0.25, 255);
+        // Create the lobby name field with proper parameters (using relative positioning like in UsernameScreen)
+        this.lobbyNameField = new Field(this.sketch, 0.5, 0.30, 0.4, 0.08, this.keylistener, 36, "Lobby Name", getCanvasSize() * 0.025, getCanvasSize() * 0.5, getCanvasSize()*0.3-60);
+        this.lobbyNameField.setOpacity(255);
+        this.levelSizeSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.46, getCanvasSize()/2, 5, 1, 9, 1, 2, "Level Size");
+        this.slotNumSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.76, getCanvasSize()/2, 5, 1, 9, 1, 3, "Slot Number");
+        this.playerNumSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.61, getCanvasSize()/2, 5, 2, 10, 1, 2, "Player Number");
+        
+        this.loadingIcon = new LoadingSpinner(sketch, getCanvasSize() / 2, getCanvasSize() * 0.94, 40);
+        this.showLoadingIcon = false;
+        this.selectedButton = this.returnToOnlineScreen;
 
         this.lobbyNav = new MenuNav([
             this.returnToOnlineScreen,
             this.levelSizeSlider,
             this.slotNumSlider,
+            this.lobbyNameField,
             createLobbyButton,
             this.playerNumSlider
         ], this.sketch);
@@ -72,44 +86,10 @@ export default class CreateLobbyScreen implements Menu {
     {
         // Only change screen when transition is complete
         if (this.transitionTimer >= this.transitionDuration) {
-            if (this.selectedButton === 'Return') {
+            if (this.selectedButton.getText() === 'Return') {
                 GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
-            } else if (this.selectedButton == 'Create') {
-                const action = () => {
-                    this.webManager.initiateConnectionIfNotEstablished().then(connected => {
-                        if (connected) {
-                            // Generate a unique lobby name
-                            const lobbyName = `lobby_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-                            
-                            // Create a unique player ID
-                            const playerID = `player_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-                            
-                            // Create the lobby
-                            this.webManager.createLobby(
-                                lobbyName,
-                                this.playerNumSlider.getValue(),
-                                this.levelSizeSlider.getValue(),
-                                this.slotNumSlider.getValue(),
-                                playerID
-                            ).then(success => {
-                                console.log(`Lobby creation ${success ? 'successful' : 'failed'}: ${lobbyName}`);
-                                if (success) {
-                                    // Store the lobby information for later use
-                                    localStorage.setItem('currentLobby', lobbyName);
-                                    localStorage.setItem('playerID', playerID);
-                                } else {
-                                    console.error(`Lobby creation failed: ${lobbyName}`);
-                                    // Show an error message or handle the failure
-                                }
-                            }).catch(error => {
-                                console.error('Error creating lobby:', error);
-                            });
-                        } else {
-                            console.error('Failed to establish WebSocket connection');
-                        }
-                    });    
-                }
-
+            } else if (this.selectedButton.getText() == 'Create') {
+                const action = () => {};
                 const condition = () => {
                     return true;   
                 }
@@ -159,27 +139,34 @@ export default class CreateLobbyScreen implements Menu {
             this.handleTransitionOut();
         }
 
+        if (this.showLoadingIcon) {
+            this.loadingIcon.draw();
+        }
+
         // Detect any keypresses
         let keypress = this.lobbyNav.getKeyEvent();
         // Handle keypresses
         if (!this.transition_in_active && !this.transition_out_active) {
-            if (keypress === KEY_EVENTS.UP) {
-                this.lobbyNav.selectClosest(270);
-            } else if (keypress === KEY_EVENTS.RIGHT) {
-                this.lobbyNav.selectClosest(0);
-            } else if (keypress === KEY_EVENTS.DOWN) {
-                this.lobbyNav.selectClosest(90);
-            } else if (keypress === KEY_EVENTS.LEFT) {
-                this.lobbyNav.selectClosest(180);
-            } else if (keypress === KEY_EVENTS.SELECT) {
-                // Store which button was selected
-                if (this.lobbyNav.getCurrentlySelected() instanceof MenuButton) {
-                    this.selectedButton = (this.lobbyNav.getCurrentlySelected() as MenuButton).getText();
-                    this.transition_out_active = true;
+            if (!this.lobbyNameField.isInEditMode()) {
+                if (keypress === KEY_EVENTS.UP) {
+                    this.lobbyNav.selectClosest(270);
+                } else if (keypress === KEY_EVENTS.RIGHT) {
+                    this.lobbyNav.selectClosest(0);
+                } else if (keypress === KEY_EVENTS.DOWN) {
+                    this.lobbyNav.selectClosest(90);
+                } else if (keypress === KEY_EVENTS.LEFT) {
+                    this.lobbyNav.selectClosest(180);
+                } else if (keypress === KEY_EVENTS.SELECT) {
+                    // Store which button was selected
+                    if (this.lobbyNav.getCurrentlySelected() instanceof MenuButton) {
+                        this.selectedButton = (this.lobbyNav.getCurrentlySelected() as MenuButton);
+                        if (this.selectedButton.getText() === 'Create') {
+                            this.showLoadingIcon = true;
+                            this.keylistener.deactivate();
+                            setTimeout(() => this.createLobby(), 1000);
+                        }
+                    }
                 }
-                
-                this.lobbyNav.confirm();
-                this.keylistener.deactivate();
             }
         }
     }
@@ -189,4 +176,61 @@ export default class CreateLobbyScreen implements Menu {
     public resize(): void{
         
     }
+
+    private createLobby(): void {
+        // Generate a unique lobby name
+        const lobbyName = this.lobbyNameField.getText();
+        if (lobbyName == "") {
+            this.lobbyNameField.shake();
+            this.lobbyNameField.setError("The lobby name cannot be empty.");
+            this.showLoadingIcon = false;
+            this.keylistener.activate();
+            return
+        }
+
+        let playerID = localStorage.getItem("playerID") || "defaultPlayerID";
+
+        // Create the lobby
+        try { 
+        this.webManager.createLobby(
+            lobbyName,
+            this.playerNumSlider.getValue(),
+            this.levelSizeSlider.getValue(),
+            this.slotNumSlider.getValue(),
+            playerID
+        ).then(success => {
+            console.log(`Lobby creation ${success ? 'successful' : 'failed'}: ${lobbyName}`);
+            if (success) {
+                // Store the lobby information for later use
+                localStorage.setItem('currentLobby', lobbyName);
+                localStorage.setItem('playerID', playerID);
+                this.selectedButton.setConfirmed(true);
+                this.showLoadingIcon = false;
+                this.transition_out_active = true;
+            } else {
+                console.error(`Lobby creation failed: ${lobbyName}`);
+                this.lobbyNameField.shake();
+                this.lobbyNameField.setError("Lobby creation failed: API error");
+                this.showLoadingIcon = false;
+                this.keylistener.activate();
+                return;
+            }
+        }).catch(error => {
+            console.error('Error creating lobby:', error);
+            this.lobbyNameField.shake();
+            this.lobbyNameField.setError(error);
+            this.showLoadingIcon = false;
+            this.keylistener.activate();
+            return;
+        });
+        } catch(error) {
+            console.error('Error creating lobby:', error as string);
+            this.lobbyNameField.shake();
+            this.lobbyNameField.setError(error as string);
+            this.showLoadingIcon = false;
+            this.keylistener.activate();
+            return;
+        }
+    }
+    
 }

@@ -18,7 +18,7 @@ import { FRAMERATE } from "../Constants";
 import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
 import WebManager from '../WebManager'; 
 
-const LOBBY_REFRESH_TIME = 3 * FRAMERATE; // 3 seconds
+const LOBBY_REFRESH_TIME = 7 * FRAMERATE; // 3 seconds
 const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
 
 export default class MultiplayerScreen implements Menu {
@@ -94,7 +94,7 @@ export default class MultiplayerScreen implements Menu {
         //Add a third line along the left side of the screen
         this.sketch.line(getCanvasSize()/4,getCanvasSize() / 4,getCanvasSize() / 4,getCanvasSize() / 4 * 3);
 
-        // Draw all MenuItem objects
+        // Draw all BaseMenuItem objects
         this.lobbyNav.drawAll();
 
         //Lobby dot timer
@@ -151,6 +151,7 @@ export default class MultiplayerScreen implements Menu {
      * @param number {number} The number of multiplayer lobbies to search for
      */
     displayMutiplayerLobby(): void {
+        if (this.lobbyList.length <= 0) {return;}
         for (let i = 0 ; i < this.lobbyNav.getLength() ; i++) {
             if (this.lobbyNav.getAtIndex(i) instanceof LobbyDot) {
                 let lobbyDot = (this.lobbyNav.getAtIndex(i) as LobbyDot);
@@ -229,7 +230,7 @@ export default class MultiplayerScreen implements Menu {
             
             // Display detailed lobby information
             this.sketch.textSize(18);
-            this.sketch.text("ID: " + selectedLobbyInfo.lobbyID, leftPanelX, topMargin + lineHeight * 2);
+            this.sketch.text("Name: " + selectedLobbyInfo.lobbyID, leftPanelX, topMargin + lineHeight * 2);
             
             this.sketch.textSize(16);
             this.sketch.text("Status: " + selectedLobbyInfo.state, leftPanelX, topMargin + lineHeight * 3.5);

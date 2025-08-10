@@ -7,16 +7,12 @@
  */
 
 import p5 from "p5";
-import MenuItem from "./MenuItem";
+import BaseMenuItem from "./BaseMenuItem";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
 import { getCanvasSize } from "../sketch";
 
-export default class Slider implements MenuItem {
+export default class Slider extends BaseMenuItem {
 
-    private sketch:p5
-    private selected: boolean;
-    private x: number;
-    private y: number;
     private width: number;
     private strokeWidth: number;
     private maxValue: number;
@@ -25,13 +21,9 @@ export default class Slider implements MenuItem {
     private currentValue: number;
     private keylistener: KeyListener;
     private text: string;
-    private opacity: number = 255;
     
     constructor(sketch: p5, keylistener: KeyListener, x: number, y: number, width: number, strokeWidth: number, minValue: number, maxValue: number, increment: number, defaultValue?: number, text?: string) {
-        this.sketch = sketch;
-        this.selected = false;
-        this.x = x;
-        this.y = y;
+        super(sketch, x, y, 255)
         this.width = width;
         this.strokeWidth = strokeWidth;
         this.maxValue = maxValue;
@@ -43,72 +35,49 @@ export default class Slider implements MenuItem {
 
     }
 
-    // MENUITEM METHODS
-
-    public isSelected(): boolean {
-        return this.selected;
-    }
-
-    public setSelected(status: boolean): void 
-    {
-        this.selected = status;
-    }
-
     public reset() {
-        this.selected = false;
-    }
-
-    public confirm() {
-
-    }
-
-    public getX(): number {
-        return this.x;
-    }
-
-    public getY(): number {
-        return this.y;
+        this.setSelected(false);
     }
 
     public draw(keyEvent: KEY_EVENTS): void {
-        if (this.selected) {
+        if (this.isSelected()) {
             this.keylistener.enableKey([KEY_EVENTS.LEFT, KEY_EVENTS.RIGHT]);
         } 
 
-        this.sketch.push();
+        this.getSketch().push();
             //The slider should have a line drawn accross the screen of any thickness and any width
-            this.sketch.stroke(255);
-            this.sketch.strokeWeight(this.strokeWidth);
-            this.sketch.line(this.x - this.width/2, this.y, this.x + this.width/2, this.y);
+            this.getSketch().stroke(255);
+            this.getSketch().strokeWeight(this.strokeWidth);
+            this.getSketch().line(this.getX() - this.width/2, this.getY(), this.getX() + this.width/2, this.getY());
             //Draw the notches at the end of the line
-            this.sketch.fill(255);
-            this.sketch.rectMode(this.sketch.CENTER);
-            this.sketch.rect(this.x - this.width/2, this.y, this.strokeWidth, this.strokeWidth*5);
-            this.sketch.rect(this.x + this.width/2, this.y, this.strokeWidth, this.strokeWidth*5);
+            this.getSketch().fill(255);
+            this.getSketch().rectMode(this.getSketch().CENTER);
+            this.getSketch().rect(this.getX() - this.width/2, this.getY(), this.strokeWidth, this.strokeWidth*5);
+            this.getSketch().rect(this.getX() + this.width/2, this.getY(), this.strokeWidth, this.strokeWidth*5);
             //Player selection notch
-            this.sketch.rect(this.x - this.width/2 + (this.currentValue - this.minValue)*(this.width/(this.maxValue-this.minValue)) , this.y, this.strokeWidth/2, this.strokeWidth*5);
+            this.getSketch().rect(this.getX() - this.width/2 + (this.currentValue - this.minValue)*(this.width/(this.maxValue-this.minValue)) , this.getY(), this.strokeWidth/2, this.strokeWidth*5);
             //TODO: Draw a number beside the slider that shows the current value of the slider.
             //This is where the marker will be drawn for if the slider is being hovered over by the user or not.
-            if (this.selected) {
-                this.sketch.noFill();
-                this.sketch.stroke(255, 255, 255); // Yellow color for the rectangle
-                this.sketch.strokeWeight(2);
-                this.sketch.rectMode(this.sketch.CORNER);
-                this.sketch.rect(this.x - this.width/2 - this.strokeWidth - 10, this.y - this.strokeWidth * 3 - 10, this.width + this.strokeWidth * 2 + 20, this.strokeWidth * 6 + 20);
+            if (this.isSelected()) {
+                this.getSketch().noFill();
+                this.getSketch().stroke(255, 255, 255); // Yellow color for the rectangle
+                this.getSketch().strokeWeight(2);
+                this.getSketch().rectMode(this.getSketch().CORNER);
+                this.getSketch().rect(this.getX() - this.width/2 - this.strokeWidth - 10, this.getY() - this.strokeWidth * 3 - 10, this.width + this.strokeWidth * 2 + 20, this.strokeWidth * 6 + 20);
             }
             
             //Center text on top of the slider
-            this.sketch.fill(255);
-            this.sketch.strokeWeight(1);
-            this.sketch.textSize(getCanvasSize()*0.025);
-            this.sketch.text(this.text,this.x,this.y - 50);
+            this.getSketch().fill(255);
+            this.getSketch().strokeWeight(1);
+            this.getSketch().textSize(getCanvasSize()*0.025);
+            this.getSketch().text(this.text,this.getX(),this.getY() - 40);
             //Center text underneath the slider
-            this.sketch.strokeWeight(1);
-            this.sketch.text(this.currentValue,this.x, this.y + 35)
+            this.getSketch().strokeWeight(1);
+            this.getSketch().text(this.currentValue,this.getX(), this.getY() + 35)
 
-        this.sketch.pop();
+        this.getSketch().pop();
 
-        if (this.selected) {
+        if (this.isSelected()) {
             if (keyEvent === KEY_EVENTS.LEFT) {
                 this.incrementSlider(-1);
             } else if (keyEvent === KEY_EVENTS.RIGHT) {
@@ -117,21 +86,9 @@ export default class Slider implements MenuItem {
         }
         
 
-        if (this.selected) {
+        if (this.isSelected()) {
             this.keylistener.disableKey([KEY_EVENTS.LEFT, KEY_EVENTS.RIGHT]);
         }
-    }
-
-    // END OF MENUITEM METHODS
-
-    /**
-     * @method valueToDistance
-     * @description This method converts the value of the slider to a pixel distance of the notch along the slider
-     * @param value {number} - The value of the slider
-     * @returns {number} - The distance of the notch along the slider
-     */
-    private valueToDistance(value: number) {
-        return (value / this.maxValue) * this.width;
     }
 
     /**
@@ -156,51 +113,5 @@ export default class Slider implements MenuItem {
      */
     public getValue(): number {
         return this.currentValue;
-    }
-    
-    /**
-     * @method setOpacity
-     * @description Sets the opacity of the slider
-     * @param opacity {number} - The opacity value (0-255)
-     */
-    public setOpacity(opacity: number): void {
-        this.opacity = opacity;
-    }
-    
-    /**
-     * @method getOpacity
-     * @description Gets the opacity of the slider
-     * @returns {number} - The opacity value
-     */
-    public getOpacity(): number {
-        return this.opacity;
-    }
-    
-    /**
-     * @method fade
-     * @description Reduces the opacity of the slider by the specified amount
-     * @param amount {number} - The amount to reduce opacity by
-     */
-    public fade(amount: number): void {
-        this.opacity -= amount;
-        if (this.opacity < 0) this.opacity = 0;
-    }
-    
-    /**
-     * @method setX
-     * @description Sets the x-coordinate of the slider
-     * @param x {number} - The new x-coordinate
-     */
-    public setX(x: number): void {
-        this.x = x;
-    }
-    
-    /**
-     * @method setY
-     * @description Sets the y-coordinate of the slider
-     * @param y {number} - The new y-coordinate
-     */
-    public setY(y: number): void {
-        this.y = y;
     }
 }

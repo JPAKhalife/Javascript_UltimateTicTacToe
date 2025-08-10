@@ -28,8 +28,8 @@ docker container prune -f  # Remove all stopped containers
 docker volume prune -f     # Remove all unused volumes
 docker image prune -f      # Remove all dangling images
 
-# Build fresh containers without using cache
-docker-compose build --no-cache
+# Build fresh containers using cache
+docker-compose build 
 
 # Start the application
 docker-compose up
