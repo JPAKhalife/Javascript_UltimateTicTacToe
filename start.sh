@@ -1,6 +1,6 @@
 #!/bin/bash
 set -x  # Enable command echoing for debugging
-
+#lol
 #Erase the dist directory if it does exist
 rm -rf dist
 # Create dist directory
