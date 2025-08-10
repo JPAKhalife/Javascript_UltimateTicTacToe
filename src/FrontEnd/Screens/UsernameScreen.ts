@@ -16,11 +16,12 @@ import GuiManager from "../GuiManager";
 import Field from "../MenuObjects/Field";
 import { Text, Rectangle, Img } from "../ShapeWrapper";
 import WebManager from '../WebManager';
+import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 
 // Animation constants
 const ANIMATION_TIME = 60; // 1 second at 60fps
 const STROKEWEIGHT = 15;
-const LOADING_TIME = ANIMATION_TIME*2;
+const LOADING_TIME = ANIMATION_TIME * 2;
 
 export default class UsernameScreen implements Menu {
     private sketch: p5;
@@ -34,7 +35,7 @@ export default class UsernameScreen implements Menu {
     private confirmButton: MenuButton;
     private menuNav: MenuNav;
     private border: Rectangle;
-    
+
     // Animation variables
     private transitionInActive: boolean;
     private transitionOutActive: boolean;
@@ -44,12 +45,15 @@ export default class UsernameScreen implements Menu {
     private rotationAngle: number;
     private iconX: number;
     private iconY: number;
-    
+    private spinner: LoadingSpinner;
+
     constructor(sketch: p5) {
         this.sketch = sketch;
         this.keylistener = new KeyListener(sketch);
         this.webManager = WebManager.getInstance();
-        
+
+        this.spinner = new LoadingSpinner(sketch, getCanvasSize() / 4, getCanvasSize() / 2, 40);
+
         // Initialize animation variables
         this.transitionInActive = true;
         this.transitionOutActive = false;
@@ -59,48 +63,48 @@ export default class UsernameScreen implements Menu {
         this.rotationAngle = 0;
         this.iconX = 0;
         this.iconY = 0;
-        
+
         // Create border rectangle
         this.border = new Rectangle(
-            getCanvasSize() + STROKEWEIGHT, 
-            getCanvasSize() + STROKEWEIGHT, 
+            getCanvasSize() + STROKEWEIGHT,
+            getCanvasSize() + STROKEWEIGHT,
             this.sketch,
-            getCanvasSize()/2, 
-            getCanvasSize()/2
+            getCanvasSize() / 2,
+            getCanvasSize() / 2
         );
         this.border.unsetFill();
         this.border.setStrokeWeight(STROKEWEIGHT);
         this.border.setRectOrientation(this.sketch.CENTER);
         this.border.setStroke(sketch.color(255, 255, 255, 255));
-        
+
         // Create title text
         this.title = new Text(
-            "To start playing...", 
-            getCanvasSize()/2, 
-            getCanvasSize()/5, 
-            this.sketch, 
-            getCanvasSize()*0.05, 
-            fontPointless, 
+            "To start playing...",
+            getCanvasSize() / 2,
+            getCanvasSize() / 5,
+            this.sketch,
+            getCanvasSize() * 0.05,
+            fontPointless,
             this.sketch.color(255, 255, 255)
         );
         this.title.setTextOrientation(this.sketch.CENTER, this.sketch.CENTER);
         this.title.setStroke(sketch.color(255, 255, 255, this.opacity));
         this.title.setFill(sketch.color(255, 255, 255, 0));
-        
+
         // Create subtitle text
         this.subtitle = new Text(
-            "Enter your username below", 
-            getCanvasSize()/2, 
-            getCanvasSize()/3, 
-            this.sketch, 
-            getCanvasSize()*0.025, 
-            fontPointless, 
+            "Enter your username below",
+            getCanvasSize() / 2,
+            getCanvasSize() / 3,
+            this.sketch,
+            getCanvasSize() * 0.025,
+            fontPointless,
             this.sketch.color(255, 255, 255)
         );
         this.subtitle.setTextOrientation(this.sketch.CENTER, this.sketch.CENTER);
         this.subtitle.setStroke(sketch.color(255, 255, 255, this.opacity));
         this.subtitle.setFill(sketch.color(255, 255, 255, 0));
-        
+
         // Create username field
         this.usernameField = new Field(
             sketch,
@@ -113,7 +117,7 @@ export default class UsernameScreen implements Menu {
             "Username" // label
         );
         this.usernameField.setOpacity(0); // Start invisible for animation
-        
+
         // Create confirm button
         this.confirmButton = new MenuButton(
             this.sketch,
@@ -122,29 +126,29 @@ export default class UsernameScreen implements Menu {
             "Confirm", // text
             0.1, // height
             0.2, // width
-            50*0.25, // text size
+            50 * 0.25, // text size
             0 // start with 0 opacity
         );
 
         // Store the position for the loading icon
         //this.confirmButton.getX() + getCanvasSize() * 0.1
-        this.iconX = getCanvasSize()/4; // Position to the right of the button
-        this.iconY = getCanvasSize()/2;
-        
-        
+        this.iconX = getCanvasSize() / 4; // Position to the right of the button
+        this.iconY = getCanvasSize() / 2;
+
+
         // Create menu navigation
         this.menuNav = new MenuNav([
             this.usernameField,
             this.confirmButton
         ], this.sketch);
-        
+
         // Set the field as initially selected (it's the first item, index 0)
         this.menuNav.changeSelected(0);
-        
+
         // Deactivate keylistener during animation
         this.keylistener.deactivate();
     }
-    
+
     /**
      * @method transitionIn
      * @description Handles the transition in animation
@@ -159,7 +163,7 @@ export default class UsernameScreen implements Menu {
                 this.usernameField.setOpacity(this.opacity);
                 this.confirmButton.fadeIn(ANIMATION_TIME / 2);
             }
-            
+
             if (this.opacity >= 255) {
                 this.transitionInActive = false;
                 this.keylistener.activate();
@@ -172,94 +176,83 @@ export default class UsernameScreen implements Menu {
             this.border.setHeight(getCanvasSize() + STROKEWEIGHT - this.borderPos);
         }
     }
-    
+
     /**
      * @method transitionOut
      * @description Handles the transition out animation and navigation
      */
     private transitionOut(): void {
         // Note: Rotation is now handled in the draw method
-        
+
         // Fade out UI elements
         this.confirmButton.fade();
         this.usernameField.setOpacity(this.usernameField.getOpacity() - 255 / (ANIMATION_TIME / 2));
-        
+
         // Animate border expanding out
         this.borderPos -= (STROKEWEIGHT * 2) / (ANIMATION_TIME / 2);
         this.border.setWidth(getCanvasSize() + STROKEWEIGHT - this.borderPos);
         this.border.setHeight(getCanvasSize() + STROKEWEIGHT - this.borderPos);
-        
+
         // Fade out text
         this.opacity -= 255 / (ANIMATION_TIME / 2);
         this.title.setStroke(this.sketch.color(255, 255, 255, this.opacity));
         this.subtitle.setStroke(this.sketch.color(255, 255, 255, this.opacity));
-        
+
         // When animation is complete, navigate to next screen
         if (this.borderPos <= 0) {
             this.transitionOutActive = false;
             this.keylistener.activate();
-            
+
             // Store username in localStorage
             const username = this.usernameField.getText();
             localStorage.setItem('username', username);
-            
+
             //TODO: The username needs to be passed to the next screen, and also a check should be added on this screen.s
             GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
         }
     }
-    
+
     /**
      * @method draw
      * @description Draws the username screen
      */
     public draw(): void {
         this.sketch.background(0);
-        
+
         // Draw border
         this.border.render();
-        
+
         // Draw title and subtitle
         this.title.render();
         this.subtitle.render();
-        
+
         // Draw menu items (field and button)
         this.menuNav.drawAll();
-        
+
         // Draw spinning loading icon if needed - using p5's image method directly
-        
+
         if (this.showLoadingIcon) {
-            this.sketch.push();            
-            this.sketch.imageMode(this.sketch.CENTER);
-            this.sketch.translate(this.iconX, this.iconY);
-            this.sketch.rotate(this.rotationAngle);
-            this.sketch.fill(255);
-            this.sketch.tint(255,255)
-            this.sketch.image(whiteTicTac, 0, 0, 40, 40);
-            this.sketch.pop();
-            
-            // Increment rotation angle for continuous spinning
-            this.rotationAngle += 4;
+            this.spinner.draw();
         }
-        
+
         // Handle transitions
         if (this.transitionInActive) {
             this.transitionIn();
         }
-        
+
         if (this.transitionOutActive) {
             this.transitionOut();
         }
-        
+
         // Handle key events when not in transition
         if (!this.transitionInActive && !this.transitionOutActive) {
             // Get key event from menuNav
             const keypress = this.menuNav.getKeyEvent();
-            
+
             // If the field is in edit mode, pass the key event to the field
             // But don't pass ENTER key events to prevent immediate exit
             if (this.usernameField.isInEditMode()) {
                 if (keypress !== KEY_EVENTS.NONE && keypress !== KEY_EVENTS.ENTER) {
-                    console.log("Key event in edit mode:", keypress);
                     this.usernameField.draw(keypress);
                 }
             } else {
@@ -281,9 +274,9 @@ export default class UsernameScreen implements Menu {
                 }
             }
         }
-        }
-    
-    
+    }
+
+
     /**
      * @method resize
      * @description Handles resize events

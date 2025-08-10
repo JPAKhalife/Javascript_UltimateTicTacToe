@@ -230,7 +230,7 @@ export default class MultiplayerScreen implements Menu {
             
             // Display detailed lobby information
             this.sketch.textSize(18);
-            this.sketch.text("ID: " + selectedLobbyInfo.lobbyID, leftPanelX, topMargin + lineHeight * 2);
+            this.sketch.text("Name: " + selectedLobbyInfo.lobbyID, leftPanelX, topMargin + lineHeight * 2);
             
             this.sketch.textSize(16);
             this.sketch.text("Status: " + selectedLobbyInfo.state, leftPanelX, topMargin + lineHeight * 3.5);

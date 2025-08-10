@@ -33,6 +33,9 @@ export default class Field extends BaseMenuItem {
     private selectedBorderColor: number;
     private timeSinceEnter: number;
     private errorMessage: string;
+    private textSize: number;
+    private textX: number;
+    private textY: number;
     
     // Shake animation properties
     private isShaking: boolean;
@@ -48,7 +51,10 @@ export default class Field extends BaseMenuItem {
         height: number = 0.05, 
         keyListener?: KeyListener,
         maxLength: number = 30,
-        label: string = ""
+        label: string = "",
+        textSize?: number,
+        textX?: number,
+        textY?: number
     ) {
         super(sketch, x * getCanvasSize(), y * getCanvasSize(), 255);
         
@@ -66,7 +72,10 @@ export default class Field extends BaseMenuItem {
         this.fontSize = getCanvasSize() * 0.02; // 2% of canvas size
         this.padding = getCanvasSize() * 0.01; // 1% of canvas size
         this.timeSinceEnter = 0;
-        
+        this.textX = textX ? textX : this.getX();
+        this.textY = textY ? textY : (this.getY() - this.height / 2 - 5);
+        this.textSize = textSize ? textSize : this.fontSize * 0.8;
+
         // Colors (grayscale values 0-255)
         this.backgroundColor = 0;      // Black background
         this.textColor = 255;          // White text
@@ -155,13 +164,13 @@ export default class Field extends BaseMenuItem {
             sketch.stroke(this.borderColor, this.getOpacity());
             sketch.fill(this.textColor, this.getOpacity());
             sketch.textAlign(sketch.CENTER, sketch.BOTTOM);
-            sketch.textSize(this.fontSize * 0.8);
+            sketch.textSize(this.textSize);
             
             // Apply shake offset to label if shaking
             if (this.isShaking) {
-                sketch.text(this.label, this.getX() + shakeOffsetX, this.getY() - this.height/2 - 5);
+                sketch.text(this.label, this.textX + shakeOffsetX, this.textY);
             } else {
-                sketch.text(this.label, this.getX(), this.getY() - this.height/2 - 5);
+                sketch.text(this.label, this.getX(), this.textY);
             }
         }
         
