@@ -1,0 +1,64 @@
+name: Build and Start Application
+
+on:
+  - pull_request
+
+
+jobs:
+  build-and-start:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16' # Use the Node.js version your project requires
+
+      # Install dependencies
+      - name: Install Dependencies
+        run: npm install
+
+      # Clean and prepare dist directory
+      - name: Clean and Prepare dist Directory
+        run: |
+          rm -rf dist
+          mkdir -p dist/FrontEnd
+          cp ./src/FrontEnd/*.html ./dist/FrontEnd/
+          cp ./src/FrontEnd/*.css ./dist/FrontEnd/
+          cp -r ./src/FrontEnd/assets ./dist/FrontEnd/assets
+
+      # Build backend and frontend using Webpack
+      - name: Build Backend
+        run: npx webpack --config webpack-back.config.js --mode production
+
+      - name: Build Frontend
+        run: npx webpack --config webpack-front.config.js --mode production
+
+      # Set up Docker
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      # Clean up Docker resources
+      - name: Clean Up Docker Resources
+        run: |
+          docker-compose down || true
+          docker container prune -f
+          docker volume prune -f
+          docker image prune -f
+
+      # Build Docker containers
+      - name: Build Docker Containers
+        run: docker-compose build
+
+      # Start the application
+      - name: Start Application
+        run: docker-compose up -d
+
+      # Show running containers
+      - name: Show Running Containers
+        run: docker ps
