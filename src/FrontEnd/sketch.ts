@@ -114,9 +114,6 @@ const sketch = (p5: P5) => {
       getSmallestWindowSize() - getSmallestWindowSize() * WINDOW_MARGIN / 100,
       getSmallestWindowSize() - getSmallestWindowSize() * WINDOW_MARGIN / 100
     );
-    
-    // Notify the current screen of the resize
-    GuiManager.resizeScreen();
   };
 };
 
