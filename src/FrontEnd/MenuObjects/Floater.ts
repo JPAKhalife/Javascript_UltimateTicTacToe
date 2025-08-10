@@ -7,7 +7,6 @@
  */
 
 import * as p5 from 'p5';
-import { Img } from '../ShapeWrapper';
 import { getCanvasSize, getRandomInt } from '../sketch';
 import { STROKEWEIGHT } from '../Screens/SetupScreen';
 
