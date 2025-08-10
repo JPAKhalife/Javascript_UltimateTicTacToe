@@ -11,7 +11,6 @@ import {getCanvasSize, getRandomInt } from "../sketch";
 import { FRAMERATE } from "../Constants";
 import BaseMenuItem from "./BaseMenuItem";
 import MenuNav from "./MenuNav";
-import { stringify } from "querystring";
 
 //These are constants for this class
 //THe value that framerate is being multiplied by is the number of seconds.
@@ -70,24 +69,26 @@ export default class LobbyDot extends BaseMenuItem {
     private pulseInterval: number = 0;
 
     //TODO: Make a specific object for lobby info
-    constructor(sketch: p5, x: number, y: number, size: number, lifetime: number, info: LobbyInfo, menuNav: MenuNav, boxX: number, boxY: number) {
-        super(sketch, x, y, 0)
-        this.boxX = boxX;
-        this.boxY = boxY;
-        this.size = size;
+    constructor(sketch: p5, xPercent: number, yPercent: number, sizePercent: number, lifetime: number, info: LobbyInfo, menuNav: MenuNav, boxXPercent: number, boxYPercent: number) {
+        super(sketch, xPercent, yPercent, 0)
+        this.boxX = boxXPercent;
+        this.boxY = boxYPercent;
+        this.size = sizePercent;
         this.info = info;
         this.doTransitionIn = true;
         this.lifeTime = lifetime;
         this.navMenu = menuNav;
     }
 
-    public draw(): void 
+    public draw(currentCanvasSize?: number): void 
     {
+        const canvasSize = currentCanvasSize || getCanvasSize();
+        
         //Draw the point on the x or y
         this.getSketch().push();
             this.getSketch().stroke(255,this.getOpacity());
-            this.getSketch().strokeWeight(this.size);
-            this.getSketch().point(this.getX(), this.getY());
+            this.getSketch().strokeWeight(this.size * canvasSize);
+            this.getSketch().point(this.getX(canvasSize), this.getY(canvasSize));
         this.getSketch().pop();
 
         if (this.doTransitionIn) {
@@ -95,12 +96,12 @@ export default class LobbyDot extends BaseMenuItem {
         } else if (this.doTransitionOut && !this.isSelected()) { 
             this.transitionOut();
         } else {
-            this.pulse();
+            this.pulse(canvasSize);
         }
 
         //This is the part that draws the info displayer on the menu.
         if (this.isSelected()) {
-            this.drawSelected();
+            this.drawSelected(canvasSize);
         }
 
         if (this.lifeTime <= 0) {
@@ -152,8 +153,9 @@ export default class LobbyDot extends BaseMenuItem {
     /**
      * @method pulse
      * @description This method creates a pulse around the dot - a circle that expands and fades out
+     * @param currentCanvasSize The current canvas size
      */
-    private pulse(): void{
+    private pulse(currentCanvasSize: number): void{
         
         if (this.pulseInterval > 0) {
             this.pulseInterval -= 1;
@@ -161,7 +163,7 @@ export default class LobbyDot extends BaseMenuItem {
             this.getSketch().push();
                 this.getSketch().stroke(255,this.pulseOpacity);
                 this.getSketch().noFill();
-                this.getSketch().circle(this.getX(), this.getY(), this.radius);
+                this.getSketch().circle(this.getX(currentCanvasSize), this.getY(currentCanvasSize), this.radius);
             this.getSketch().pop();
             //Increase the radius and decrease the opacity
             this.radius += 5;
@@ -179,15 +181,15 @@ export default class LobbyDot extends BaseMenuItem {
 
     /**
      * @method drawSelected
-     * @description This method is activated when the a
-     * @param
+     * @description This method is activated when the dot is selected
+     * @param currentCanvasSize The current canvas size
      */
-    private drawSelected() {
+    private drawSelected(currentCanvasSize: number) {
         //Draw a line from the dot to the center of the screen
         this.getSketch().push();
             this.getSketch().strokeWeight(3);
             this.getSketch().stroke(255);
-            this.getSketch().line(this.getX(),this.getY(), this.boxX, this.boxY);
+            this.getSketch().line(this.getX(currentCanvasSize), this.getY(currentCanvasSize), this.boxX * currentCanvasSize, this.boxY * currentCanvasSize);
             this.getSketch().fill(0);
             this.getSketch().strokeWeight(2);
         this.getSketch().pop();

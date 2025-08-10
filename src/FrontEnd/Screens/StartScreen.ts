@@ -25,23 +25,9 @@ export default class StartScreen implements Menu {
     private authorText: string;
     private startMessageText: string;
     
-    // Position properties
-    private titleX: number;
-    private titleY: number;
-    private authorX: number;
-    private authorY: number;
-    private startMessageX: number;
-    private startMessageY: number;
+    private animOffset: number;
     
-    // Text size properties
-    private titleSize: number;
-    private authorSize: number;
-    private startMessageSize: number;
-    
-    // Color properties
-    private titleColor: p5.Color;
-    private authorColor: p5.Color;
-    private startMessageColor: p5.Color;
+    // Alpha value for start message - needed for animation
     private startMessageAlpha: number;
     
     private s: number;
@@ -58,24 +44,9 @@ export default class StartScreen implements Menu {
         this.titleText = HEADER.START_SCREEN_TITLE;
         this.authorText = HEADER.START_SCREEN_AUTHOR;
         this.startMessageText = HEADER.START_SCREEN_MESSAGE;
+        this.animOffset = 0;
         
-        // Set positions
-        this.titleX = getCanvasSize()/2;
-        this.titleY = getCanvasSize()/5;
-        this.authorX = getCanvasSize()/2;
-        this.authorY = getCanvasSize()/10*3;
-        this.startMessageX = getCanvasSize()/2;
-        this.startMessageY = getCanvasSize()/2;
-        
-        // Set text sizes
-        this.titleSize = getCanvasSize()*0.05;
-        this.authorSize = getCanvasSize()*0.05;
-        this.startMessageSize = getCanvasSize()*0.05;
-        
-        // Set colors
-        this.titleColor = sketch.color(255, 255, 255);
-        this.authorColor = sketch.color(127, 127, 127);
-        this.startMessageColor = sketch.color(200, 200, 200);
+        // Set alpha for start message
         this.startMessageAlpha = 255;
 
         //This is a variable to keep track of the sin function.
@@ -87,30 +58,31 @@ export default class StartScreen implements Menu {
 
         // Set text properties and render title
         this.sketch.textFont(fontPointless);
-        this.sketch.textSize(this.titleSize);
+        this.sketch.textSize(getCanvasSize()*0.05);
         this.sketch.textAlign(this.sketch.CENTER, this.sketch.CENTER);
         this.sketch.angleMode(this.sketch.RADIANS);
-        this.sketch.fill(this.titleColor);
-        this.sketch.text(this.titleText, this.titleX, this.titleY);
+        this.sketch.fill(this.sketch.color(255, 255, 255));
+        this.sketch.text(this.titleText, getCanvasSize() / 2, getCanvasSize() / 5 + this.animOffset); 
         
         // Render author
         this.sketch.textFont(fontAldoApache);
-        this.sketch.textSize(this.authorSize);
-        this.sketch.fill(this.authorColor);
-        this.sketch.text(this.authorText, this.authorX, this.authorY);
+        this.sketch.textSize(getCanvasSize()*0.05);
+        this.sketch.fill(this.sketch.color(127, 127, 127)); 
+        this.sketch.text(this.authorText, getCanvasSize() / 2, getCanvasSize() / 10 * 3 + this.animOffset); 
         
         // Render start message
         this.sketch.textFont(fontSquareo);
-        this.sketch.textSize(this.startMessageSize);
-        this.sketch.fill(this.startMessageColor);
+        this.sketch.textSize(getCanvasSize()*0.05); 
+        const startMessageColor = this.sketch.color(200, 200, 200);
+        this.sketch.fill(startMessageColor);
         // Apply alpha to the start message
         this.sketch.fill(
-            this.sketch.red(this.startMessageColor),
-            this.sketch.green(this.startMessageColor),
-            this.sketch.blue(this.startMessageColor),
+            this.sketch.red(startMessageColor),
+            this.sketch.green(startMessageColor),
+            this.sketch.blue(startMessageColor),
             this.startMessageAlpha
         );
-        this.sketch.text(this.startMessageText, this.startMessageX, this.startMessageY);
+        this.sketch.text(this.startMessageText, getCanvasSize() / 2, getCanvasSize() / 2 + this.animOffset); 
     
         //Check for animation conditions and run animation if active
         this.checkAnimationConditions();
@@ -126,7 +98,7 @@ export default class StartScreen implements Menu {
         if ((this.keylistener.listen() == KEY_EVENTS.SELECT) && (!StartScreen.isPlaying)) {
             this.activateAnimation();
             this.keylistener.deactivate();
-        } else if (this.startMessageY < getCanvasSize() * -1) {
+        } else if ((getCanvasSize() / 2 + this.animOffset) < getCanvasSize() * -1) {
             this.deactivateAnimation();
             GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
         } else {
@@ -155,20 +127,11 @@ export default class StartScreen implements Menu {
      */
     private runAnimation(): void {
         // Calculate the animation offset
-        const animOffset = getCanvasSize() * this.sketch.sin((this.animationCounter + (100 * this.sketch.asin(3/4) + 200 * this.sketch.PI)) / 100) - getCanvasSize() / 4 * 3;
-        
-        // Set the y of all three titles - they all move at the same speed
-        this.titleY = getCanvasSize() / 5 + animOffset;
-        this.authorY = getCanvasSize() / 10 * 3 + animOffset;
-        this.startMessageY = getCanvasSize() / 2 + animOffset;
+        this.animOffset = getCanvasSize() * this.sketch.sin((this.animationCounter + (100 * this.sketch.asin(3/4) + 200 * this.sketch.PI)) / 100) - getCanvasSize() / 4 * 3;
         
         this.animationCounter += 2;
         
         // Increase the flashing of the bottom titles
         this.startMessageAlpha = 128 * this.sketch.sin(this.sketch.millis() / 50);
-    }
-
-    public resize(): void {
-
     }
 }

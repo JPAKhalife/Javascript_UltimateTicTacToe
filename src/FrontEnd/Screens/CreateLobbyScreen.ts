@@ -53,16 +53,16 @@ export default class CreateLobbyScreen implements Menu {
         this.webManager = WebManager.getInstance();
 
         //This is where the menu buttons will be defined
-        this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.13, "Return", 0.05, 0.2, 50*0.25, 255);
-        let createLobbyButton = new MenuButton(this.sketch, 0.5, 0.86, "Create", 0.05, 0.2, 50*0.25, 255);
-        // Create the lobby name field with proper parameters (using relative positioning like in UsernameScreen)
-        this.lobbyNameField = new Field(this.sketch, 0.5, 0.30, 0.4, 0.08, this.keylistener, 36, "Lobby Name", getCanvasSize() * 0.025, getCanvasSize() * 0.5, getCanvasSize()*0.3-60);
+        this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.13, "Return", 0.05, 0.2, 0.015, 255);
+        let createLobbyButton = new MenuButton(this.sketch, 0.5, 0.86, "Create", 0.05, 0.2, 0.015, 255);
+        // Create the lobby name field with proper parameters (using percentage-based positioning)
+        this.lobbyNameField = new Field(this.sketch, 0.5, 0.30, 0.4, 0.08, this.keylistener, 36, "Lobby Name", 0.025, 0.5, 0.24);
         this.lobbyNameField.setOpacity(255);
-        this.levelSizeSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.46, getCanvasSize()/2, 5, 1, 9, 1, 2, "Level Size");
-        this.slotNumSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.76, getCanvasSize()/2, 5, 1, 9, 1, 3, "Slot Number");
-        this.playerNumSlider = new Slider(this.sketch, this.keylistener, getCanvasSize()/2, getCanvasSize() * 0.61, getCanvasSize()/2, 5, 2, 10, 1, 2, "Player Number");
+        this.levelSizeSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.46, 0.5, 0.005, 1, 9, 1, 2, "Level Size");
+        this.slotNumSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.76, 0.5, 0.005, 1, 9, 1, 3, "Slot Number");
+        this.playerNumSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.61, 0.5, 0.005, 2, 10, 1, 2, "Player Number");
         
-        this.loadingIcon = new LoadingSpinner(sketch, getCanvasSize() / 2, getCanvasSize() * 0.94, 40);
+        this.loadingIcon = new LoadingSpinner(sketch, 0.5, 0.94, 0.04);
         this.showLoadingIcon = false;
         this.selectedButton = this.returnToOnlineScreen;
 
@@ -122,12 +122,14 @@ export default class CreateLobbyScreen implements Menu {
     {
         this.sketch.background(0);
 
-        //Add two lines along the top and bottom of the screen
+        //Add two lines along the left and right sides of the screen
         this.sketch.push();
             this.sketch.stroke(255, this.lineOpacity);
             this.sketch.strokeWeight(5);
-            this.sketch.line(getCanvasSize()/5, 0, getCanvasSize()/5, getCanvasSize());
-            this.sketch.line(getCanvasSize()/5*4, 0, getCanvasSize()/5*4, getCanvasSize());
+            const canvasSize = getCanvasSize();
+            // Use percentages for line positions (0.2 and 0.8)
+            this.sketch.line(canvasSize * 0.2, 0, canvasSize * 0.2, canvasSize);
+            this.sketch.line(canvasSize * 0.8, 0, canvasSize * 0.8, canvasSize);
         this.sketch.pop();
 
         // Draw the buttons for options
@@ -169,12 +171,6 @@ export default class CreateLobbyScreen implements Menu {
                 }
             }
         }
-    }
-
-
-
-    public resize(): void{
-        
     }
 
     private createLobby(): void {

@@ -14,7 +14,6 @@ import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 import Field from "../MenuObjects/Field";
-import { Text, Rectangle, Img } from "../ShapeWrapper";
 import WebManager from '../WebManager';
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 
@@ -29,12 +28,11 @@ export default class UsernameScreen implements Menu {
     private webManager: WebManager;
 
     // UI Elements
-    private title: Text;
-    private subtitle: Text;
     private usernameField: Field;
     private confirmButton: MenuButton;
     private menuNav: MenuNav;
-    private border: Rectangle;
+    private spinner: LoadingSpinner;
+
 
     // Animation variables
     private transitionInActive: boolean;
@@ -42,17 +40,14 @@ export default class UsernameScreen implements Menu {
     private opacity: number;
     private borderPos: number;
     private showLoadingIcon: boolean;
-    private rotationAngle: number;
-    private iconX: number;
-    private iconY: number;
-    private spinner: LoadingSpinner;
 
     constructor(sketch: p5) {
         this.sketch = sketch;
         this.keylistener = new KeyListener(sketch);
         this.webManager = WebManager.getInstance();
 
-        this.spinner = new LoadingSpinner(sketch, getCanvasSize() / 4, getCanvasSize() / 2, 40);
+        this.spinner = new LoadingSpinner(sketch, 0.25, 0.5, 0.04);
+
 
         // Initialize animation variables
         this.transitionInActive = true;
@@ -60,50 +55,6 @@ export default class UsernameScreen implements Menu {
         this.opacity = 0;
         this.borderPos = 0;
         this.showLoadingIcon = false;
-        this.rotationAngle = 0;
-        this.iconX = 0;
-        this.iconY = 0;
-
-        // Create border rectangle
-        this.border = new Rectangle(
-            getCanvasSize() + STROKEWEIGHT,
-            getCanvasSize() + STROKEWEIGHT,
-            this.sketch,
-            getCanvasSize() / 2,
-            getCanvasSize() / 2
-        );
-        this.border.unsetFill();
-        this.border.setStrokeWeight(STROKEWEIGHT);
-        this.border.setRectOrientation(this.sketch.CENTER);
-        this.border.setStroke(sketch.color(255, 255, 255, 255));
-
-        // Create title text
-        this.title = new Text(
-            "To start playing...",
-            getCanvasSize() / 2,
-            getCanvasSize() / 5,
-            this.sketch,
-            getCanvasSize() * 0.05,
-            fontPointless,
-            this.sketch.color(255, 255, 255)
-        );
-        this.title.setTextOrientation(this.sketch.CENTER, this.sketch.CENTER);
-        this.title.setStroke(sketch.color(255, 255, 255, this.opacity));
-        this.title.setFill(sketch.color(255, 255, 255, 0));
-
-        // Create subtitle text
-        this.subtitle = new Text(
-            "Enter your username below",
-            getCanvasSize() / 2,
-            getCanvasSize() / 3,
-            this.sketch,
-            getCanvasSize() * 0.025,
-            fontPointless,
-            this.sketch.color(255, 255, 255)
-        );
-        this.subtitle.setTextOrientation(this.sketch.CENTER, this.sketch.CENTER);
-        this.subtitle.setStroke(sketch.color(255, 255, 255, this.opacity));
-        this.subtitle.setFill(sketch.color(255, 255, 255, 0));
 
         // Create username field
         this.usernameField = new Field(
@@ -126,15 +77,9 @@ export default class UsernameScreen implements Menu {
             "Confirm", // text
             0.1, // height
             0.2, // width
-            50 * 0.25, // text size
+            0.020, // text size
             0 // start with 0 opacity
         );
-
-        // Store the position for the loading icon
-        //this.confirmButton.getX() + getCanvasSize() * 0.1
-        this.iconX = getCanvasSize() / 4; // Position to the right of the button
-        this.iconY = getCanvasSize() / 2;
-
 
         // Create menu navigation
         this.menuNav = new MenuNav([
@@ -158,8 +103,6 @@ export default class UsernameScreen implements Menu {
             // Fade in UI elements after border animation
             if (this.opacity < 255) {
                 this.opacity = Math.min(this.opacity + 255 / (ANIMATION_TIME / 2), 255);
-                this.title.setStroke(this.sketch.color(255, 255, 255, this.opacity));
-                this.subtitle.setStroke(this.sketch.color(255, 255, 255, this.opacity));
                 this.usernameField.setOpacity(this.opacity);
                 this.confirmButton.fadeIn(ANIMATION_TIME / 2);
             }
@@ -172,8 +115,6 @@ export default class UsernameScreen implements Menu {
         } else {
             // Animate border shrinking in
             this.borderPos += (STROKEWEIGHT * 2) / (ANIMATION_TIME / 2);
-            this.border.setWidth(getCanvasSize() + STROKEWEIGHT - this.borderPos);
-            this.border.setHeight(getCanvasSize() + STROKEWEIGHT - this.borderPos);
         }
     }
 
@@ -182,21 +123,15 @@ export default class UsernameScreen implements Menu {
      * @description Handles the transition out animation and navigation
      */
     private transitionOut(): void {
-        // Note: Rotation is now handled in the draw method
-
         // Fade out UI elements
         this.confirmButton.fade();
         this.usernameField.setOpacity(this.usernameField.getOpacity() - 255 / (ANIMATION_TIME / 2));
 
         // Animate border expanding out
         this.borderPos -= (STROKEWEIGHT * 2) / (ANIMATION_TIME / 2);
-        this.border.setWidth(getCanvasSize() + STROKEWEIGHT - this.borderPos);
-        this.border.setHeight(getCanvasSize() + STROKEWEIGHT - this.borderPos);
 
         // Fade out text
         this.opacity -= 255 / (ANIMATION_TIME / 2);
-        this.title.setStroke(this.sketch.color(255, 255, 255, this.opacity));
-        this.subtitle.setStroke(this.sketch.color(255, 255, 255, this.opacity));
 
         // When animation is complete, navigate to next screen
         if (this.borderPos <= 0) {
@@ -220,17 +155,40 @@ export default class UsernameScreen implements Menu {
         this.sketch.background(0);
 
         // Draw border
-        this.border.render();
+        this.sketch.push();
+        this.sketch.rectMode(this.sketch.CENTER);
+        this.sketch.noFill();
+        this.sketch.stroke(255, 255, 255, this.opacity);
+        this.sketch.strokeWeight(STROKEWEIGHT);
+        this.sketch.rect(
+            getCanvasSize() / 2,
+            getCanvasSize() / 2,
+            getCanvasSize() + STROKEWEIGHT - this.borderPos,
+            getCanvasSize() + STROKEWEIGHT - this.borderPos
+        );
+        this.sketch.pop();
 
-        // Draw title and subtitle
-        this.title.render();
-        this.subtitle.render();
+        // Draw title and subtitle with stroke
+        this.sketch.push();
+        this.sketch.textFont(fontPointless);
+        this.sketch.textAlign(this.sketch.CENTER, this.sketch.CENTER);
+        this.sketch.stroke(255, 255, 255, this.opacity);
+        this.sketch.fill(255, 255, 255, 0);
+        this.sketch.strokeWeight(1); // Ensure text stroke is visible
+
+        // Draw title
+        this.sketch.textSize(getCanvasSize() * 0.05);
+        this.sketch.text("To start playing...", getCanvasSize() / 2, getCanvasSize() / 5);
+
+        // Draw subtitle
+        this.sketch.textSize(getCanvasSize() * 0.025);
+        this.sketch.text("Enter your username below", getCanvasSize() / 2, getCanvasSize() / 3);
+        this.sketch.pop();
 
         // Draw menu items (field and button)
         this.menuNav.drawAll();
 
-        // Draw spinning loading icon if needed - using p5's image method directly
-
+        // Draw spinning loading icon if needed
         if (this.showLoadingIcon) {
             this.spinner.draw();
         }
@@ -253,7 +211,8 @@ export default class UsernameScreen implements Menu {
             // But don't pass ENTER key events to prevent immediate exit
             if (this.usernameField.isInEditMode()) {
                 if (keypress !== KEY_EVENTS.NONE && keypress !== KEY_EVENTS.ENTER) {
-                    this.usernameField.draw(keypress);
+                    const canvasSize = getCanvasSize();
+                    this.usernameField.draw(canvasSize, keypress);
                 }
             } else {
                 // Normal navigation when not in edit mode
@@ -269,6 +228,7 @@ export default class UsernameScreen implements Menu {
                     // If the confirm button is selected
                     if (this.menuNav.getCurrentlySelected() === this.confirmButton) {
                         this.showLoadingIcon = true; // Ensure icon is shown immediately when button is pressed
+                        this.webManager.initiateConnectionIfNotEstablished();
                         setTimeout(() => this.checkUsername(), 1000);
                     }
                 }
@@ -276,17 +236,9 @@ export default class UsernameScreen implements Menu {
         }
     }
 
-
-    /**
-     * @method resize
-     * @description Handles resize events
-     */
-    public resize(): void {
-        // Update positions and sizes if needed
-    }
-
     private checkUsername(): void {
         if (this.usernameField.getText() == "") {
+            this.usernameField.setError("Please enter a username");
             this.usernameField.shake();
             this.showLoadingIcon = false;
             return;
