@@ -97,7 +97,7 @@ const sketch = (p5: P5) => {
     GuiManager.addScreen(MultiplayerScreen, Screens.MULTIPLAYER_SCREEN);
     GuiManager.addScreen(CreateLobbyScreen, Screens.CREATE_LOBBY_SCREEN);
     GuiManager.addScreen(UsernameScreen, Screens.USERNAME_SCREEN);
-    GuiManager.changeScreen(Screens.SETUP_SCREEN, p5);
+    GuiManager.changeScreen(Screens.CONTROL_SCREEN, p5);
     p5.background(255);
   };
 
@@ -105,6 +105,18 @@ const sketch = (p5: P5) => {
   p5.draw = () => {
     p5.fill(255);
     GuiManager.drawScreen();
+  };
+
+  // Handle window resize events
+  p5.windowResized = () => {
+    // Resize the canvas based on the new window dimensions
+    p5.resizeCanvas(
+      getSmallestWindowSize() - getSmallestWindowSize() * WINDOW_MARGIN / 100,
+      getSmallestWindowSize() - getSmallestWindowSize() * WINDOW_MARGIN / 100
+    );
+    
+    // Notify the current screen of the resize
+    GuiManager.resizeScreen();
   };
 };
 
