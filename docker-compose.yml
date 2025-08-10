@@ -1,8 +1,9 @@
 # Specifies the version of the Compose file format.
-version: '3'
+version: '3.8'
+
 # This header is meant for all of the containers that will be running
 services:
-#This is for the redis database
+  # This is for the Redis database
   db:
     container_name: tictacdb
     image: redis/redis-stack:latest
@@ -21,10 +22,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: on-failure:3
+    restart: on-failure
     depends_on:
       db:
         condition: service_healthy
-        restart: true     
     ports:
-      - 3000:3000
+      - "3000:3000"
