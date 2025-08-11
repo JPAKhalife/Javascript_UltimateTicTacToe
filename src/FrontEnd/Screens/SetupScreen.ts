@@ -12,8 +12,7 @@ import GuiManager from "../GuiManager";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
 import Menu, { Screens } from "../Menu"
 import MenuNav from "../MenuObjects/MenuNav";
-import {MenuButton} from "../MenuObjects/MenuButton";
-import {Text, Rectangle } from "../ShapeWrapper";
+import { MenuButton } from "../MenuObjects/MenuButton";
 import { whiteTicTac, getCanvasSize, HEADER, fontPointless } from "../sketch";
 import WebManager from "../WebManager";
 
@@ -27,8 +26,6 @@ export default class SetupScreen implements Menu {
     private floater_array: Floater[]
     private opacity: number;
     private border_pos: number;
-    private border: Rectangle;
-    private title: Text;
     private multiplayer_MenuButton_list: MenuNav;
     private transition_in_active: boolean;
     private transition_out_active: boolean;
@@ -40,34 +37,22 @@ export default class SetupScreen implements Menu {
         // Create floaters for the setup screen
         this.floater_array = new Array<Floater>(4);
         for (let i = 0; i < 4; i++) {
-            this.floater_array[i] = new Floater(this.sketch, whiteTicTac, 50, 50);
+            // Use smaller percentage values (5% of canvas size) instead of fixed pixel values
+            this.floater_array[i] = new Floater(this.sketch, whiteTicTac, 0.05, 0.05);
             this.floater_array[i].setOpacity(0);
             this.floater_array[i].init();
         }
-        
+
         // Opacity and border position
         this.opacity = 0;
         this.border_pos = 0;
 
-        // Border rectangle
-        this.border = new Rectangle(getCanvasSize() + STROKEWEIGHT, getCanvasSize() + STROKEWEIGHT, this.sketch,getCanvasSize()/2, getCanvasSize()/2 );
-        this.border.unsetFill();
-        this.border.setStrokeWeight(STROKEWEIGHT);
-        this.border.setRectOrientation(this.sketch.CENTER);
-        this.border.setStroke(sketch.color(255, 255, 255, 255));
-
-        // This is the text for the title
-        this.title = new Text(HEADER.SETUP_SCREEN_TITLE, getCanvasSize()/2, getCanvasSize()/5, this.sketch, getCanvasSize()*0.05, fontPointless, this.sketch.color(255, 255, 255));
-        this.title.setTextOrientation(this.sketch.CENTER, this.sketch.CENTER);
-        this.title.setStroke(sketch.color(255, 255, 255, this.opacity));
-        this.title.setFill(sketch.color(255, 255, 255, 0));
-
         // Here are the buttons for the setup screen
         this.multiplayer_MenuButton_list = new MenuNav([
-            new MenuButton(this.sketch, 0.5, 0.4, "Local", 0.1, 0.1, 50*0.25, 0),
-            new MenuButton(this.sketch, 0.80, 0.85, "How to play", 0.05, 0.15, 50*0.25, 0),
-            new MenuButton(this.sketch, 0.20, 0.85, "Controls", 0.05, 0.15, 50*0.25, 0),
-            new MenuButton(this.sketch, 0.5, 0.6, "Online", 0.1, 0.1, 50*0.25, 0)
+            new MenuButton(this.sketch, 0.5, 0.4, "Local", 0.1, 0.1, 0.015, 0),
+            new MenuButton(this.sketch, 0.80, 0.85, "How to play", 0.05, 0.15, 0.015, 0),
+            new MenuButton(this.sketch, 0.20, 0.85, "Controls", 0.05, 0.15, 0.015, 0),
+            new MenuButton(this.sketch, 0.5, 0.6, "Online", 0.1, 0.1, 0.015, 0)
         ], this.sketch);
 
         this.transition_in_active = true;
@@ -85,7 +70,6 @@ export default class SetupScreen implements Menu {
             }
             if (this.opacity < 255) {
                 this.opacity = Math.min(this.opacity + 255 / (SETUP_SCREEN_ANIMATION_TIME / 3 * 2), 255);
-                this.title.setStroke(this.sketch.color(255, 255, 255, this.opacity));
             }
             if (this.opacity >= 255) {
                 for (let i = 0; i < this.floater_array.length; i++) {
@@ -99,24 +83,19 @@ export default class SetupScreen implements Menu {
 
         } else {
             this.border_pos += (STROKEWEIGHT * 2) / (SETUP_SCREEN_ANIMATION_TIME / 3);
-            this.border.setWidth(getCanvasSize() + STROKEWEIGHT - this.border_pos);
-            this.border.setHeight(getCanvasSize() + STROKEWEIGHT - this.border_pos);
         }
     }
 
     private transitionOut(): void {
         for (let i = 0; i < this.multiplayer_MenuButton_list.getLength(); i++) {
             if (this.multiplayer_MenuButton_list.getAtIndex(i) !== this.multiplayer_MenuButton_list.getCurrentlySelected()) {
-                (this.multiplayer_MenuButton_list.getAtIndex(i) as MenuButton).fade ();
+                (this.multiplayer_MenuButton_list.getAtIndex(i) as MenuButton).fade();
             }
         }
         for (let i = 0; i < this.floater_array.length; i++) {
             this.floater_array[i].fadeOut(MenuButton.CONFIRMED_ANIMATION_TIME / 4);
         }
         this.border_pos -= (STROKEWEIGHT * 2) / (MenuButton.CONFIRMED_ANIMATION_TIME / 4);
-        this.border.setWidth(getCanvasSize() + STROKEWEIGHT - this.border_pos);
-        this.border.setHeight(getCanvasSize() + STROKEWEIGHT - this.border_pos);
-        this.title.setStroke(this.sketch.color(255, 255, 255, this.border_pos));
         this.opacity -= 255 / (MenuButton.CONFIRMED_ANIMATION_TIME / 4);
 
         if (this.border_pos <= 0) {
@@ -132,11 +111,11 @@ export default class SetupScreen implements Menu {
                     return WebManager.getInstance().isConnected();
                 };
                 GuiManager.changeScreen(
-                    Screens.LOADING_SCREEN, 
-                    this.sketch, 
-                    Screens.USERNAME_SCREEN, 
-                    "Connecting to Server", 
-                    loadingAction, 
+                    Screens.LOADING_SCREEN,
+                    this.sketch,
+                    Screens.USERNAME_SCREEN,
+                    "Connecting to Server",
+                    loadingAction,
                     proceedCondition
                 );
             } else if (selectedPhrase === 'Local') {
@@ -154,23 +133,41 @@ export default class SetupScreen implements Menu {
     public draw(): void {
         this.sketch.background(0);
 
-        // Draw the border
-        this.border.render();
-    
+        // Draw the border directly with p5.js functions
+        this.sketch.push();
+        this.sketch.rectMode(this.sketch.CENTER);
+        this.sketch.noFill();
+        this.sketch.strokeWeight(STROKEWEIGHT);
+        this.sketch.stroke(255, 255, 255, 255);
+        this.sketch.rect(
+            getCanvasSize() / 2,
+            getCanvasSize() / 2,
+            getCanvasSize() + STROKEWEIGHT - this.border_pos,
+            getCanvasSize() + STROKEWEIGHT - this.border_pos
+        );
+        this.sketch.pop();
+
         // Render out buttons
         this.multiplayer_MenuButton_list.drawAll();
-    
+
         // Render our floaters
         for (let i = 0; i < this.floater_array.length; i++) {
             this.floater_array[i].draw();
         }
-    
-        // Render our title
-        this.title.render();
-    
+
+        // Render the title directly with p5.js functions
+        this.sketch.push();
+        this.sketch.textFont(fontPointless);
+        this.sketch.textSize(getCanvasSize() * 0.05);
+        this.sketch.textAlign(this.sketch.CENTER, this.sketch.CENTER);
+        this.sketch.stroke(255, 255, 255, this.opacity);
+        this.sketch.fill(255, 255, 255, 0);
+        this.sketch.text(HEADER.SETUP_SCREEN_TITLE, getCanvasSize() / 2, getCanvasSize() / 5);
+        this.sketch.pop();
+
         // Detect any keypresses
         let keypress = this.multiplayer_MenuButton_list.getKeyEvent();
-    
+
         // Detect for our entry and exit animations
         if (this.transition_in_active) {
             this.transitionIn();
@@ -178,7 +175,7 @@ export default class SetupScreen implements Menu {
         if (this.transition_out_active) {
             this.transitionOut();
         }
-    
+
         // Handle keypresses
         if (!this.transition_in_active && !this.transition_out_active) {
             if (keypress === KEY_EVENTS.UP) {
@@ -196,9 +193,5 @@ export default class SetupScreen implements Menu {
                 this.keylistener.deactivate();
             }
         }
-    }
-
-    public resize(): void {
-        // Handle resize logic if needed
     }
 }

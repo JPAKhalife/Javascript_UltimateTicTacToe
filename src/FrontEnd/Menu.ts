@@ -26,6 +26,4 @@ export enum Screens {
 export default interface Menu {
     //Each Menu will need a draw funciton
     draw(): void;
-    //Each Menu will need a resize function
-    resize(): void;
 }

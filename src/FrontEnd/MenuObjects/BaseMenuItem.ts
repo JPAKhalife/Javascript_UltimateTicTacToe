@@ -8,6 +8,7 @@
 
 import p5 from "p5";
 import { KEY_EVENTS } from "../KeyListener";
+import { getCanvasSize } from "../sketch";
 
 export default abstract class BaseMenuItem {
 
@@ -15,15 +16,15 @@ export default abstract class BaseMenuItem {
     //typical members
     private selected: boolean;
     private confirmed: boolean;
-    private x: number;
-    private y: number;
+    private xPercent: number;
+    private yPercent: number;
     private opacity: number;
     private sketch: p5
 
-    constructor(sketch: p5, x: number, y: number, opacity: number) {
+    constructor(sketch: p5, xPercent: number, yPercent: number, opacity: number) {
         this.sketch = sketch;
-        this.x = x;
-        this.y = y;
+        this.xPercent = xPercent;
+        this.yPercent = yPercent;
         this.opacity = opacity
         this.selected = false;
         this.confirmed = false;
@@ -49,38 +50,60 @@ export default abstract class BaseMenuItem {
 
     /**
     * @method setX
-    * @description Sets the x-coordinate of the BaseMenuItem
-    * @param x {number} - The new x-coordinate
+    * @description Sets the x-coordinate percentage of the BaseMenuItem
+    * @param xPercent {number} - The new x-coordinate percentage (0-1)
     */
-    public setX(x: number): void {
-        this.x = x;
+    public setX(xPercent: number): void {
+        this.xPercent = xPercent;
     }
     
     /**
     * @method setY
-    * @description Sets the y-coordinate of the BaseMenuItem
-    * @param y {number} - The new y-coordinate
+    * @description Sets the y-coordinate percentage of the BaseMenuItem
+    * @param yPercent {number} - The new y-coordinate percentage (0-1)
     */
-    public setY(y: number): void {
-        this.y = y;
+    public setY(yPercent: number): void {
+        this.yPercent = yPercent;
     }
 
     /**
      * @method getX
-     * @description Gets the x coordinate of the BaseMenuItem
-     * @returns a number that is the x coordinate
+     * @description Gets the x coordinate of the BaseMenuItem in pixels
+     * @param currentCanvasSize {number} - Optional current canvas size, defaults to getCanvasSize()
+     * @returns a number that is the x coordinate in pixels
      */
-    public getX(): number {
-        return this.x;
+    public getX(currentCanvasSize?: number): number {
+        const canvasSize = currentCanvasSize || getCanvasSize();
+        return this.xPercent * canvasSize;
     }
 
     /**
      * @method getY
-     * @description Gets the y coordinate of the BaseMenuItem
-     * @returns a number that is the y coordinate
+     * @description Gets the y coordinate of the BaseMenuItem in pixels
+     * @param currentCanvasSize {number} - Optional current canvas size, defaults to getCanvasSize()
+     * @returns a number that is the y coordinate in pixels
      */
-    public getY(): number {
-        return this.y;
+    public getY(currentCanvasSize?: number): number {
+        const canvasSize = currentCanvasSize || getCanvasSize();
+        return this.yPercent * canvasSize;
+    }
+    
+    /**
+     * @method getXPercent
+     * @description Gets the x coordinate percentage of the BaseMenuItem
+     * @returns a number that is the x coordinate percentage (0-1)
+     */
+    public getXPercent(): number {
+        return this.xPercent;
+    }
+
+    /**
+     * @method getYPercent
+     * @description Gets the y coordinate percentage of the BaseMenuItem
+     * @returns a number that is the y coordinate percentage (0-1)
+     */
+    public getYPercent(): number {
+        return this.yPercent;
     }
 
     /**
@@ -141,5 +164,5 @@ export default abstract class BaseMenuItem {
     }
 
     public abstract reset(): void;
-    public abstract draw(...args: any[]): void;
+    public abstract draw(currentCanvasSize?: number, ...args: any[]): void;
 }

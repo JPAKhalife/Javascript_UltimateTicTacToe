@@ -9,6 +9,7 @@
 import p5 from 'p5';
 import KeyListener, { KEY_EVENTS } from '../KeyListener';
 import BaseMenuItem from './BaseMenuItem'
+import { getCanvasSize } from '../sketch';
 
 /**
  * @class ButtonNav
@@ -49,11 +50,13 @@ export default class MenuNav {
     /**
      * @method drawAll
      * @description This method is intended to draw all of the buttons and detect keypresses
+     * @param currentCanvasSize Optional current canvas size
      */
-    public drawAll(): void {
+    public drawAll(currentCanvasSize?: number): void {
+        const canvasSize = currentCanvasSize || getCanvasSize();
         this.currentKeyEvent = this.keylistener.listen();
         for (let i = 0; i < this.itemArray.length; i++) {
-            this.itemArray[i].draw(this.currentKeyEvent);
+            this.itemArray[i].draw(canvasSize, this.currentKeyEvent);
         }
     }
 
@@ -128,11 +131,15 @@ export default class MenuNav {
             // Loop through all of the items and find the closest four distances in each direction
             for (let j = 0; j < this.itemArray.length; j++) {
                 if (i != j) { // Don't compare the item to itself
-                    let distance = Math.sqrt(Math.pow(this.itemArray[i].getY() - this.itemArray[j].getY(), 2) + Math.pow(this.itemArray[i].getX() - this.itemArray[j].getX(), 2));
-                    let rawAngle = Math.atan2(
-                        this.itemArray[j].getY() - this.itemArray[i].getY(),
-                        this.itemArray[j].getX() - this.itemArray[i].getX()
-                    ) * (180 / Math.PI);
+            const canvasSize = getCanvasSize();
+            let distance = Math.sqrt(
+                Math.pow(this.itemArray[i].getY(canvasSize) - this.itemArray[j].getY(canvasSize), 2) + 
+                Math.pow(this.itemArray[i].getX(canvasSize) - this.itemArray[j].getX(canvasSize), 2)
+            );
+            let rawAngle = Math.atan2(
+                this.itemArray[j].getY(canvasSize) - this.itemArray[i].getY(canvasSize),
+                this.itemArray[j].getX(canvasSize) - this.itemArray[i].getX(canvasSize)
+            ) * (180 / Math.PI);
                     let direction = (rawAngle < 0 ? rawAngle + 360 : rawAngle);
                     allDistancesAndDirections.push({ distance: distance, direction: direction, destination: this.itemArray[j] });
                 }

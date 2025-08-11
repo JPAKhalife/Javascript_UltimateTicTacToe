@@ -54,8 +54,4 @@ export default class TestScreen implements Menu {
         }
         
     }
-
-    public resize(): void {
-        this.board.cachePoints();
-    }
 }

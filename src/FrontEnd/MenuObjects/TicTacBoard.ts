@@ -11,6 +11,7 @@ import p5 from "p5";
 import GameManager from "../GameManager";
 import TicTac, { TicTacState } from "../TicTac";
 import BaseMenuItem from "./BaseMenuItem";
+import { getCanvasSize } from "../sketch";
 
 //creating the object type smalltictac.
 export default class TicTacBoard extends BaseMenuItem {
@@ -33,14 +34,14 @@ export default class TicTacBoard extends BaseMenuItem {
      * A constructor for the TicTacBoard
      * @param {*} gameManager
      * @param {*} tictac 
-     * @param {*} x 
-     * @param {*} y 
-     * @param {*} gridSize 
+     * @param {*} xPercent 
+     * @param {*} yPercent 
+     * @param {*} gridSizePercent 
      */
-    constructor(sketch:p5, gameManager: GameManager, x: number,y: number,gridSize: number) {
-        let newGridsize = gridSize*TicTacBoard.BOARD_SHRINK_CONSTANT; 
-        super(sketch, x - newGridsize/2, y - newGridsize /2, 255)
-        this.gridSize = newGridsize;
+    constructor(sketch:p5, gameManager: GameManager, xPercent: number, yPercent: number, gridSizePercent: number) {
+        let newGridsizePercent = gridSizePercent * TicTacBoard.BOARD_SHRINK_CONSTANT; 
+        super(sketch, xPercent - newGridsizePercent/2, yPercent - newGridsizePercent/2, 255)
+        this.gridSize = newGridsizePercent;
 
         this.setConfirmed(true);
         this.setSelected(true);
@@ -67,20 +68,23 @@ export default class TicTacBoard extends BaseMenuItem {
 
     /**
      * This method is intended to cache every single point of the tictac.
+     * @param currentCanvasSize Optional current canvas size
      */
-    public cachePoints() {
+    public cachePoints(currentCanvasSize?: number) {
+        const canvasSize = currentCanvasSize || getCanvasSize();
+        
         for (let i = 0 ; i <= this.maxLevelSize ; i++) {
             let space = ((this.GRID_SIZE*this.GRID_SIZE)**(this.maxLevelSize - i));
             for (let j = 0 ; j < this.tictac.getArraySize()/space ; j++) {
                 //Set initial coordinates to watchamacallit
-                let x = this.getX();
-                let y = this.getY();
+                let x = this.getX(canvasSize);
+                let y = this.getY(canvasSize);
                 //Iterate through all current levelsizes to get x and y coordinates
                 for (let z = 0 ; z < i ; z++) {
-                    let col =  this.tictac.getCol(z,j*space); //Get the relative column
+                    let col = this.tictac.getCol(z,j*space); //Get the relative column
                     let row = this.tictac.getRow(z,j*space); //Get the relative row
-                    x += col*this.calculateSize(z+1) + col*this.calculateMarginSize(z+1) + this.calculateMarginSize(z+1)/2;
-                    y += row*this.calculateSize(z+1) + row*this.calculateMarginSize(z+1) + this.calculateMarginSize(z+1)/2;
+                    x += col*this.calculateSize(z+1, canvasSize) + col*this.calculateMarginSize(z+1, canvasSize) + this.calculateMarginSize(z+1, canvasSize)/2;
+                    y += row*this.calculateSize(z+1, canvasSize) + row*this.calculateMarginSize(z+1, canvasSize) + this.calculateMarginSize(z+1, canvasSize)/2;
                 }
                 this.cache[i].push([x,y]);
             }
@@ -89,8 +93,15 @@ export default class TicTacBoard extends BaseMenuItem {
 
     /**
      * This method is responsible for rendering the tictac + the cursor on the tictac
+     * @param currentCanvasSize Optional current canvas size
      */
-    public draw() {
+    public draw(currentCanvasSize?: number): void {
+        const canvasSize = currentCanvasSize || getCanvasSize();
+        
+        // Recache points with current canvas size
+        this.cache = Array.from({ length: this.maxLevelSize + 1 },() => [] as any[]);
+        this.cachePoints(canvasSize);
+        
         //*The plan: one loop to draw tictacs and larger symbols
         //*Another loop to draw the smallest symbols
         //*This avoids a number of if checks
@@ -104,13 +115,13 @@ export default class TicTacBoard extends BaseMenuItem {
                     let relevantSlot = this.tictac.getSlot(j*space);
                     let isOwned = this.tictac.isSpotOwnedOrFull(j*space, this.maxLevelSize - i + 1);
                     if (relevantSlot*-1 == (this.maxLevelSize - i) && !isOwned) {
-                        this.drawIcon(i,j*space + 1,j); //Draw Icon if negative and iterating at equivalent levelsize
+                        this.drawIcon(i, j*space + 1, j, canvasSize); //Draw Icon if negative and iterating at equivalent levelsize
                     // } else if (relevantSlot*-1 > (this.maxLevelSize - i)) {
                     //     i += (this.GRID_SIZE*this.GRID_SIZE)**(-1*relevantSlot) - 1; //Skip to the next open spot
                     } else if (isOwned) {
                     } else {
                         //Otherwise draw tictac
-                        this.drawTicTac(i,j);
+                        this.drawTicTac(i, j, canvasSize);
                     }
                 }
         }
@@ -122,12 +133,12 @@ export default class TicTacBoard extends BaseMenuItem {
                 //Skip to the next open spot
                 i += (this.GRID_SIZE*this.GRID_SIZE)**(-1*relevantSlot) - 1;
             } else {
-                this.drawIcon(this.maxLevelSize,i,i); //Otherwise try an Icon
+                this.drawIcon(this.maxLevelSize, i, i, canvasSize); //Otherwise try an Icon
             }
         } 
         //Drawing the cursor
         if (this.cursorOn) {
-            this.renderCursor();
+            this.renderCursor(canvasSize);
         }
     }
 
@@ -135,21 +146,22 @@ export default class TicTacBoard extends BaseMenuItem {
      * Draws a tictac of any size
      * @param {*} levelSize - How deep in the Big TicTac we are
      * @param {*} cacheIndex - the index of the coordinates to draw the tictac
+     * @param {*} currentCanvasSize - The current canvas size
      */
-    private drawTicTac(levelSize: number,cacheIndex: number) {
-        let size = this.calculateSize(levelSize);
+    private drawTicTac(levelSize: number, cacheIndex: number, currentCanvasSize: number) {
+        let size = this.calculateSize(levelSize, currentCanvasSize);
         let x = this.cache[levelSize][cacheIndex][0];
         let y = this.cache[levelSize][cacheIndex][1];
         this.getSketch().strokeWeight(1);
         for (let i = 0 ; i < this.lineNum ; i++) {
-            this.getSketch().line(x + (size/this.GRID_SIZE)*(i+1),y,x + (size/this.GRID_SIZE)*(i+1),y + size);
-            this.getSketch().line(x,y+(size/this.GRID_SIZE)*(i+1),x + size,y + (size/this.GRID_SIZE) * (i+1));
+            this.getSketch().line(x + (size/this.GRID_SIZE)*(i+1), y, x + (size/this.GRID_SIZE)*(i+1), y + size);
+            this.getSketch().line(x, y+(size/this.GRID_SIZE)*(i+1), x + size, y + (size/this.GRID_SIZE) * (i+1));
         }
     }
 
-    private drawIcon(levelSize: number, tictacIndex: number, cacheIndex: number) {
+    private drawIcon(levelSize: number, tictacIndex: number, cacheIndex: number, currentCanvasSize: number) {
         //Get the size
-        let size = this.calculateSize(levelSize);
+        let size = this.calculateSize(levelSize, currentCanvasSize);
         //Get the coordinates from the cache
         let x = this.cache[levelSize][cacheIndex][0];
         let y = this.cache[levelSize][cacheIndex][1];
@@ -162,42 +174,43 @@ export default class TicTacBoard extends BaseMenuItem {
             case 1:
                 //Draw an X
                 this.getSketch().stroke(255);
-                this.getSketch().line(x,y,x + size,y + size);
-                this.getSketch().line(x + size,y,x,y + size);
+                this.getSketch().line(x, y, x + size, y + size);
+                this.getSketch().line(x + size, y, x, y + size);
             break;
             case 2:
                 //Draw an O
                 this.getSketch().stroke(255);
                 this.getSketch().noFill();
                 this.getSketch().ellipseMode(this.getSketch().CENTER)
-                this.getSketch().ellipse(x + size/2,y + size/2,size*(TicTacBoard.SMALLEST_BOARD_PERCENT/100),size*(TicTacBoard.SMALLEST_BOARD_PERCENT/100));
+                this.getSketch().ellipse(x + size/2, y + size/2, size*(TicTacBoard.SMALLEST_BOARD_PERCENT/100), size*(TicTacBoard.SMALLEST_BOARD_PERCENT/100));
             break;
             default:
                 //Draw the number in the grid instead. (used in case of >2 players)
                 this.getSketch().textSize(size);
-                this.getSketch().textAlign(this.getSketch().CENTER,this.getSketch().CENTER);
-                this.getSketch().text(slot,x + size/2, y + size/2);
+                this.getSketch().textAlign(this.getSketch().CENTER, this.getSketch().CENTER);
+                this.getSketch().text(slot, x + size/2, y + size/2);
             break;
         }
-
     }
     
     /**
      * Given a levelSize, return the size of a tictac grid inside the big tictac
      * @param {*} levelSize 
+     * @param {*} currentCanvasSize 
      * @returns a float containing the size
      */
-    private calculateSize(levelSize: number) {
-        return this.gridSize*((TicTacBoard.BOARD_SHRINK_CONSTANT/(this.GRID_SIZE))**(levelSize));
+    private calculateSize(levelSize: number, currentCanvasSize: number) {
+        return (this.gridSize * currentCanvasSize) * ((TicTacBoard.BOARD_SHRINK_CONSTANT/(this.GRID_SIZE))**(levelSize));
     }
 
     /**
      * Calculates the margin size between the edge of the an item grid and the tictac it is inside of.
      * @param {*} levelSize 
+     * @param {*} currentCanvasSize 
      * @returns margin size (float)
      */
-    private calculateMarginSize(levelSize: number) {
-        return ((this.calculateSize(levelSize)/TicTacBoard.BOARD_SHRINK_CONSTANT) * (1 - TicTacBoard.BOARD_SHRINK_CONSTANT));
+    private calculateMarginSize(levelSize: number, currentCanvasSize: number) {
+        return ((this.calculateSize(levelSize, currentCanvasSize)/TicTacBoard.BOARD_SHRINK_CONSTANT) * (1 - TicTacBoard.BOARD_SHRINK_CONSTANT));
     }
 
     /**
@@ -283,16 +296,19 @@ export default class TicTacBoard extends BaseMenuItem {
     
     /**
      * This method renders the cursor on the tictac
+     * @param currentCanvasSize The current canvas size
      */
-    private renderCursor() {
+    private renderCursor(currentCanvasSize: number) {
             this.getSketch().rectMode(this.getSketch().CORNER);
             this.getSketch().noFill();
             this.getSketch().strokeWeight(5);
             let c = this.getCacheIndex();
-            this.getSketch().rect(this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
+            this.getSketch().rect(
+                this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow*this.GRID_SIZE + this.cursorCol][0],
                 this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow*this.GRID_SIZE + this.cursorCol][1],
-                this.calculateSize(this.tictac.getSelectedLevel()),
-                this.calculateSize(this.tictac.getSelectedLevel()));
+                this.calculateSize(this.tictac.getSelectedLevel(), currentCanvasSize),
+                this.calculateSize(this.tictac.getSelectedLevel(), currentCanvasSize)
+            );
     }
 
     /**

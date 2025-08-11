@@ -8,88 +8,130 @@
 
 
 import p5 from "p5";
-import Cutscene from "../Cutscene";
 import GuiManager from "../GuiManager";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
 import Menu, { Screens } from "../Menu"
 import { HEADER, getCanvasSize, fontPointless, fontAldoApache, fontSquareo } from "../sketch";
-import {Text} from "../ShapeWrapper";
 
 export default class StartScreen implements Menu {
+    // Static property to track if animation is playing
+    private static isPlaying: boolean = false;
 
     private sketch: p5;
     private keylistener: KeyListener;
-    private title: Text;
-    private author: Text;
-    private startMessage: Text;
+    
+    // Text properties
+    private titleText: string;
+    private authorText: string;
+    private startMessageText: string;
+    
+    private animOffset: number;
+    
+    // Alpha value for start message - needed for animation
+    private startMessageAlpha: number;
+    
     private s: number;
-    private startCutscene: Cutscene;
+    
+    // Animation properties
+    private animationActive: boolean = false;
+    private animationCounter: number = 0;
 
     constructor(sketch: p5) {
         this.sketch = sketch;
         this.keylistener = new KeyListener(sketch);
-
-        //This is the text for the title
-        this.title = new Text(HEADER.START_SCREEN_TITLE,getCanvasSize()/2,getCanvasSize()/5, this.sketch, getCanvasSize()*0.05 , fontPointless,this.sketch.color(255,255,255));
-        this.title.setTextOrientation(this.sketch.CENTER,this.sketch.CENTER);
-        this.title.setAngleMode(this.sketch.RADIANS);
-
-        //This is the text for the author
-        this.author = new Text(HEADER.START_SCREEN_AUTHOR,getCanvasSize()/2,getCanvasSize()/10*3,this.sketch,getCanvasSize()*0.05,fontAldoApache,this.sketch.color(127,127,127));
-        this.author.setTextOrientation(this.sketch.CENTER,this.sketch.CENTER); 
-        this.author.setAngleMode(this.sketch.RADIANS);
-
-        //This is the text for the start message
-        this.startMessage = new Text(HEADER.START_SCREEN_MESSAGE,getCanvasSize()/2,getCanvasSize()/2,this.sketch,getCanvasSize()*0.05,fontSquareo,this.sketch.color(200,200,200));
-        this.startMessage.setTextOrientation(this.sketch.CENTER,this.sketch.CENTER);
-        this.startMessage.setAngleMode(this.sketch.RADIANS); 
+        
+        // Set text content
+        this.titleText = HEADER.START_SCREEN_TITLE;
+        this.authorText = HEADER.START_SCREEN_AUTHOR;
+        this.startMessageText = HEADER.START_SCREEN_MESSAGE;
+        this.animOffset = 0;
+        
+        // Set alpha for start message
+        this.startMessageAlpha = 255;
 
         //This is a variable to keep track of the sin function.
         this.s = 0;
-
-        //Create a new animation for when the user presses the start button
-        this.startCutscene = new Cutscene(this.keylistener, this.title,this.author,this.startMessage,this.s);
-        
-        //Set the animation condition
-        this.startCutscene.setCondition(() => {
-            if ((this.keylistener.listen() == KEY_EVENTS.SELECT) && (!Cutscene.isPlaying)) {
-                this.startCutscene.activate();
-                this.keylistener.deactivate();
-            } else if (this.startCutscene.getShape(2).getY() < getCanvasSize()*-1){
-                this.startCutscene.deactivate();
-                GuiManager.changeScreen(Screens.SETUP_SCREEN,this.sketch);
-            } else {
-                this.startCutscene.getShape(2).setFillAlpha(128 + 128 * this.sketch.sin(this.sketch.millis() / 500));
-            }
-        });
-
-        //Set the animation
-        this.startCutscene.setAnimation(() => {
-            //Set the y of all three titles - they all move at the same speed
-            this.startCutscene.getShape(0).setY(getCanvasSize()/5 + getCanvasSize()*this.sketch.sin((this.startCutscene.getShape(3)+(100*this.sketch.asin(3/4) + 200*this.sketch.PI))/100) - getCanvasSize()/4*3);
-            this.startCutscene.getShape(1).setY(getCanvasSize()/10*3 + getCanvasSize()*this.sketch.sin((this.startCutscene.getShape(3)+(100*this.sketch.asin(3/4) + 200*this.sketch.PI))/100) - getCanvasSize()/4*3);
-            this.startCutscene.getShape(2).setY(getCanvasSize()/2 + getCanvasSize()*this.sketch.sin((this.startCutscene.getShape(3)+(100*this.sketch.asin(3/4) + 200*this.sketch.PI))/100) - getCanvasSize()/4*3);
-            this.startCutscene.setShape(3,this.startCutscene.getShape(3) + 2);
-            //Increase the flashing of the bottom titles
-            this.startCutscene.getShape(2).setFillAlpha(128 * this.sketch.sin(this.sketch.millis() / 50));
-
-        });
-
     }
 
     public draw(): void {
         this.sketch.background(0);
 
-        //Render titles
-        this.title.render();
-        this.author.render();
-        this.startMessage.render();
+        // Set text properties and render title
+        this.sketch.textFont(fontPointless);
+        this.sketch.textSize(getCanvasSize()*0.05);
+        this.sketch.textAlign(this.sketch.CENTER, this.sketch.CENTER);
+        this.sketch.angleMode(this.sketch.RADIANS);
+        this.sketch.fill(this.sketch.color(255, 255, 255));
+        this.sketch.text(this.titleText, getCanvasSize() / 2, getCanvasSize() / 5 + this.animOffset); 
+        
+        // Render author
+        this.sketch.textFont(fontAldoApache);
+        this.sketch.textSize(getCanvasSize()*0.05);
+        this.sketch.fill(this.sketch.color(127, 127, 127)); 
+        this.sketch.text(this.authorText, getCanvasSize() / 2, getCanvasSize() / 10 * 3 + this.animOffset); 
+        
+        // Render start message
+        this.sketch.textFont(fontSquareo);
+        this.sketch.textSize(getCanvasSize()*0.05); 
+        const startMessageColor = this.sketch.color(200, 200, 200);
+        this.sketch.fill(startMessageColor);
+        // Apply alpha to the start message
+        this.sketch.fill(
+            this.sketch.red(startMessageColor),
+            this.sketch.green(startMessageColor),
+            this.sketch.blue(startMessageColor),
+            this.startMessageAlpha
+        );
+        this.sketch.text(this.startMessageText, getCanvasSize() / 2, getCanvasSize() / 2 + this.animOffset); 
     
-        //listen for starting animation.
-        this.startCutscene.listen();
+        //Check for animation conditions and run animation if active
+        this.checkAnimationConditions();
+        if (this.animationActive) {
+            this.runAnimation();
+        }
     }
 
-    public resize(): void {
+    /**
+     * Checks conditions for starting or ending the animation
+     */
+    private checkAnimationConditions(): void {
+        if ((this.keylistener.listen() == KEY_EVENTS.SELECT) && (!StartScreen.isPlaying)) {
+            this.activateAnimation();
+            this.keylistener.deactivate();
+        } else if ((getCanvasSize() / 2 + this.animOffset) < getCanvasSize() * -1) {
+            this.deactivateAnimation();
+            GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
+        } else {
+            this.startMessageAlpha = 128 + 128 * this.sketch.sin(this.sketch.millis() / 500);
+        }
+    }
 
+    /**
+     * Activates the animation
+     */
+    private activateAnimation(): void {
+        this.animationActive = true;
+        StartScreen.isPlaying = true;
+    }
+
+    /**
+     * Deactivates the animation
+     */
+    private deactivateAnimation(): void {
+        this.animationActive = false;
+        StartScreen.isPlaying = false;
+    }
+
+    /**
+     * Runs the animation
+     */
+    private runAnimation(): void {
+        // Calculate the animation offset
+        this.animOffset = getCanvasSize() * this.sketch.sin((this.animationCounter + (100 * this.sketch.asin(3/4) + 200 * this.sketch.PI)) / 100) - getCanvasSize() / 4 * 3;
+        
+        this.animationCounter += 2;
+        
+        // Increase the flashing of the bottom titles
+        this.startMessageAlpha = 128 * this.sketch.sin(this.sketch.millis() / 50);
     }
 }
