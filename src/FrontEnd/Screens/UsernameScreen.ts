@@ -16,6 +16,7 @@ import GuiManager from "../GuiManager";
 import Field from "../MenuObjects/Field";
 import WebManager from '../WebManager';
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
+import ScreenBorder from "../MenuObjects/ScreenBorder";
 
 // Animation constants
 const ANIMATION_TIME = 60; // 1 second at 60fps
@@ -32,6 +33,7 @@ export default class UsernameScreen implements Menu {
     private confirmButton: MenuButton;
     private menuNav: MenuNav;
     private spinner: LoadingSpinner;
+    private border: ScreenBorder;
 
 
     // Animation variables
@@ -87,6 +89,10 @@ export default class UsernameScreen implements Menu {
             this.confirmButton
         ], this.sketch);
 
+        //Screen Border
+        this.border = new ScreenBorder(sketch, 0.017, 30);
+        this.border.setTransitionIn(true);
+
         // Set the field as initially selected (it's the first item, index 0)
         this.menuNav.changeSelected(0);
 
@@ -99,7 +105,7 @@ export default class UsernameScreen implements Menu {
      * @description Handles the transition in animation
      */
     private transitionIn(): void {
-        if (this.borderPos >= STROKEWEIGHT * 2) {
+        if (!this.border.isTransitioning()) {
             // Fade in UI elements after border animation
             if (this.opacity < 255) {
                 this.opacity = Math.min(this.opacity + 255 / (ANIMATION_TIME / 2), 255);
@@ -112,9 +118,6 @@ export default class UsernameScreen implements Menu {
                 this.keylistener.activate();
                 console.log("Username Screen transition in complete");
             }
-        } else {
-            // Animate border shrinking in
-            this.borderPos += (STROKEWEIGHT * 2) / (ANIMATION_TIME / 2);
         }
     }
 
@@ -127,14 +130,11 @@ export default class UsernameScreen implements Menu {
         this.confirmButton.fade();
         this.usernameField.setOpacity(this.usernameField.getOpacity() - 255 / (ANIMATION_TIME / 2));
 
-        // Animate border expanding out
-        this.borderPos -= (STROKEWEIGHT * 2) / (ANIMATION_TIME / 2);
-
         // Fade out text
         this.opacity -= 255 / (ANIMATION_TIME / 2);
 
         // When animation is complete, navigate to next screen
-        if (this.borderPos <= 0) {
+        if (!this.border.isTransitioning()) {
             this.transitionOutActive = false;
             this.keylistener.activate();
 
@@ -154,20 +154,6 @@ export default class UsernameScreen implements Menu {
     public draw(): void {
         this.sketch.background(0);
 
-        // Draw border
-        this.sketch.push();
-        this.sketch.rectMode(this.sketch.CENTER);
-        this.sketch.noFill();
-        this.sketch.stroke(255, 255, 255, this.opacity);
-        this.sketch.strokeWeight(STROKEWEIGHT);
-        this.sketch.rect(
-            getCanvasSize() / 2,
-            getCanvasSize() / 2,
-            getCanvasSize() + STROKEWEIGHT - this.borderPos,
-            getCanvasSize() + STROKEWEIGHT - this.borderPos
-        );
-        this.sketch.pop();
-
         // Draw title and subtitle with stroke
         this.sketch.push();
         this.sketch.textFont(fontPointless);
@@ -175,6 +161,9 @@ export default class UsernameScreen implements Menu {
         this.sketch.stroke(255, 255, 255, this.opacity);
         this.sketch.fill(255, 255, 255, 0);
         this.sketch.strokeWeight(1); // Ensure text stroke is visible
+
+        //Draw border
+        this.border.draw();
 
         // Draw title
         this.sketch.textSize(getCanvasSize() * 0.05);
@@ -251,6 +240,7 @@ export default class UsernameScreen implements Menu {
                 this.usernameField.setError("");
                 this.keylistener.deactivate();
                 this.transitionOutActive = true;
+                this.border.setTransitionOut(true);
                 this.confirmButton.setConfirmed(true);
                 this.showLoadingIcon = false;
             } else {

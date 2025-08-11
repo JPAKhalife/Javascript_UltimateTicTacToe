@@ -15,6 +15,7 @@ import MenuNav from "../MenuObjects/MenuNav";
 import { MenuButton } from "../MenuObjects/MenuButton";
 import { whiteTicTac, getCanvasSize, HEADER, fontPointless } from "../sketch";
 import WebManager from "../WebManager";
+import ScreenBorder from "../MenuObjects/ScreenBorder";
 
 export const STROKEWEIGHT = 15;
 const SETUP_SCREEN_ANIMATION_TIME = 120;
@@ -25,8 +26,8 @@ export default class SetupScreen implements Menu {
     private sketch: p5;
     private floater_array: Floater[]
     private opacity: number;
-    private border_pos: number;
     private multiplayer_MenuButton_list: MenuNav;
+    private border: ScreenBorder;
     private transition_in_active: boolean;
     private transition_out_active: boolean;
 
@@ -45,7 +46,6 @@ export default class SetupScreen implements Menu {
 
         // Opacity and border position
         this.opacity = 0;
-        this.border_pos = 0;
 
         // Here are the buttons for the setup screen
         this.multiplayer_MenuButton_list = new MenuNav([
@@ -55,6 +55,10 @@ export default class SetupScreen implements Menu {
             new MenuButton(this.sketch, 0.5, 0.6, "Online", 0.1, 0.1, 0.015, 0)
         ], this.sketch);
 
+        //Screen Border
+        this.border = new ScreenBorder(sketch, 0.017, 30);
+        this.border.setTransitionIn(true);
+
         this.transition_in_active = true;
         this.transition_out_active = false;
 
@@ -62,7 +66,7 @@ export default class SetupScreen implements Menu {
     }
 
     private transitionIn(): void {
-        if (this.border_pos >= STROKEWEIGHT * 2) {
+        if (!this.border.isTransitioning()) {
             for (let i = 0; i < this.multiplayer_MenuButton_list.getLength(); i++) {
                 if ((this.multiplayer_MenuButton_list.getAtIndex(i) as MenuButton).getOpacity() <= 255) {
                     (this.multiplayer_MenuButton_list.getAtIndex(i) as MenuButton).fadeIn(SETUP_SCREEN_ANIMATION_TIME / 3 * 2);
@@ -80,9 +84,6 @@ export default class SetupScreen implements Menu {
                 this.transition_in_active = false;
                 this.keylistener.activate();
             }
-
-        } else {
-            this.border_pos += (STROKEWEIGHT * 2) / (SETUP_SCREEN_ANIMATION_TIME / 3);
         }
     }
 
@@ -95,10 +96,9 @@ export default class SetupScreen implements Menu {
         for (let i = 0; i < this.floater_array.length; i++) {
             this.floater_array[i].fadeOut(MenuButton.CONFIRMED_ANIMATION_TIME / 4);
         }
-        this.border_pos -= (STROKEWEIGHT * 2) / (MenuButton.CONFIRMED_ANIMATION_TIME / 4);
         this.opacity -= 255 / (MenuButton.CONFIRMED_ANIMATION_TIME / 4);
 
-        if (this.border_pos <= 0) {
+        if (!this.border.isTransitioning()) {
             this.transition_out_active = false;
             this.keylistener.activate();
             const selectedPhrase = (this.multiplayer_MenuButton_list.getCurrentlySelected() as MenuButton).getText();
@@ -133,19 +133,7 @@ export default class SetupScreen implements Menu {
     public draw(): void {
         this.sketch.background(0);
 
-        // Draw the border directly with p5.js functions
-        this.sketch.push();
-        this.sketch.rectMode(this.sketch.CENTER);
-        this.sketch.noFill();
-        this.sketch.strokeWeight(STROKEWEIGHT);
-        this.sketch.stroke(255, 255, 255, 255);
-        this.sketch.rect(
-            getCanvasSize() / 2,
-            getCanvasSize() / 2,
-            getCanvasSize() + STROKEWEIGHT - this.border_pos,
-            getCanvasSize() + STROKEWEIGHT - this.border_pos
-        );
-        this.sketch.pop();
+        this.border.draw();
 
         // Render out buttons
         this.multiplayer_MenuButton_list.drawAll();
