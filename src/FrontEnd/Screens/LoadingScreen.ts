@@ -1,17 +1,17 @@
 /**
  * @file LoadingScreen.ts
  * @description This file is responsible for drawing the loading screen
- * @author John Khalife
+ * @author John Khalife (refactored by Cline)
  * @created 2024-06-9
- * @updated 2024-06-23
+ * @updated 2025-08-12
  */
 
 import p5 from "p5";
-import Menu, { Screens } from "../Menu"
-import KeyListener from "../KeyListener";
-import { whiteTicTac, getCanvasSize, HEADER, fontRobot, fontminecraft, fontAldoApache, FRAMERATE } from "../sketch";
+import { Screens } from "../Menu";
+import { whiteTicTac, getCanvasSize, HEADER, fontRobot, fontAldoApache, FRAMERATE } from "../sketch";
 import GuiManager from "../GuiManager";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
+import TransitionableScreen from "./TransitionableScreen";
 
 // Constants for the loading screen
 const LOADING_TRANSITION_IN = 180;
@@ -22,30 +22,34 @@ const TEXT_SIZES = {
     MESSAGE: 0.03     // Loading message text size
 };
 
-export default class LoadingScreen implements Menu {
-
-    private sketch: p5;
-    private keylistener: KeyListener;
+export default class LoadingScreen extends TransitionableScreen {
     private spinner: LoadingSpinner;
     private titleOpacity: number;
     private loadingMessageIndex: number;
     private titleDotIndex: number;
     private frameCounter: number;
-    private transitionInActive: boolean;
-    private transitionOutActive: boolean;
     private transitionTimer: number;
     private proceed: boolean;
-    private nextScreen: Screens;
+    private finalNextScreen: Screens;
     private titleText: string;
     private args: any[];
+    private loadingAction?: () => void;
+    private proceedCondition?: () => boolean;
 
     constructor(sketch: p5, nextScreen?: Screens, titleText?: string, loadingAction?: () => void, proceedCondition?: () => boolean, ...args: any[]) {
-        this.sketch = sketch;
-        this.args = args;
-        this.keylistener = new KeyListener(this.sketch);
+        // Initialize with custom options - no border, we'll handle our own transitions
+        super(sketch, {
+            useBorder: false,
+            fadeContent: false
+        });
+        
+        this.args = args || [];
         this.titleText = titleText || HEADER.LOADING_SCREEN_TITLE_MESSAGES[0];
-        this.nextScreen = nextScreen || Screens.START_SCREEN;
+        this.finalNextScreen = nextScreen || Screens.START_SCREEN;
+        this.loadingAction = loadingAction;
+        this.proceedCondition = proceedCondition;
 
+        // Create spinner with custom animation
         this.spinner = new LoadingSpinner(sketch, -0.125, 0.875, 0.10, whiteTicTac, (counter: number) => {
             this.sketch.angleMode(this.sketch.DEGREES);
             return 255 / 2 * this.sketch.cos(counter) + 255 / 2;
@@ -58,39 +62,31 @@ export default class LoadingScreen implements Menu {
         this.frameCounter = 0;
         this.transitionTimer = FRAMERATE * 3;
 
-        // Transition markers
-        this.transitionInActive = false;
+        // Override transition state to use our custom transitions
+        this.transitionInActive = true;
         this.transitionOutActive = false;
 
-        // Start transition in animation
-        this.keylistener.deactivate();
-        this.startTransitionIn();
-
-        if (loadingAction) {
-            loadingAction();
+        // Execute loading action if provided
+        if (this.loadingAction) {
+            this.loadingAction();
         }
 
         this.proceed = true;
         // If proceedCondition is provided, use it to determine when to proceed
-        if (proceedCondition) {
+        if (this.proceedCondition) {
             this.proceed = false;
-            const checkProceed = () => {
-                if (proceedCondition()) {
-                    this.proceed = true;
-                } else {
-                    setTimeout(checkProceed, 100); // Check again after 100ms
-                }
-            };
-            checkProceed();
+            this.checkProceedCondition();
         }
     }
 
-    private startTransitionIn(): void {
-        this.titleOpacity = 0;
-        this.transitionInActive = true;
+    private checkProceedCondition(): void {
+        if (this.proceedCondition && this.proceedCondition()) {
+            this.proceed = true;
+        } else if (this.proceedCondition) {
+            setTimeout(() => this.checkProceedCondition(), 100); // Check again after 100ms
+        }
     }
-
-    private animateTransitionIn(): void {
+    protected transitionIn(): void {
         if (this.spinner.getXPercent() < 0.875) {
             this.spinner.setX(this.spinner.getXPercent() + 1 / (LOADING_TRANSITION_IN / 2));
         } else if (this.titleOpacity < 255) {
@@ -102,20 +98,34 @@ export default class LoadingScreen implements Menu {
     }
 
     /**
-     * @method animateTransitionOut
-     * @description This method is responsible for animating the transition out of the loading screen
+     * @method transitionOut
+     * @description Custom transition out animation for the loading screen
+     * Overrides the parent class method
      */
-    private animateTransitionOut(): void {
+    protected transitionOut(): void {
         this.titleOpacity -= 255 / (LOADING_TRANSITION_IN / 2);
         this.spinner.setX(this.spinner.getXPercent() - 1 / (LOADING_TRANSITION_IN / 2));
 
         if (this.titleOpacity <= 0 && this.spinner.getXPercent() <= 0 - this.spinner.getWidthPercent()) {
             this.transitionOutActive = false;
-            this.keylistener.activate();
-            GuiManager.changeScreen(this.nextScreen, this.sketch, this.args);
+            this.onTransitionOutComplete();
         }
     }
 
+    /**
+     * @method onTransitionOutComplete
+     * @description Called when transition out is complete
+     * Overrides the parent class method
+     */
+    protected onTransitionOutComplete(): void {
+        this.keylistener.activate();
+        GuiManager.changeScreen(this.finalNextScreen, this.sketch, ...this.args);
+    }
+
+    /**
+     * @method animateLoading
+     * @description Animates the loading dots and message
+     */
     private animateLoading(): void {
         if ((this.frameCounter / 3) % 60 === 0) {
             this.titleDotIndex++;
@@ -132,6 +142,38 @@ export default class LoadingScreen implements Menu {
         this.frameCounter++;
     }
 
+    /**
+     * @method drawContent
+     * @description Draws the loading screen content
+     */
+    protected drawContent(): void {
+        // Draw the spinner
+        this.spinner.draw();
+        
+        // Draw title
+        this.drawTitle();
+        
+        // Draw loading message
+        this.drawLoadingMessage();
+        
+        // Check for the transition Timer to start the transition out
+        if (this.transitionTimer <= 0 && this.proceed && !this.transitionOutActive && !this.transitionInActive) {
+            // If the connection has been established, start the transition out   
+            this.transitionOutActive = true;
+            this.keylistener.deactivate();
+            this.transitionTimer = FRAMERATE * 3;
+        } else if (!this.transitionOutActive && !this.transitionInActive && this.proceed) {
+            this.transitionTimer--;
+        }
+
+        // Animate the loading dots and message
+        this.animateLoading();
+    }
+
+    /**
+     * @method drawTitle
+     * @description Draws the title with animated dots
+     */
     private drawTitle(): void {
         const canvasSize = getCanvasSize();
         this.sketch.push();
@@ -148,6 +190,10 @@ export default class LoadingScreen implements Menu {
         this.sketch.pop();
     }
 
+    /**
+     * @method drawLoadingMessage
+     * @description Draws the loading message
+     */
     private drawLoadingMessage(): void {
         const canvasSize = getCanvasSize();
         this.sketch.push();
@@ -171,11 +217,6 @@ export default class LoadingScreen implements Menu {
         const textBoxWidth = canvasSize * 0.8; // 80% of canvas width
         const textBoxHeight = canvasSize * 0.3; // 30% of canvas height
         
-        // For debugging - uncomment to see the text box boundaries
-        // this.sketch.noFill();
-        // this.sketch.stroke(255, 50);
-        // this.sketch.rect(canvasSize / 2, canvasSize / 2, textBoxWidth, textBoxHeight);
-        
         // Draw the message directly at the center of the canvas
         this.sketch.text(
             currentMessage,
@@ -188,33 +229,12 @@ export default class LoadingScreen implements Menu {
         this.sketch.pop();
     }
 
-    public draw(): void {
-        // Clear the background
-        this.sketch.background(0);
-
-        // Draw the spinner, title, and loading message
-        this.spinner.draw();
-        this.drawTitle();
-        this.drawLoadingMessage();
-
-        // Check for the transition Timer to start the transition out
-        if (this.transitionTimer <= 0) {
-            // If the connection has been established, start the transition out   
-            this.transitionOutActive = true;
-            this.keylistener.deactivate();
-            this.transitionTimer = FRAMERATE * 3;
-        }
-
-        // Handle transitions
-        if (this.transitionInActive) {
-            this.animateTransitionIn();
-        } else if (this.transitionOutActive) {
-            this.animateTransitionOut();
-        } else if (this.proceed) {
-            this.transitionTimer--;
-        }
-
-        // Animate the loading dots and message
-        this.animateLoading();
+    /**
+     * @method handleInput
+     * @description Handles user input
+     * Required by TransitionableScreen but not used in this screen
+     */
+    protected handleInput(): void {
+        // No input handling needed for loading screen
     }
 }

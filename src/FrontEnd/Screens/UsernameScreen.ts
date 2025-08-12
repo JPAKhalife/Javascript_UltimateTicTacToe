@@ -1,31 +1,27 @@
 /**
  * @file UsernameScreen.ts
  * @description This file is responsible for allowing users to enter their username
- * @author John Khalife
+ * @author John Khalife (refactored by Cline)
  * @created 2024-07-26
- * @updated 2024-07-26
+ * @updated 2025-08-12
  */
 
 import p5 from "p5";
-import Menu, { Screens } from "../Menu";
-import KeyListener, { KEY_EVENTS } from "../KeyListener";
-import { getCanvasSize, fontPointless, HEADER, whiteTicTac } from "../sketch";
+import { Screens } from "../Menu";
+import { KEY_EVENTS } from "../KeyListener";
+import { getCanvasSize, fontPointless } from "../sketch";
 import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
-import GuiManager from "../GuiManager";
 import Field from "../MenuObjects/Field";
 import WebManager from '../WebManager';
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
-import ScreenBorder from "../MenuObjects/ScreenBorder";
+import BaseMenuItem from "../MenuObjects/BaseMenuItem";
+import TransitionableScreen from "./TransitionableScreen";
 
 // Animation constants
 const ANIMATION_TIME = 60; // 1 second at 60fps
-const STROKEWEIGHT = 15;
-const LOADING_TIME = ANIMATION_TIME * 2;
 
-export default class UsernameScreen implements Menu {
-    private sketch: p5;
-    private keylistener: KeyListener;
+export default class UsernameScreen extends TransitionableScreen {
     private webManager: WebManager;
 
     // UI Elements
@@ -33,30 +29,23 @@ export default class UsernameScreen implements Menu {
     private confirmButton: MenuButton;
     private menuNav: MenuNav;
     private spinner: LoadingSpinner;
-    private border: ScreenBorder;
-
-
-    // Animation variables
-    private transitionInActive: boolean;
-    private transitionOutActive: boolean;
-    private opacity: number;
-    private borderPos: number;
     private showLoadingIcon: boolean;
 
     constructor(sketch: p5) {
-        this.sketch = sketch;
-        this.keylistener = new KeyListener(sketch);
+        // Initialize the TransitionableScreen with custom options
+        super(sketch, {
+            animationTime: ANIMATION_TIME,
+            borderWidth: 0.017,
+            borderAnimationTime: 30,
+            useBorder: true,
+            fadeContent: true
+        });
+
         this.webManager = WebManager.getInstance();
-
-        this.spinner = new LoadingSpinner(sketch, 0.25, 0.5, 0.04);
-
-
-        // Initialize animation variables
-        this.transitionInActive = true;
-        this.transitionOutActive = false;
-        this.opacity = 0;
-        this.borderPos = 0;
         this.showLoadingIcon = false;
+
+        // Create loading spinner
+        this.spinner = new LoadingSpinner(sketch, 0.25, 0.5, 0.04);
 
         // Create username field
         this.usernameField = new Field(
@@ -69,7 +58,6 @@ export default class UsernameScreen implements Menu {
             20, // max length
             "Username" // label
         );
-        this.usernameField.setOpacity(0); // Start invisible for animation
 
         // Create confirm button
         this.confirmButton = new MenuButton(
@@ -89,71 +77,18 @@ export default class UsernameScreen implements Menu {
             this.confirmButton
         ], this.sketch);
 
-        //Screen Border
-        this.border = new ScreenBorder(sketch, 0.017, 30);
-        this.border.setTransitionIn(true);
+        // Register UI elements for automatic transition handling
+        this.registerUIElements([this.usernameField, this.confirmButton]);
 
         // Set the field as initially selected (it's the first item, index 0)
         this.menuNav.changeSelected(0);
-
-        // Deactivate keylistener during animation
-        this.keylistener.deactivate();
     }
 
     /**
-     * @method transitionIn
-     * @description Handles the transition in animation
+     * @method drawContent
+     * @description Draws the username screen content
      */
-    private transitionIn(): void {
-        if (!this.border.isTransitioning()) {
-            // Fade in UI elements after border animation
-            if (this.opacity < 255) {
-                this.opacity = Math.min(this.opacity + 255 / (ANIMATION_TIME / 2), 255);
-                this.usernameField.setOpacity(this.opacity);
-                this.confirmButton.fadeIn(ANIMATION_TIME / 2);
-            }
-
-            if (this.opacity >= 255) {
-                this.transitionInActive = false;
-                this.keylistener.activate();
-                console.log("Username Screen transition in complete");
-            }
-        }
-    }
-
-    /**
-     * @method transitionOut
-     * @description Handles the transition out animation and navigation
-     */
-    private transitionOut(): void {
-        // Fade out UI elements
-        this.confirmButton.fade();
-        this.usernameField.setOpacity(this.usernameField.getOpacity() - 255 / (ANIMATION_TIME / 2));
-
-        // Fade out text
-        this.opacity -= 255 / (ANIMATION_TIME / 2);
-
-        // When animation is complete, navigate to next screen
-        if (!this.border.isTransitioning()) {
-            this.transitionOutActive = false;
-            this.keylistener.activate();
-
-            // Store username in localStorage
-            const username = this.usernameField.getText();
-            localStorage.setItem('username', username);
-
-            //TODO: The username needs to be passed to the next screen, and also a check should be added on this screen.s
-            GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
-        }
-    }
-
-    /**
-     * @method draw
-     * @description Draws the username screen
-     */
-    public draw(): void {
-        this.sketch.background(0);
-
+    protected drawContent(): void {
         // Draw title and subtitle with stroke
         this.sketch.push();
         this.sketch.textFont(fontPointless);
@@ -161,9 +96,6 @@ export default class UsernameScreen implements Menu {
         this.sketch.stroke(255, 255, 255, this.opacity);
         this.sketch.fill(255, 255, 255, 0);
         this.sketch.strokeWeight(1); // Ensure text stroke is visible
-
-        //Draw border
-        this.border.draw();
 
         // Draw title
         this.sketch.textSize(getCanvasSize() * 0.05);
@@ -181,50 +113,57 @@ export default class UsernameScreen implements Menu {
         if (this.showLoadingIcon) {
             this.spinner.draw();
         }
+    }
 
-        // Handle transitions
-        if (this.transitionInActive) {
-            this.transitionIn();
-        }
+    /**
+     * @method handleInput
+     * @description Handles user input
+     */
+    protected handleInput(): void {
+        // Get key event from menuNav
+        const keypress = this.menuNav.getKeyEvent();
 
-        if (this.transitionOutActive) {
-            this.transitionOut();
-        }
-
-        // Handle key events when not in transition
-        if (!this.transitionInActive && !this.transitionOutActive) {
-            // Get key event from menuNav
-            const keypress = this.menuNav.getKeyEvent();
-
-            // If the field is in edit mode, pass the key event to the field
-            // But don't pass ENTER key events to prevent immediate exit
-            if (this.usernameField.isInEditMode()) {
-                if (keypress !== KEY_EVENTS.NONE && keypress !== KEY_EVENTS.ENTER) {
-                    const canvasSize = getCanvasSize();
-                    this.usernameField.draw(canvasSize, keypress);
-                }
-            } else {
-                // Normal navigation when not in edit mode
-                if (keypress === KEY_EVENTS.UP) {
-                    this.menuNav.selectClosest(270);
-                } else if (keypress === KEY_EVENTS.RIGHT) {
-                    this.menuNav.selectClosest(0);
-                } else if (keypress === KEY_EVENTS.DOWN) {
-                    this.menuNav.selectClosest(90);
-                } else if (keypress === KEY_EVENTS.LEFT) {
-                    this.menuNav.selectClosest(180);
-                } else if (keypress === KEY_EVENTS.SELECT) {
-                    // If the confirm button is selected
-                    if (this.menuNav.getCurrentlySelected() === this.confirmButton) {
-                        this.showLoadingIcon = true; // Ensure icon is shown immediately when button is pressed
-                        this.webManager.initiateConnectionIfNotEstablished();
-                        setTimeout(() => this.checkUsername(), 1000);
-                    }
+        // If the field is in edit mode, pass the key event to the field
+        // But don't pass ENTER key events to prevent immediate exit
+        if (this.usernameField.isInEditMode()) {
+            if (keypress !== KEY_EVENTS.NONE && keypress !== KEY_EVENTS.ENTER) {
+                const canvasSize = getCanvasSize();
+                this.usernameField.draw(canvasSize, keypress);
+            }
+        } else {
+            // Normal navigation when not in edit mode
+            if (keypress === KEY_EVENTS.UP) {
+                this.menuNav.selectClosest(270);
+            } else if (keypress === KEY_EVENTS.RIGHT) {
+                this.menuNav.selectClosest(0);
+            } else if (keypress === KEY_EVENTS.DOWN) {
+                this.menuNav.selectClosest(90);
+            } else if (keypress === KEY_EVENTS.LEFT) {
+                this.menuNav.selectClosest(180);
+            } else if (keypress === KEY_EVENTS.SELECT) {
+                // If the confirm button is selected
+                if (this.menuNav.getCurrentlySelected() === this.confirmButton) {
+                    this.showLoadingIcon = true; // Ensure icon is shown immediately when button is pressed
+                    this.webManager.initiateConnectionIfNotEstablished();
+                    setTimeout(() => this.checkUsername(), 1000);
                 }
             }
         }
     }
 
+    /**
+     * @method getSelectedElement
+     * @description Gets the currently selected UI element
+     * @returns The selected element or null if none
+     */
+    protected getSelectedElement(): BaseMenuItem | null {
+        return this.menuNav.getCurrentlySelected();
+    }
+
+    /**
+     * @method checkUsername
+     * @description Validates the username and transitions to the next screen if valid
+     */
     private checkUsername(): void {
         if (this.usernameField.getText() == "") {
             this.usernameField.setError("Please enter a username");
@@ -232,22 +171,36 @@ export default class UsernameScreen implements Menu {
             this.showLoadingIcon = false;
             return;
         }
+
         let playerIDPromise = this.webManager.checkAndRegisterPlayer(this.usernameField.getText()) as Promise<[string, string]>;
         playerIDPromise.then(response => {
             //Valid player ID
             if (response[0].length > 0) {
                 localStorage.setItem("playerID", response[0]);
                 this.usernameField.setError("");
-                this.keylistener.deactivate();
-                this.transitionOutActive = true;
-                this.border.setTransitionOut(true);
                 this.confirmButton.setConfirmed(true);
                 this.showLoadingIcon = false;
+
+                // Start transition out to next screen
+                this.startTransitionOut(Screens.MULTIPLAYER_SCREEN);
             } else {
                 this.usernameField.setError(response[1]);
                 this.usernameField.shake();
                 this.showLoadingIcon = false;
             }
         });
+    }
+
+    /**
+     * @method onTransitionOutComplete
+     * @description Called when transition out is complete
+     */
+    protected onTransitionOutComplete(): void {
+        // Store username in localStorage
+        const username = this.usernameField.getText();
+        localStorage.setItem('username', username);
+
+        // Call parent implementation to change screen
+        super.onTransitionOutComplete();
     }
 }

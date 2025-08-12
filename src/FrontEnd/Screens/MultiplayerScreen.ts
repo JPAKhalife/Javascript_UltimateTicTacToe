@@ -1,14 +1,14 @@
 /**
  * @file MultiplayerScreen.ts
  * @description This file is responsible for displaying all open lobbies
- * @author John Khalife
+ * @author John Khalife (refactored by Cline)
  * @created 2024-06-9
- * @updated 2024-06-23
+ * @updated 2025-08-12
  */
 
 import p5 from "p5";
-import Menu, { Screens } from "../Menu";
-import KeyListener, { KEY_EVENTS } from "../KeyListener";
+import { Screens } from "../Menu";
+import { KEY_EVENTS } from "../KeyListener";
 import { getCanvasSize, getRandomInt } from '../sketch';
 import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
@@ -16,10 +16,13 @@ import GuiManager from "../GuiManager";
 import LobbyDot, { LobbyInfo } from "../MenuObjects/LobbyDot";
 import { FRAMERATE } from "../Constants";
 import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
-import WebManager from '../WebManager'; 
+import WebManager from '../WebManager';
+import BaseMenuItem from "../MenuObjects/BaseMenuItem";
+import TransitionableScreen from "./TransitionableScreen";
 
 const LOBBY_REFRESH_TIME = 7 * FRAMERATE; // 3 seconds
 const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
+const MULTIPLAYER_SCREEN_ANIMATION_TIME = 60;
 
 // Bounds for lobby icons as percentages of canvas size
 const LOBBY_BOUNDS = {
@@ -37,58 +40,53 @@ const TEXT_SIZES = {
     SMALL: 0.014 // ~14px on a 1000px canvas
 };
 
-export default class MultiplayerScreen implements Menu {
-    
-    private sketch: p5;
-    private keylistener: KeyListener;
-
-    //Buttons
+export default class MultiplayerScreen extends TransitionableScreen {
+    // Buttons
     private returnToSetupScreen: MenuButton;
     private createNewLobby: MenuButton;
     private lobbyNav: MenuNav;
 
-    //Transition variables
-    private transition_in_active: boolean = false;
-    private transition_out_active: boolean = false;
-    private lobbyRefreshTime: number = LOBBY_REFRESH_TIME;
-
+    // Lobby management
     private webManager: WebManager;
     private lobbyList: LobbyInfo[];
+    private lobbyRefreshTime: number;
 
     constructor(sketch: p5) {
-        this.sketch = sketch;
-        this.keylistener = new KeyListener(sketch);
+        // Initialize with custom options
+        super(sketch, {
+            animationTime: MULTIPLAYER_SCREEN_ANIMATION_TIME,
+            borderWidth: 0.017,
+            borderAnimationTime: 30,
+            useBorder: true,
+            fadeContent: true
+        });
+        
         this.webManager = WebManager.getInstance();
         this.lobbyList = [];
+        this.lobbyRefreshTime = LOBBY_REFRESH_TIME;
+        
+        // Fetch initial lobby list
         this.fetchLobbyList(DEFAULT_LOBBY_DISPLAY_NUM);
 
         // Define menu buttons
-        this.returnToSetupScreen = new MenuButton(this.sketch, 0.15, 0.20, "Return", 0.05, 0.2, 0.015, 255);
-        this.createNewLobby = new MenuButton(this.sketch, 0.85, 0.20, "Create Lobby", 0.05, 0.2, 0.015, 255);
+        this.returnToSetupScreen = new MenuButton(this.sketch, 0.15, 0.20, "Return", 0.05, 0.2, 0.015, 0);
+        this.createNewLobby = new MenuButton(this.sketch, 0.85, 0.20, "Create Lobby", 0.05, 0.2, 0.015, 0);
+        
+        // Create menu navigation
         this.lobbyNav = new MenuNav([
             this.returnToSetupScreen,
             this.createNewLobby
         ], this.sketch);
+        
+        // Register UI elements for automatic transition handling
+        this.registerUIElements([this.returnToSetupScreen, this.createNewLobby]);
     }
 
     /**
-     * @method handleTransitionOut
-     * @description This method is called when the screen is transitioning out.
+     * @method drawContent
+     * @description Draws the multiplayer screen content
      */
-    private handleTransitionOut(): void {
-        const selectedPhrase = (this.lobbyNav.getCurrentlySelected() as MenuButton).getText();
-        if (selectedPhrase === 'Return') {
-            GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
-        } else if (selectedPhrase === 'Create Lobby') {
-            GuiManager.changeScreen(Screens.CREATE_LOBBY_SCREEN, this.sketch);
-        } else {
-            GuiManager.changeScreen(Screens.START_SCREEN, this.sketch);
-        }
-    }
-
-    public draw(): void {
-        // Clear background
-        this.sketch.background(0);
+    protected drawContent(): void {
         const canvasSize = getCanvasSize();
         
         // Draw border lines
@@ -110,14 +108,53 @@ export default class MultiplayerScreen implements Menu {
 
         // Display lobby information on the left panel
         this.displayLobbyInfo();
+    }
 
-        // Check for transition out
-        if (this.transition_out_active) {
-            this.handleTransitionOut();
+    /**
+     * @method handleInput
+     * @description Handles user input
+     */
+    protected handleInput(): void {
+        let keypress = this.lobbyNav.getKeyEvent();
+        
+        if (keypress === KEY_EVENTS.UP) {
+            this.lobbyNav.selectClosest(270);
+        } else if (keypress === KEY_EVENTS.RIGHT) {
+            this.lobbyNav.selectClosest(0);
+        } else if (keypress === KEY_EVENTS.DOWN) {
+            this.lobbyNav.selectClosest(90);
+        } else if (keypress === KEY_EVENTS.LEFT) {
+            this.lobbyNav.selectClosest(180);
+        } else if (keypress === KEY_EVENTS.SELECT) {
+            this.lobbyNav.confirm();
+            
+            // Get the selected button and determine the next screen
+            if (this.lobbyNav.getCurrentlySelected() instanceof MenuButton) {
+                const selectedPhrase = (this.lobbyNav.getCurrentlySelected() as MenuButton).getText();
+                
+                if (selectedPhrase === 'Return') {
+                    this.startTransitionOut(Screens.SETUP_SCREEN);
+                } else if (selectedPhrase === 'Create Lobby') {
+                    this.startTransitionOut(Screens.CREATE_LOBBY_SCREEN);
+                }
+            } else if (this.lobbyNav.getCurrentlySelected() instanceof LobbyDot) {
+                // Handle lobby selection - join the selected lobby
+                const selectedLobby = (this.lobbyNav.getCurrentlySelected() as LobbyDot).getLobbyInfo();
+                localStorage.setItem('selectedLobbyID', selectedLobby.lobbyID);
+                
+                // Start transition out to game screen
+                this.startTransitionOut(Screens.GAME_SCREEN);
+            }
         }
-
-        // Handle key navigation
-        this.handleKeyNavigation();
+    }
+    
+    /**
+     * @method getSelectedElement
+     * @description Gets the currently selected UI element
+     * @returns The selected element or null if none
+     */
+    protected getSelectedElement(): BaseMenuItem | null {
+        return this.lobbyNav.getCurrentlySelected();
     }
     
     /**
@@ -126,7 +163,7 @@ export default class MultiplayerScreen implements Menu {
      * @param canvasSize The current canvas size
      */
     private drawBorderLines(canvasSize: number): void {
-        this.sketch.stroke(255);
+        this.sketch.stroke(255, 255, 255, this.opacity);
         this.sketch.strokeWeight(5);
         
         // Top horizontal line
@@ -139,37 +176,12 @@ export default class MultiplayerScreen implements Menu {
         this.sketch.line(canvasSize * LOBBY_BOUNDS.MIN_X, canvasSize * LOBBY_BOUNDS.MIN_Y, 
                          canvasSize * LOBBY_BOUNDS.MIN_X, canvasSize * LOBBY_BOUNDS.MAX_Y);
     }
-    
-    /**
-     * @method handleKeyNavigation
-     * @description Handles key navigation between menu items
-     */
-    private handleKeyNavigation(): void {
-        let keypress = this.lobbyNav.getKeyEvent();
-        
-        if (!this.transition_in_active && !this.transition_out_active) {
-            if (keypress === KEY_EVENTS.UP) {
-                this.lobbyNav.selectClosest(270);
-            } else if (keypress === KEY_EVENTS.RIGHT) {
-                this.lobbyNav.selectClosest(0);
-            } else if (keypress === KEY_EVENTS.DOWN) {
-                this.lobbyNav.selectClosest(90);
-            } else if (keypress === KEY_EVENTS.LEFT) {
-                this.lobbyNav.selectClosest(180);
-            } else if (keypress === KEY_EVENTS.SELECT) {
-                this.lobbyNav.confirm();
-                this.transition_out_active = true;
-                this.keylistener.deactivate();
-            }
-        }
-    }
 
     /**
-     * @method displayMutiplayerLobbies
+     * @method displayMutiplayerLobby
      * @description This method is used to access any multiplayer lobbies that exist, and display them in the empty space in the middle of the screen.
-     * @param number {number} The number of multiplayer lobbies to search for
      */
-    displayMutiplayerLobby(): void {
+    private displayMutiplayerLobby(): void {
         if (this.lobbyList.length <= 0) {return;}
         
         // Check if we need to update an existing lobby dot
@@ -177,7 +189,7 @@ export default class MultiplayerScreen implements Menu {
             if (this.lobbyNav.getAtIndex(i) instanceof LobbyDot) {
                 let lobbyDot = (this.lobbyNav.getAtIndex(i) as LobbyDot);
                 if(this.lobbyList.at(0)?.lobbyID == lobbyDot.getLobbyInfo().lobbyID) {
-                    lobbyDot.setLobbyInfo(this.lobbyList.shift() ?? (() => { throw new Error("Lobby list is empty"); })())
+                    lobbyDot.setLobbyInfo(this.lobbyList.shift() ?? (() => { throw new Error("Lobby list is empty"); })());
                     return;
                 }
             }
@@ -191,7 +203,7 @@ export default class MultiplayerScreen implements Menu {
         const yPercent = LOBBY_BOUNDS.MIN_Y + Math.random() * (LOBBY_BOUNDS.MAX_Y - LOBBY_BOUNDS.MIN_Y);
 
         // Create a new LobbyDot and add it to the lobbyNav
-        this.lobbyNav.addItem(new LobbyDot(
+        const newLobbyDot = new LobbyDot(
             this.sketch,
             xPercent,
             yPercent,
@@ -201,10 +213,19 @@ export default class MultiplayerScreen implements Menu {
             this.lobbyNav,
             0.25, // 25% of canvas width for box X position
             0.5,  // 50% of canvas height for box Y position
-        ));
+        );
+        
+        // Set initial opacity to match current screen opacity
+        newLobbyDot.setOpacity(this.opacity);
+        
+        // Add to navigation
+        this.lobbyNav.addItem(newLobbyDot);
+        
+        // Register for transition handling
+        this.registerUIElements([newLobbyDot]);
     }
 
-        /**
+    /**
      * @method fetchLobbyList
      * @description Fetches the list of lobbies from the server and converts them to LobbyDotInfo format
      */
@@ -240,7 +261,7 @@ export default class MultiplayerScreen implements Menu {
         const lineHeight = canvasSize * 0.03; // Space between lines (3% of canvas height)
         
         // Set common text properties
-        this.sketch.fill(255); // White text
+        this.sketch.fill(255, 255, 255, this.opacity); // White text with current opacity
         this.sketch.noStroke();
         this.sketch.textAlign(this.sketch.CENTER, this.sketch.TOP);
         
@@ -330,7 +351,7 @@ export default class MultiplayerScreen implements Menu {
      * @description Draws a horizontal divider line
      */
     private drawDivider(centerX: number, y: number, width: number, canvasSize: number): void {
-        this.sketch.stroke(255);
+        this.sketch.stroke(255, 255, 255, this.opacity);
         this.sketch.strokeWeight(1);
         this.sketch.line(
             centerX - width, // Left end of divider

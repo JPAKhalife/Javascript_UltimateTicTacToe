@@ -1,25 +1,24 @@
 /**
  * @file TutorialScreen.ts
- * @description //This file is responsible for drawing the tutorial screen
- * @author John Khalife
+ * @description This file is responsible for drawing the tutorial screen
+ * @author John Khalife (refactored by Cline)
  * @created 2024-06-9
- * @updated 2024-06-23
+ * @updated 2025-08-12
  */
 
 import p5 from "p5";
-import GuiManager from "../GuiManager";
-import KeyListener, { KEY_EVENTS } from "../KeyListener";
-import Menu, { Screens } from "../Menu"
+import { KEY_EVENTS } from "../KeyListener";
+import { Screens } from "../Menu";
 import { tictacboard, getCanvasSize, tictacboard_two, tictacboard_three, fontOSDMONO } from "../sketch";
+import TransitionableScreen from "./TransitionableScreen";
 
 const TUTORIAL_SCREEN_TRANSITION_TIME = 60;
 
-export default class TutorialScreen implements Menu {
-    private sketch: p5;
-    private keylistener: KeyListener;
-    private screenState: [number, number]; // [current screen index, opacity]
-    private transitioning: boolean;
-    private transitionIn: boolean;
+export default class TutorialScreen extends TransitionableScreen {
+    // Screen state: [current screen index, screen content opacity]
+    private screenState: [number, number];
+    private internalTransitioning: boolean;
+    private internalTransitioningIn: boolean;
     
     // Store just the image references
     private tutorialImages: p5.Image[];
@@ -28,9 +27,17 @@ export default class TutorialScreen implements Menu {
     private paragraphTexts: Array<Array<[string, number, number]>>;
 
     constructor(sketch: p5) {
-        this.sketch = sketch;
-        this.keylistener = new KeyListener(this.sketch);
+        // Initialize with no border since we'll handle our own transitions
+        super(sketch, {
+            useBorder: false,
+            fadeContent: false,
+            animationTime: TUTORIAL_SCREEN_TRANSITION_TIME
+        });
+        
+        // Initialize screen state
         this.screenState = [0, 0]; // [current screen index, opacity]
+        this.internalTransitioning = true;
+        this.internalTransitioningIn = true;
         
         // Store just the image references
         this.tutorialImages = [
@@ -60,47 +67,56 @@ export default class TutorialScreen implements Menu {
                 ["Press space to continue.", 0.5, 0.8]
             ]
         ];
-        
-        this.transitioning = false;
-        this.transitionIn = true;
-        this.startTransition();
     }
 
-    private handleTransition(): void {
-        if (this.transitioning) {
-            if (this.transitionIn) {
+    /**
+     * @method handleInternalTransition
+     * @description Handles transitions between tutorial screens
+     */
+    private handleInternalTransition(): void {
+        if (this.internalTransitioning) {
+            if (this.internalTransitioningIn) {
                 if (this.screenState[1] < 255) {
                     this.screenState[1] += 255 / TUTORIAL_SCREEN_TRANSITION_TIME;
                 } else {
-                    this.transitionIn = false;
-                    this.transitioning = false;
+                    this.internalTransitioningIn = false;
+                    this.internalTransitioning = false;
                     this.keylistener.activate();
                 }
             } else {
                 if (this.screenState[1] > 0) {
                     this.screenState[1] -= 255 / TUTORIAL_SCREEN_TRANSITION_TIME;
                 } else {
-                    this.transitionIn = true;
                     if (this.screenState[0] >= this.tutorialImages.length - 1) {
-                        GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
+                        // If we've shown all screens, transition out to setup screen
+                        this.startTransitionOut(Screens.SETUP_SCREEN);
                     } else {
-                        this.screenState[1] = 0;
+                        // Move to the next screen
                         this.screenState[0]++;
+                        this.screenState[1] = 0;
+                        this.internalTransitioningIn = true;
                     }
                 }
             }
         }
     }
 
-    private startTransition(): void {
-        this.transitioning = true;
+    /**
+     * @method startInternalTransition
+     * @description Starts the transition between tutorial screens
+     */
+    private startInternalTransition(): void {
+        this.internalTransitioning = true;
+        this.internalTransitioningIn = false;
         this.keylistener.deactivate();
     }
 
-    public draw(): void {
-        this.sketch.background(0);
-        
-        // Draw the current image with appropriate opacity
+    /**
+     * @method drawContent
+     * @description Draws the tutorial screen content
+     */
+    protected drawContent(): void {
+        // Get the current screen index and opacity
         const currentScreenIndex = this.screenState[0];
         const opacity = this.screenState[1];
         
@@ -117,7 +133,7 @@ export default class TutorialScreen implements Menu {
         // Draw text paragraphs
         this.sketch.push();
         this.sketch.textFont(fontOSDMONO);
-        this.sketch.textSize(getCanvasSize()*0.02);
+        this.sketch.textSize(getCanvasSize() * 0.02);
         this.sketch.textAlign(this.sketch.CENTER, this.sketch.CENTER);
         this.sketch.fill(255, opacity);
         
@@ -131,10 +147,17 @@ export default class TutorialScreen implements Menu {
         }
         this.sketch.pop();
         
-        this.handleTransition();
+        // Handle internal transitions between screens
+        this.handleInternalTransition();
+    }
 
-        if (this.keylistener.listen() === KEY_EVENTS.SELECT && !this.transitioning) {
-            this.startTransition();
+    /**
+     * @method handleInput
+     * @description Handles user input
+     */
+    protected handleInput(): void {
+        if (this.keylistener.listen() === KEY_EVENTS.SELECT && !this.internalTransitioning) {
+            this.startInternalTransition();
         }
     }
 }

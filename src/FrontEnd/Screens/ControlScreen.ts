@@ -1,49 +1,55 @@
 /**
  * @file ControlScreen.ts
- * @description //This file is responsible for Drawing the control screen
- * @author John Khalife
+ * @description This file is responsible for drawing the control screen
+ * @author John Khalife (refactored by Cline)
  * @created 2024-06-9
- * @updated 2024-06-23
+ * @updated 2025-08-12
  */
 
 import p5 from "p5";
-import KeyListener, { KEY_EVENTS } from "../KeyListener";
-import Menu, { Screens } from "../Menu"
+import { KEY_EVENTS } from "../KeyListener";
+import { Screens } from "../Menu";
 import { arrows, fontOSDMONO, getCanvasSize, space, wasd } from "../sketch";
-import GuiManager from "../GuiManager";
+import TransitionableScreen from "./TransitionableScreen";
 
 const CONTROL_SCREEN_TRANSITION_TIME = 60;
 
-export default class ControlScreen implements Menu {
-
-    private keylistener: KeyListener;
-    private sketch: p5;
-    private screenState: [number, number]; // [current screen, opacity]
-    private transitioning: boolean;
-    private transitioningIn: boolean;
-    private opacity: number;
+export default class ControlScreen extends TransitionableScreen {
+    // Screen state: [current screen index, screen content opacity]
+    private screenState: [number, number];
+    private internalTransitioning: boolean;
+    private internalTransitioningIn: boolean;
 
     constructor(sketch: p5) {
-        this.sketch = sketch;
-        this.keylistener = new KeyListener(this.sketch);
-        this.screenState = [0, 0]; // First is value, second is opacity
-        this.transitioning = false;
-        this.transitioningIn = true;
-        this.opacity = 0;
-
-        this.transitioningIn = true;
-        this.transitioning = true;
-        this.keylistener.deactivate();
+        // Initialize with no border since we'll handle our own transitions
+        super(sketch, {
+            useBorder: false,
+            fadeContent: false,
+            animationTime: CONTROL_SCREEN_TRANSITION_TIME
+        });
+        
+        // Initialize screen state
+        this.screenState = [0, 0]; // First is screen index, second is opacity
+        this.internalTransitioning = false;
+        this.internalTransitioningIn = true;
+        
+        // Start with transition in
+        this.internalTransitioning = true;
+        this.internalTransitioningIn = true;
     }
 
-    private handleTransition(): void {
-        if (this.transitioning) {
-            if (this.transitioningIn) {
+    /**
+     * @method handleInternalTransition
+     * @description Handles transitions between the two control screens
+     */
+    private handleInternalTransition(): void {
+        if (this.internalTransitioning) {
+            if (this.internalTransitioningIn) {
                 if (this.screenState[1] < 255) {
                     this.screenState[1] += 255 / CONTROL_SCREEN_TRANSITION_TIME;
                 } else {
-                    this.transitioning = false;
-                    this.transitioningIn = false;
+                    this.internalTransitioning = false;
+                    this.internalTransitioningIn = false;
                     this.keylistener.activate();
                 }
             } else {
@@ -51,63 +57,95 @@ export default class ControlScreen implements Menu {
                     this.screenState[1] -= 255 / CONTROL_SCREEN_TRANSITION_TIME;
                 } else {
                     if (this.screenState[0] >= 1) { // We have 2 screens (0 and 1)
-                        GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
+                        // If we've shown both screens, transition out to setup screen
+                        this.startTransitionOut(Screens.SETUP_SCREEN);
                     } else {
+                        // Move to the next screen
                         this.screenState[0]++;
                         this.screenState[1] = 0;
-                        this.transitioningIn = true;
+                        this.internalTransitioningIn = true;
                     }
                 }
             }
         }
     }
 
-    public draw(): void {
-        this.sketch.background(0);
-
+    /**
+     * @method drawContent
+     * @description Draws the control screen content
+     */
+    protected drawContent(): void {
         // Draw the appropriate screen based on screenState[0]
         if (this.screenState[0] === 0) {
-            this.sketch.push();
-                // First screen - arrows and WASD keys
-                this.sketch.rectMode(this.sketch.CENTER);
-                this.sketch.imageMode(this.sketch.CENTER);
-                this.sketch.tint(255, this.screenState[1]);
-            this.sketch.image(arrows, getCanvasSize() * 0.25, getCanvasSize() / 2, getCanvasSize() * 0.15 * 1.5, getCanvasSize() * 0.15);
-            this.sketch.image(wasd, getCanvasSize() / 4 * 3, getCanvasSize() / 2, getCanvasSize() * 0.15 * 1.5, getCanvasSize() * 0.15);
-                // Draw text for first screen
-                this.sketch.rectMode(this.sketch.CENTER);
-                this.sketch.textFont(fontOSDMONO);
-                this.sketch.textSize(getCanvasSize() * 0.02);
-                this.sketch.textAlign(this.sketch.CENTER, this.sketch.CENTER);
-                this.sketch.fill(255, this.screenState[1]);
-                this.sketch.text('Use the WASD and/or Arrow keys to navigate through menus and the Ultimate Tictactoe grid.', 
-                    getCanvasSize() / 2, getCanvasSize() / 5 * 2, getCanvasSize() / 4 * 3, getCanvasSize() / 4 * 1);
-                this.sketch.text('Press space to continue', 
-                    getCanvasSize() / 2, getCanvasSize() / 4 * 2, getCanvasSize() / 4 * 3, getCanvasSize() / 4 * 1);
-            this.sketch.pop();
+            this.drawFirstScreen();
         } else if (this.screenState[0] === 1) {
-            this.sketch.push();
-                // Second screen - spacebar
-                this.sketch.imageMode(this.sketch.CENTER);
-                this.sketch.rectMode(this.sketch.CENTER);
-                this.sketch.textAlign(this.sketch.CENTER, this.sketch.CENTER);
-                this.sketch.textFont(fontOSDMONO);
-                this.sketch.textSize(getCanvasSize() * 0.02)
-                //Second screen - text
-                this.sketch.tint(255, this.screenState[1]);
-            this.sketch.image(space, getCanvasSize() / 2, getCanvasSize() / 2, getCanvasSize() * 0.15 * 1.5, getCanvasSize() * 0.15);
-                this.sketch.fill(255, this.screenState[1]);
-                this.sketch.text('Press space to select in the menus or play a spot on the Ultimate Tictactoe Grid.',
-                    getCanvasSize() / 2, getCanvasSize() / 5 * 2 - 10, getCanvasSize() / 4 * 3, getCanvasSize() / 4 * 1);
-                this.sketch.text('Press space to continue',
-                    getCanvasSize() / 2, getCanvasSize() / 5 * 3, getCanvasSize() / 4 * 3, getCanvasSize() / 4 * 1);
-            this.sketch.pop();
+            this.drawSecondScreen();
         }
 
-        this.handleTransition();
+        // Handle internal transitions between screens
+        this.handleInternalTransition();
+    }
 
-        if (this.keylistener.listen() == KEY_EVENTS.SELECT) {
-            this.transitioning = true;
+    /**
+     * @method drawFirstScreen
+     * @description Draws the first control screen (arrows and WASD)
+     */
+    private drawFirstScreen(): void {
+        this.sketch.push();
+        // First screen - arrows and WASD keys
+        this.sketch.rectMode(this.sketch.CENTER);
+        this.sketch.imageMode(this.sketch.CENTER);
+        this.sketch.tint(255, this.screenState[1]);
+        this.sketch.image(arrows, getCanvasSize() * 0.25, getCanvasSize() / 2, getCanvasSize() * 0.15 * 1.5, getCanvasSize() * 0.15);
+        this.sketch.image(wasd, getCanvasSize() / 4 * 3, getCanvasSize() / 2, getCanvasSize() * 0.15 * 1.5, getCanvasSize() * 0.15);
+        
+        // Draw text for first screen
+        this.sketch.rectMode(this.sketch.CENTER);
+        this.sketch.textFont(fontOSDMONO);
+        this.sketch.textSize(getCanvasSize() * 0.02);
+        this.sketch.textAlign(this.sketch.CENTER, this.sketch.CENTER);
+        this.sketch.fill(255, this.screenState[1]);
+        this.sketch.text('Use the WASD and/or Arrow keys to navigate through menus and the Ultimate Tictactoe grid.', 
+            getCanvasSize() / 2, getCanvasSize() / 5 * 2, getCanvasSize() / 4 * 3, getCanvasSize() / 4 * 1);
+        this.sketch.text('Press space to continue', 
+            getCanvasSize() / 2, getCanvasSize() / 4 * 2, getCanvasSize() / 4 * 3, getCanvasSize() / 4 * 1);
+        this.sketch.pop();
+    }
+
+    /**
+     * @method drawSecondScreen
+     * @description Draws the second control screen (spacebar)
+     */
+    private drawSecondScreen(): void {
+        this.sketch.push();
+        // Second screen - spacebar
+        this.sketch.imageMode(this.sketch.CENTER);
+        this.sketch.rectMode(this.sketch.CENTER);
+        this.sketch.textAlign(this.sketch.CENTER, this.sketch.CENTER);
+        this.sketch.textFont(fontOSDMONO);
+        this.sketch.textSize(getCanvasSize() * 0.02);
+        
+        // Second screen - image and text
+        this.sketch.tint(255, this.screenState[1]);
+        this.sketch.image(space, getCanvasSize() / 2, getCanvasSize() / 2, getCanvasSize() * 0.15 * 1.5, getCanvasSize() * 0.15);
+        
+        this.sketch.fill(255, this.screenState[1]);
+        this.sketch.text('Press space to select in the menus or play a spot on the Ultimate Tictactoe Grid.',
+            getCanvasSize() / 2, getCanvasSize() / 5 * 2 - 10, getCanvasSize() / 4 * 3, getCanvasSize() / 4 * 1);
+        this.sketch.text('Press space to continue',
+            getCanvasSize() / 2, getCanvasSize() / 5 * 3, getCanvasSize() / 4 * 3, getCanvasSize() / 4 * 1);
+        this.sketch.pop();
+    }
+
+    /**
+     * @method handleInput
+     * @description Handles user input
+     */
+    protected handleInput(): void {
+        if (this.keylistener.listen() == KEY_EVENTS.SELECT && !this.internalTransitioning) {
+            this.keylistener.deactivate();
+            this.internalTransitioning = true;
+            this.internalTransitioningIn = false;
         }
     }
 }
