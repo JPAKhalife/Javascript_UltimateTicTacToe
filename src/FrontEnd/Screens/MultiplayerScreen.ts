@@ -17,6 +17,7 @@ import LobbyDot, { LobbyInfo } from "../MenuObjects/LobbyDot";
 import { FRAMERATE } from "../Constants";
 import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
 import WebManager from '../WebManager'; 
+import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 
 const LOBBY_REFRESH_TIME = 7 * FRAMERATE; // 3 seconds
 const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
@@ -46,11 +47,14 @@ export default class MultiplayerScreen implements Menu {
     private returnToSetupScreen: MenuButton;
     private createNewLobby: MenuButton;
     private lobbyNav: MenuNav;
+    //Loading Spinner
+    private loadingSpinner: LoadingSpinner;
 
     //Transition variables
     private transition_in_active: boolean = false;
     private transition_out_active: boolean = false;
     private lobbyRefreshTime: number = LOBBY_REFRESH_TIME;
+    private showLoadingIcon: boolean;
 
     private webManager: WebManager;
     private lobbyList: LobbyInfo[];
@@ -60,8 +64,9 @@ export default class MultiplayerScreen implements Menu {
         this.keylistener = new KeyListener(sketch);
         this.webManager = WebManager.getInstance();
         this.lobbyList = [];
+        this.showLoadingIcon = false;
         this.fetchLobbyList(DEFAULT_LOBBY_DISPLAY_NUM);
-
+        this.loadingSpinner = new LoadingSpinner(this.sketch, 0.125, 0.7, 0.05);
         // Define menu buttons
         this.returnToSetupScreen = new MenuButton(this.sketch, 0.15, 0.20, "Return", 0.05, 0.2, 0.015, 255);
         this.createNewLobby = new MenuButton(this.sketch, 0.85, 0.20, "Create Lobby", 0.05, 0.2, 0.015, 255);
@@ -106,6 +111,11 @@ export default class MultiplayerScreen implements Menu {
             }
         } else {
             this.lobbyRefreshTime--;
+        }
+
+        //Check for loading Icon
+        if (this.showLoadingIcon) {
+            this.loadingSpinner.draw();
         }
 
         // Display lobby information on the left panel
@@ -157,8 +167,15 @@ export default class MultiplayerScreen implements Menu {
             } else if (keypress === KEY_EVENTS.LEFT) {
                 this.lobbyNav.selectClosest(180);
             } else if (keypress === KEY_EVENTS.SELECT) {
-                this.lobbyNav.confirm();
-                this.transition_out_active = true;
+                //Functionality for if the user selects a lobby
+                if (this.lobbyNav.getCurrentlySelected() instanceof LobbyDot) {
+                    let lobbyInfo = (this.lobbyNav.getCurrentlySelected() as LobbyDot).getLobbyInfo();
+                    this.showLoadingIcon = true;
+                    setTimeout(() => this.joinLobby(), 0);
+                } else {
+                    this.lobbyNav.confirm();
+                    this.transition_out_active = true;
+                }
                 this.keylistener.deactivate();
             }
         }
@@ -339,5 +356,13 @@ export default class MultiplayerScreen implements Menu {
             y
         );
         this.sketch.noStroke();
+    }
+
+    /**
+     * @method joinLobby
+     * @description join the lobby
+     */
+    private joinLobby(): void {
+
     }
 }
