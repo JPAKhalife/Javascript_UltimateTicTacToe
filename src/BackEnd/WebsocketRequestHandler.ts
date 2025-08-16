@@ -8,7 +8,8 @@ import {
     removeConnection, 
     getConnectionByDeviceId, 
     getWebsocketObject,
-    storeDeviceConnection
+    storeDeviceConnection,
+    validatePlayerID
 } from './Database/Connections';
 import { URL } from 'url';
 const { v4: uuidv4 } = require('uuid');
@@ -87,22 +88,43 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
             const data = JSON.parse(message.toString());
             console.log('Received message from client:', data);
             messageID = data.messageID;
+            let sentPlayerID = data?.playerID
 
-            //TODO: Allow for reconnection of a client to a player.
-            // Handle different message types
-            if (data.type === 'createLobby') {
-                returnMessage = await handleCreateLobby(ws, redis, data.parameters)
-            } else if (data.type === 'searchLobbies') {
-                returnMessage = await handleSearchLobbies(ws, redis, data.parameters);
-            } else if (data.type === 'registerPlayer') {
-                returnMessage = await handleRegisterPlayer(ws, redis, data.parameters);
+            if (sentPlayerID && typeof sentPlayerID === 'string') {
+                // Ensure that a valid playerID is present
+                const playerID = await getPlayerID(redis, ws.id);
+                if (playerID && playerID == sentPlayerID) {
+                    // Handle message types for registered players
+                    if (data.type === 'createLobby') {
+                        returnMessage = await handleCreateLobby(ws, redis, data.parameters)
+                    } else if (data.type === 'searchLobbies') {
+                        returnMessage = await handleSearchLobbies(ws, redis, data.parameters);
+                    } else {
+                        returnMessage = {
+                            messageID: data.messageID,
+                            message: 'Message received',
+                            data
+                        };
+                    }
+                } else {
+                    returnMessage = {
+                        success: false,
+                        error: 'A valid playerID is required to perform this action.'
+                    };
+                }
             } else {
-                returnMessage = {
-                    messageID: data.messageID,
-                    message: 'Message received',
-                    data
-                };
+                //Handle message types for unregistered users
+                if (data.type === 'registerPlayer') {
+                    returnMessage = await handleRegisterPlayer(ws, redis, data.parameters);
+                } else {
+                    returnMessage = {
+                        messageID: data.messageID,
+                        message: 'Message received',
+                        data
+                    };
+                }
             }
+            
         } catch (error) {
             console.error('Error processing message:', error);
             returnMessage = {

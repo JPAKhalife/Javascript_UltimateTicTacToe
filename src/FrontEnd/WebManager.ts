@@ -189,6 +189,7 @@ public getDeviceId(): string {
             // Create message payload
             const message = {
                 type: 'createLobby',
+                playerID: playerID,
                 parameters: {
                     lobbyID,
                     lobbyData: {
@@ -268,9 +269,11 @@ public getDeviceId(): string {
      */
     public async getLobbyList(parameters: {lobbyID?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number, lobbyState?: string, creator?: string}): Promise<LobbyInfo[]> {
         try {
+            let playerID = localStorage.getItem('playerID');
             // Create the message payload
             const message = {
                 type: 'searchLobbies',
+                playerID: playerID,
                 parameters: {
                     lobbyID: parameters.lobbyID,
                     playerNum: parameters.playerNum,
