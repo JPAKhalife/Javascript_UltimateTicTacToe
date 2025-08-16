@@ -39,13 +39,14 @@ export default class CreateLobbyScreen implements Menu {
     //Icon
     private loadingIcon: LoadingSpinner;
 
-    //Transition varaibles
-    private transition_in_active: boolean = false;
+    //Transition variables
+    private transition_in_active: boolean = true;
     private transition_out_active: boolean = false;
     private transitionTimer: number = 0;
     private transitionDuration: number = 60; // 1 second at 60fps
     private transitionComplete: boolean = false;
-    private lineOpacity: number = 255;
+    private lineOpacity: number = 0;
+    private elementsOpacity: number = 0;
     private selectedButton: MenuButton;
     private showLoadingIcon: boolean;
 
@@ -55,17 +56,20 @@ export default class CreateLobbyScreen implements Menu {
         this.webManager = WebManager.getInstance();
 
         //This is where the menu buttons will be defined
-        this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.10, "Return", 0.05, 0.2, 0.015, 255);
-        let createLobbyButton = new MenuButton(this.sketch, 0.5, 0.85, "Create", 0.05, 0.2, 0.015, 255);
+        this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.10, "Return", 0.05, 0.2, 0.015, 0);
+        let createLobbyButton = new MenuButton(this.sketch, 0.5, 0.85, "Create", 0.05, 0.2, 0.015, 0);
         // Create the lobby name field with proper parameters (using percentage-based positioning)
         this.lobbyNameField = new Field(this.sketch, 0.5, 0.25, 0.4, 0.08, this.keylistener, 36, "Lobby Name", 0.025, 0.5, 0.20);
-        this.lobbyNameField.setOpacity(255);
+        this.lobbyNameField.setOpacity(0);
         this.levelSizeSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.41, 0.5, 0.005, 1, 9, 1, 2, "Level Size");
+        this.levelSizeSlider.setOpacity(0);
         this.playerNumSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.53, 0.5, 0.005, 2, 10, 1, 2, "Player Number");
+        this.playerNumSlider.setOpacity(0);
         this.slotNumSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.65, 0.5, 0.005, 1, 9, 1, 3, "Slot Number");
-        this.spectatorToggle = new Toggle(this.sketch, 0.5, 0.78, 0.05, 255);
+        this.slotNumSlider.setOpacity(0);
+        this.spectatorToggle = new Toggle(this.sketch, 0.5, 0.78, 0.05, 0);
         
-        this.loadingIcon = new LoadingSpinner(sketch, 0.5, 0.94, 0.04,false,0.08);
+        this.loadingIcon = new LoadingSpinner(sketch, 0.5, 0.94, 0.04, false, 0.08);
         this.showLoadingIcon = false;
         this.selectedButton = this.returnToOnlineScreen;
 
@@ -79,7 +83,45 @@ export default class CreateLobbyScreen implements Menu {
             createLobbyButton
         ], this.sketch);
 
-        
+        // Start transition in
+        this.keylistener.deactivate(); // Disable input during transition
+    }
+
+    /**
+     * @method startTransitionIn
+     * @description Initializes the transition in animation
+     */
+    private startTransitionIn(): void {
+        this.elementsOpacity = 0;
+        this.lineOpacity = 0;
+        this.transition_in_active = true;
+    }
+
+    /**
+     * @method animateTransitionIn
+     * @description Animates the transition in by fading in all elements
+     */
+    private animateTransitionIn(): void {
+        // Fade in border lines
+        if (this.lineOpacity < 255) {
+            this.lineOpacity = Math.min(this.lineOpacity + 255 / (this.transitionDuration / 2), 255);
+        } 
+        // Then fade in buttons and other elements
+        else if (this.elementsOpacity < 255) {
+            this.elementsOpacity += 255 / (this.transitionDuration / 2);
+            
+            // Update opacity of menu elements
+            for (let i = 0; i < this.lobbyNav.getLength(); i++) {
+                const item = this.lobbyNav.getAtIndex(i);
+                item.setOpacity(this.elementsOpacity);
+            }
+            
+            // If elements are fully visible, end transition
+            if (this.elementsOpacity >= 255) {
+                this.transition_in_active = false;
+                this.keylistener.activate(); // Enable input after transition
+            }
+        }
     }
 
     /**
@@ -115,8 +157,9 @@ export default class CreateLobbyScreen implements Menu {
             item.fade(255 / this.transitionDuration);
         }
         
-        // Fade out the side lines
+        // Fade out the side lines and text
         this.lineOpacity -= 255 / this.transitionDuration;
+        this.elementsOpacity -= 255 / this.transitionDuration;
         
         // Increment the transition timer
         this.transitionTimer++;
@@ -128,7 +171,7 @@ export default class CreateLobbyScreen implements Menu {
         
         // Draw "Spectators" text next to the toggle
         this.sketch.push();
-            this.sketch.fill(255, this.lineOpacity);
+            this.sketch.fill(255, this.elementsOpacity);
             this.sketch.textSize(0.025 * getCanvasSize());
             this.sketch.textAlign(this.sketch.CENTER);
             this.sketch.text("Spectators", getCanvasSize() * 0.5, 0.73 * getCanvasSize());
@@ -151,8 +194,10 @@ export default class CreateLobbyScreen implements Menu {
             this.loadingIcon.draw();
         }
 
-        //Check for transitionout
-        if (this.transition_out_active && !this.transitionComplete) {
+        // Handle transitions
+        if (this.transition_in_active) {
+            this.animateTransitionIn();
+        } else if (this.transition_out_active && !this.transitionComplete) {
             this.animateTransitionOut();
             this.handleTransitionOut();
         }

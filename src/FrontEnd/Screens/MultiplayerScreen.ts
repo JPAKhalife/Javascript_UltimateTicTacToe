@@ -51,8 +51,13 @@ export default class MultiplayerScreen implements Menu {
     private loadingSpinner: LoadingSpinner;
 
     //Transition variables
-    private transition_in_active: boolean = false;
+    private transition_in_active: boolean = true;
     private transition_out_active: boolean = false;
+    private transitionTimer: number = 0;
+    private transitionDuration: number = 60; // 1 second at 60fps
+    private transitionComplete: boolean = false;
+    private lineOpacity: number = 0;
+    private elementsOpacity: number = 0;
     private lobbyRefreshTime: number = LOBBY_REFRESH_TIME;
     private showLoadingIcon: boolean;
 
@@ -68,12 +73,53 @@ export default class MultiplayerScreen implements Menu {
         this.fetchLobbyList(DEFAULT_LOBBY_DISPLAY_NUM);
         this.loadingSpinner = new LoadingSpinner(this.sketch, 0.125, 0.7, 0.05);
         // Define menu buttons
-        this.returnToSetupScreen = new MenuButton(this.sketch, 0.15, 0.20, "Return", 0.05, 0.2, 0.015, 255);
-        this.createNewLobby = new MenuButton(this.sketch, 0.85, 0.20, "Create Lobby", 0.05, 0.2, 0.015, 255);
+        this.returnToSetupScreen = new MenuButton(this.sketch, 0.15, 0.20, "Return", 0.05, 0.2, 0.015, 0);
+        this.createNewLobby = new MenuButton(this.sketch, 0.85, 0.20, "Create Lobby", 0.05, 0.2, 0.015, 0);
         this.lobbyNav = new MenuNav([
             this.returnToSetupScreen,
             this.createNewLobby
         ], this.sketch);
+        
+        // Start transition in
+        this.keylistener.deactivate(); // Disable input during transition
+    }
+
+    /**
+     * @method startTransitionIn
+     * @description Initializes the transition in animation
+     */
+    private startTransitionIn(): void {
+        this.elementsOpacity = 0;
+        this.lineOpacity = 0;
+        this.transition_in_active = true;
+    }
+
+    /**
+     * @method animateTransitionIn
+     * @description Animates the transition in by fading in all elements
+     */
+    private animateTransitionIn(): void {
+        // Fade in border lines
+        if (this.lineOpacity < 255) {
+            this.lineOpacity = Math.min(this.lineOpacity + 255 / (this.transitionDuration / 2), 255);
+        } 
+        // Then fade in buttons and other elements
+        else if (this.elementsOpacity < 255) {
+            this.elementsOpacity += 255 / (this.transitionDuration / 2);
+            
+            // Update opacity of menu buttons
+            for (let i = 0; i < this.lobbyNav.getLength(); i++) {
+                if (this.lobbyNav.getAtIndex(i) instanceof MenuButton) {
+                    (this.lobbyNav.getAtIndex(i) as MenuButton).setOpacity(this.elementsOpacity);
+                }
+            }
+            
+            // If elements are fully visible, end transition
+            if (this.elementsOpacity >= 255) {
+                this.transition_in_active = false;
+                this.keylistener.activate(); // Enable input after transition
+            }
+        }
     }
 
     /**
@@ -81,14 +127,41 @@ export default class MultiplayerScreen implements Menu {
      * @description This method is called when the screen is transitioning out.
      */
     private handleTransitionOut(): void {
-        const selectedPhrase = (this.lobbyNav.getCurrentlySelected() as MenuButton).getText();
-        if (selectedPhrase === 'Return') {
-            GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
-        } else if (selectedPhrase === 'Create Lobby') {
-            GuiManager.changeScreen(Screens.CREATE_LOBBY_SCREEN, this.sketch);
-        } else {
-            GuiManager.changeScreen(Screens.START_SCREEN, this.sketch);
+        // Only change screen when transition is complete
+        if (this.transitionTimer >= this.transitionDuration) {
+            const selectedPhrase = (this.lobbyNav.getCurrentlySelected() as MenuButton).getText();
+            if (selectedPhrase === 'Return') {
+                GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
+            } else if (selectedPhrase === 'Create Lobby') {
+                GuiManager.changeScreen(Screens.CREATE_LOBBY_SCREEN, this.sketch);
+            } else {
+                GuiManager.changeScreen(Screens.START_SCREEN, this.sketch);
+            }
+            this.transitionComplete = true;
         }
+    }
+    
+    /**
+     * @method animateTransitionOut
+     * @description Animates the transition out by fading all elements
+     */
+    private animateTransitionOut(): void {
+        // Fade out all menu items
+        for (let i = 0; i < this.lobbyNav.getLength(); i++) {
+            const item = this.lobbyNav.getAtIndex(i);
+            if (item instanceof MenuButton && item !== this.lobbyNav.getCurrentlySelected()) {
+                item.fade(255 / this.transitionDuration);
+            } else if (item instanceof LobbyDot) {
+                item.fade(255 / this.transitionDuration);
+            }
+        }
+        
+        // Fade out the border lines and text
+        this.lineOpacity -= 255 / this.transitionDuration;
+        this.elementsOpacity -= 255 / this.transitionDuration;
+        
+        // Increment the transition timer
+        this.transitionTimer++;
     }
 
     public draw(): void {
@@ -121,8 +194,11 @@ export default class MultiplayerScreen implements Menu {
         // Display lobby information on the left panel
         this.displayLobbyInfo();
 
-        // Check for transition out
-        if (this.transition_out_active) {
+        // Handle transitions
+        if (this.transition_in_active) {
+            this.animateTransitionIn();
+        } else if (this.transition_out_active && !this.transitionComplete) {
+            this.animateTransitionOut();
             this.handleTransitionOut();
         }
 
@@ -136,7 +212,7 @@ export default class MultiplayerScreen implements Menu {
      * @param canvasSize The current canvas size
      */
     private drawBorderLines(canvasSize: number): void {
-        this.sketch.stroke(255);
+        this.sketch.stroke(255, this.lineOpacity);
         this.sketch.strokeWeight(5);
         
         // Top horizontal line
@@ -175,6 +251,8 @@ export default class MultiplayerScreen implements Menu {
                 } else {
                     this.lobbyNav.confirm();
                     this.transition_out_active = true;
+                    this.transitionTimer = 0;
+                    this.transitionComplete = false;
                 }
                 this.keylistener.deactivate();
             }
@@ -258,7 +336,7 @@ export default class MultiplayerScreen implements Menu {
         const lineHeight = canvasSize * 0.03; // Space between lines (3% of canvas height)
         
         // Set common text properties
-        this.sketch.fill(255); // White text
+        this.sketch.fill(255, this.elementsOpacity); // White text with opacity
         this.sketch.noStroke();
         this.sketch.textAlign(this.sketch.CENTER, this.sketch.TOP);
         
@@ -350,7 +428,7 @@ export default class MultiplayerScreen implements Menu {
      * @description Draws a horizontal divider line
      */
     private drawDivider(centerX: number, y: number, width: number, canvasSize: number): void {
-        this.sketch.stroke(255);
+        this.sketch.stroke(255, this.elementsOpacity);
         this.sketch.strokeWeight(1);
         this.sketch.line(
             centerX - width, // Left end of divider
