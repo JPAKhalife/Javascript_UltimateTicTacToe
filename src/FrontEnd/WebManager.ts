@@ -20,8 +20,7 @@ export interface LobbyInfo {
     playersJoined: number;
     creator: string;
     lobbyState: string;
-    gameState: number[];
-    players: string[];
+    allowSpectators: boolean;
 }
 
 export default class WebManager {
@@ -297,8 +296,7 @@ public getDeviceId(): string {
                     playersJoined: lobby.playersJoined,
                     creator: lobby.creator,
                     lobbyState: lobby.lobbyState,
-                    gameState: lobby.gameState,
-                    players: lobby.players
+                    allowSpectators: lobby.allowSpectators
                 }));
             }
             

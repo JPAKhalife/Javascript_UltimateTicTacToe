@@ -63,7 +63,7 @@ export default class CreateLobbyScreen implements Menu {
         this.levelSizeSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.41, 0.5, 0.005, 1, 9, 1, 2, "Level Size");
         this.playerNumSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.53, 0.5, 0.005, 2, 10, 1, 2, "Player Number");
         this.slotNumSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.65, 0.5, 0.005, 1, 9, 1, 3, "Slot Number");
-        this.spectatorToggle = new Toggle(this.sketch, 0.5, 0.76, 0.05, 255);
+        this.spectatorToggle = new Toggle(this.sketch, 0.5, 0.78, 0.05, 255);
         
         this.loadingIcon = new LoadingSpinner(sketch, 0.5, 0.94, 0.04,false,0.08);
         this.showLoadingIcon = false;
@@ -178,6 +178,9 @@ export default class CreateLobbyScreen implements Menu {
                             this.showLoadingIcon = true;
                             this.keylistener.deactivate();
                             setTimeout(() => this.createLobby(), 1000);
+                        } else {
+                            this.selectedButton.setConfirmed(true)
+                            this.transition_out_active = true;
                         }
                     } else if (this.lobbyNav.getCurrentlySelected() instanceof Toggle) {
                         this.lobbyNav.getCurrentlySelected().setConfirmed(!this.lobbyNav.getCurrentlySelected().isConfirmed())

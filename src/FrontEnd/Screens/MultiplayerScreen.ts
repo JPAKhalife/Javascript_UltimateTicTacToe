@@ -234,10 +234,11 @@ export default class MultiplayerScreen implements Menu {
                 this.lobbyList.push(new LobbyDotInfo(
                     lobby.lobbyID,
                     lobby.lobbyState,
-                    lobby.playersJoined,
+                    lobby.playerNum,
                     lobby.gridSize,
                     lobby.levelSize,
                     lobby.playersJoined,
+                    lobby.allowSpectators
                 ));
             });
         } catch (error) {
@@ -287,7 +288,7 @@ export default class MultiplayerScreen implements Menu {
         
         this.sketch.textSize(TEXT_SIZES.NORMAL * canvasSize);
         this.sketch.text("Status: " + selectedLobbyInfo.state, leftPanelX, topMargin + lineHeight * 3.5);
-        this.sketch.text("Players: " + selectedLobbyInfo.joinedPlayers + "/" + selectedLobbyInfo.players, 
+        this.sketch.text("Players: " + selectedLobbyInfo.joinedPlayers + "/" + selectedLobbyInfo.playerNum, 
             leftPanelX, topMargin + lineHeight * 4.5);
         
         // Draw a divider
@@ -302,10 +303,12 @@ export default class MultiplayerScreen implements Menu {
             leftPanelX, topMargin + lineHeight * 8);
         this.sketch.text("Level Size: " + selectedLobbyInfo.levelsize, 
             leftPanelX, topMargin + lineHeight * 9);
+        this.sketch.text("Allow Spectators: " + selectedLobbyInfo.allowSpectators,
+            leftPanelX, topMargin + lineHeight * 10);
         
         // Instructions
         this.sketch.textSize(TEXT_SIZES.SMALL * canvasSize);
-        this.sketch.text("Press ENTER to join", leftPanelX, topMargin + lineHeight * 11);
+        this.sketch.text("Press ENTER to join", leftPanelX, topMargin + lineHeight * 12);
     }
     
     /**

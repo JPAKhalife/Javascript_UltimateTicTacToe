@@ -24,25 +24,27 @@ const PULSE_ANIMATION_TIME = FRAMERATE * 2;
 export class LobbyInfo {
     public lobbyID: string;
     public state: string;
-    public players: number;
+    public playerNum: number;
     public joinedPlayers: number;
     public gridsize: number;
     public levelsize: number;
+    public allowSpectators: boolean;
 
     constructor(
         lobbyID: string,
         state: string, 
-        players: number,
+        playerNum: number,
         gridsize: number,
         levelsize: number,
-        joinedPlayers: number) {
+        joinedPlayers: number,
+        allowSpectators: boolean) {
         this.lobbyID = lobbyID;
         this.state = state;
-        this.players = players;
+        this.playerNum = playerNum;
         this.gridsize = gridsize;
         this.levelsize = levelsize;
         this.joinedPlayers = joinedPlayers;
-
+        this.allowSpectators = allowSpectators;
     }
 }
 

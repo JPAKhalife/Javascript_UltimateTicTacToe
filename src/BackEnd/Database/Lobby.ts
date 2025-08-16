@@ -134,7 +134,7 @@ export default class Lobby {
             // Create lobby hash fields
             const lobbyHash = {
                 playerNum: lobbyData.playerNum.toString(),
-                playersJoined: "0", // Start with 0 players, will be updated by Player.addPlayer
+                playersJoined: 1, // Start with 0 players, will be updated by Player.addPlayer
                 levelSize: lobbyData.levelSize.toString(),
                 gridSize: lobbyData.gridSize.toString(),
                 creator: playerID,
@@ -447,8 +447,7 @@ export default class Lobby {
             creator: this.creator,
             lobbyState: this.lobbyState,
             gameState: this.gameState,
-            players: this.players,
-            // Exclude version as it's used for internal optimistic locking
+            allowSpectators: this.allowSpectators
         };
     }
 

@@ -50,7 +50,7 @@ export default class Slider extends BaseMenuItem {
 
         this.getSketch().push();
         //The slider should have a line drawn accross the screen of any thickness and any width
-        this.getSketch().stroke(255);
+        this.getSketch().stroke(255, this.getOpacity());
         this.getSketch().strokeWeight(this.strokeWidth * canvasSize);
         this.getSketch().line(
             this.getX(canvasSize) - (this.width * canvasSize) / 2,
@@ -59,7 +59,7 @@ export default class Slider extends BaseMenuItem {
             this.getY(canvasSize)
         );
         //Draw the notches at the end of the line
-        this.getSketch().fill(255);
+        this.getSketch().fill(255, this.getOpacity());
         this.getSketch().rectMode(this.getSketch().CENTER);
         this.getSketch().rect(
             this.getX(canvasSize) - (this.width * canvasSize) / 2,
@@ -85,7 +85,7 @@ export default class Slider extends BaseMenuItem {
             
             this.getSketch().push();
                 this.getSketch().noFill();
-                this.getSketch().stroke(255,pulseOpacity);
+                this.getSketch().stroke(255, pulseOpacity * (this.getOpacity() / 255));
                 this.getSketch().rect(
                     notchX,
                     notchY,
@@ -97,7 +97,7 @@ export default class Slider extends BaseMenuItem {
             // Default notch when not selected - matching the selected state's dimensions for consistency
             this.getSketch().push();
                 this.getSketch().noFill();
-                this.getSketch().stroke(255);
+                this.getSketch().stroke(255, this.getOpacity());
                 this.getSketch().rect(
                     notchX,
                     notchY,
@@ -109,7 +109,7 @@ export default class Slider extends BaseMenuItem {
 
         //Center text on top of the slider
         this.getSketch().textAlign(this.getSketch().CENTER);
-        this.getSketch().fill(255);
+        this.getSketch().fill(255, this.getOpacity());
         this.getSketch().strokeWeight(1);
         this.getSketch().textSize(0.025 * canvasSize);
         this.getSketch().text(this.text, this.getX(canvasSize), this.getY(canvasSize) - (0.04 * canvasSize));
