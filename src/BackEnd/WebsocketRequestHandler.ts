@@ -9,7 +9,6 @@ import {
     getConnectionByDeviceId, 
     getWebsocketObject,
     storeDeviceConnection,
-    validatePlayerID
 } from './Database/Connections';
 import { URL } from 'url';
 const { v4: uuidv4 } = require('uuid');
