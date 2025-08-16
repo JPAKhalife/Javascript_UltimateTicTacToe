@@ -26,7 +26,7 @@ export default class LoadingSpinner extends BaseMenuItem {
     private counter: number;
 
 
-    constructor(sketch: p5, xPercent: number, yPercent: number, widthPercent: number, image: p5.Image = whiteTicTac, fadeFunction: ((counter: number) => number) | null = null, rotationSpeed: number = 4, initialRotation: number = 0, rotationFunction: ((counter: number) => number) | null = null, opacity: number = 255, doRadians: boolean = false) {
+    constructor(sketch: p5, xPercent: number, yPercent: number, widthPercent: number, doRadians: boolean = false, rotationSpeed: number = 4, image: p5.Image = whiteTicTac, fadeFunction: ((counter: number) => number) | null = null, initialRotation: number = 0, rotationFunction: ((counter: number) => number) | null = null, opacity: number = 255) {
         super(sketch, xPercent, yPercent, opacity);
         this.rotationAngle = 0;
         this.image = image;
@@ -54,11 +54,12 @@ export default class LoadingSpinner extends BaseMenuItem {
             }
             this.getSketch().tint(255, this.fadeFunction(this.counter));
             this.getSketch().image(this.image, 0, 0, this.width * canvasSize, this.width * canvasSize);
+            // Increment rotation angle for continuous spinning
+            this.rotationAngle = this.rotationFunction(this.counter);
+            this.counter = (this.counter + 2) % Number.MAX_SAFE_INTEGER; // Reset after 4.2 million years lol (just in case who knows)
         this.getSketch().pop();
 
-        // Increment rotation angle for continuous spinning
-        this.rotationAngle = this.rotationFunction(this.counter);
-        this.counter = (this.counter + 2) % Number.MAX_SAFE_INTEGER; // Reset after 4.2 million years lol (just in case who knows)
+
     }
 
     //There is not really a state reset for this menuItem

@@ -33,6 +33,7 @@ export default class ScreenBorder extends BaseMenuItem {
         this.transitionOutActive = false;
     }
 
+
     public draw() {
         this.getSketch().push();
             this.getSketch().rectMode(this.getSketch().CENTER);
@@ -54,6 +55,12 @@ export default class ScreenBorder extends BaseMenuItem {
         }
     }
 
+    /**
+     * @method animationTransitionIn
+     * @description Handles the animation for transitioning the border in by shrinking it.
+     * @params None
+     * @returns void
+     */
     private animationTransitionIn(): void {
         if (this.borderPos >= 1) {
             this.transitionInActive = false;
@@ -63,6 +70,12 @@ export default class ScreenBorder extends BaseMenuItem {
         }
     }
 
+    /**
+     * @method animationTransitionOut
+     * @description Handles the animation for transitioning the border out by expanding it.
+     * @params None
+     * @returns void
+     */
     private animationTransitionOut(): void {
         this.borderPos -= (1 / this.animationTime);
         if (this.borderPos <= 0) {
@@ -74,8 +87,29 @@ export default class ScreenBorder extends BaseMenuItem {
         
     }
 
+    /**
+     * @method isTransitioning
+     * @description Checks if the border is currently in a transition (either in or out).
+     * @params None
+     * @returns boolean - True if transitioning, false otherwise.
+     */
     public isTransitioning(): boolean { return this.transitionInActive || this.transitionOutActive; }
+    /**
+     * @method setTransitionIn
+     * @description Activates or deactivates the transition-in animation.
+     * @params transition - A boolean indicating whether to activate the transition-in animation.
+     * @returns void
+     */
     public setTransitionIn(transition: boolean) { this.transitionInActive = transition; }
+
+    /**
+     * @method setTransitionOut
+     * @description Activates or deactivates the transition-out animation.
+     * @params transition - A boolean indicating whether to activate the transition-out animation.
+     * @returns void
+     */
     public setTransitionOut(transition: boolean) { this.transitionOutActive = transition; }
+
+    
 }
 

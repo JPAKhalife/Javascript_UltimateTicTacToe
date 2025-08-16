@@ -20,8 +20,7 @@ export interface LobbyInfo {
     playersJoined: number;
     creator: string;
     lobbyState: string;
-    gameState: number[];
-    players: string[];
+    allowSpectators: boolean;
 }
 
 export default class WebManager {
@@ -102,7 +101,6 @@ public getDeviceId(): string {
             this.socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('Message from server:', data);
                     // Handle response messages with messageID
                     if (data.messageID && this.messageCallbacks.has(data.messageID)) {
                         const callback = this.messageCallbacks.get(data.messageID);
@@ -175,6 +173,7 @@ public getDeviceId(): string {
      * @param levelSize Size of the level
      * @param gridSize Size of the grid
      * @param playerID Unique ID of the player creating the lobby
+     * @param allowSpectators whether or not spectators should be allowed
      * @returns Promise that resolves with the result of the lobby creation
      */
     public async createLobby(
@@ -182,18 +181,21 @@ public getDeviceId(): string {
         playerNum: number,
         levelSize: number,
         gridSize: number,
-        playerID: string
+        playerID: string,
+        allowSpectators: boolean
     ): Promise<boolean> {
         try {
             // Create message payload
             const message = {
                 type: 'createLobby',
+                playerID: playerID,
                 parameters: {
                     lobbyID,
                     lobbyData: {
                         playerNum,
                         levelSize,
-                        gridSize
+                        gridSize,
+                        allowSpectators
                     },
                     playerID: playerID
                 }
@@ -266,9 +268,11 @@ public getDeviceId(): string {
      */
     public async getLobbyList(parameters: {lobbyID?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number, lobbyState?: string, creator?: string}): Promise<LobbyInfo[]> {
         try {
+            let playerID = localStorage.getItem('playerID');
             // Create the message payload
             const message = {
                 type: 'searchLobbies',
+                playerID: playerID,
                 parameters: {
                     lobbyID: parameters.lobbyID,
                     playerNum: parameters.playerNum,
@@ -294,8 +298,7 @@ public getDeviceId(): string {
                     playersJoined: lobby.playersJoined,
                     creator: lobby.creator,
                     lobbyState: lobby.lobbyState,
-                    gameState: lobby.gameState,
-                    players: lobby.players
+                    allowSpectators: lobby.allowSpectators
                 }));
             }
             

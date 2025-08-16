@@ -34,6 +34,7 @@ export type LobbyData = {
     playerNum: number;
     levelSize: number;
     gridSize: number;
+    allowSpectators: boolean;
     version?: number; // Added for optimistic locking
 };
 
@@ -51,6 +52,7 @@ export default class Lobby {
     private gameState: number[];
     private players: string[];
     private version?: number;
+    private allowSpectators: boolean;
 
     // This constructor shall only be called internally. static methods must be called in order to create a lobby object
     private constructor(lobbyID: string, lobbyData: LobbyData, creatorID: string) {
@@ -65,6 +67,7 @@ export default class Lobby {
         this.gameState = [];
         this.players = [];
         this.version = lobbyData.version;
+        this.allowSpectators = lobbyData.allowSpectators;
     }
 
     /**
@@ -88,6 +91,7 @@ export default class Lobby {
                 playerNum: parseInt(lobbyHash.playerNum),
                 levelSize: parseInt(lobbyHash.levelSize),
                 gridSize: parseInt(lobbyHash.gridSize),
+                allowSpectators: lobbyHash.allowSpectators === "true",
                 version: lobbyHash.version ? parseInt(lobbyHash.version) : undefined
             },
             lobbyHash.creator
@@ -130,11 +134,12 @@ export default class Lobby {
             // Create lobby hash fields
             const lobbyHash = {
                 playerNum: lobbyData.playerNum.toString(),
-                playersJoined: "0", // Start with 0 players, will be updated by Player.addPlayer
+                playersJoined: 1, // Start with 0 players, will be updated by Player.addPlayer
                 levelSize: lobbyData.levelSize.toString(),
                 gridSize: lobbyData.gridSize.toString(),
                 creator: playerID,
                 lobbyState: "waiting",
+                allowSpectators: lobbyData.allowSpectators,
                 version: "1" // Initial version
             };
 
@@ -432,18 +437,16 @@ export default class Lobby {
      * @description Converts the Lobby object to a format suitable for JSON serialization and web requests
      * @returns An object representing the lobby that can be directly stringified to JSON
      */
-    public toJSON(): Record<string, any> {
+    public async lobbySummaryJson(redisClient: Redis): Promise<Record<string, any>> {
         return {
             lobbyID: this.lobbyID,
             playerNum: this.playerNum,
             playersJoined: this.playersJoined,
             levelSize: this.levelSize,
             gridSize: this.gridSize,
-            creator: this.creator,
+            creator: (await Player.getPlayer(redisClient, this.creator))?.getUsername() || "Unknown",
             lobbyState: this.lobbyState,
-            gameState: this.gameState,
-            players: this.players,
-            // Exclude version as it's used for internal optimistic locking
+            allowSpectators: this.allowSpectators
         };
     }
 
@@ -459,7 +462,7 @@ export default class Lobby {
             const lobbyKey = `lobby:${lobbyID}`;
             const gameStateKey = `gamestate:${lobbyID}`;
             const playersKey = `lobbyplayers:${lobbyID}`;
-            
+
             // Check if the lobby exists
             const doesLobbyExist = await redisClient.exists(lobbyKey);
             if (doesLobbyExist === 0) {
@@ -476,10 +479,10 @@ export default class Lobby {
             if (!lobbyHashData || Object.keys(lobbyHashData).length === 0) {
                 return null;
             }
-            
+
             // Convert game state strings to numbers
             const gameStateArray = gameStateData.map(val => parseInt(val));
-            
+
             return Lobby.fromRedisData(lobbyID, lobbyHashData, gameStateArray, playersData);
         } catch (error) {
             throw new Error(`There was an error calling getLobby: ${error}`);
@@ -506,7 +509,7 @@ export default class Lobby {
         try {
             // Get the list of all lobbies with a limit to prevent timeout
             const lobbyIDs = await redisClient.lrange('LobbyList', 0, searchListLength);
-            
+
             if (lobbyIDs.length === 0) {
                 return [];
             }
@@ -565,8 +568,8 @@ export default class Lobby {
 
                 // For string values, use localeCompare
                 if (typeof valueA === 'string' && typeof valueB === 'string') {
-                    return sortOrder === 'asc' 
-                        ? valueA.localeCompare(valueB) 
+                    return sortOrder === 'asc'
+                        ? valueA.localeCompare(valueB)
                         : valueB.localeCompare(valueA);
                 }
 
@@ -603,7 +606,8 @@ export default class Lobby {
             gridSize?: number,
             playersJoined?: number,
             lobbyState?: string,
-            creator?: string
+            creator?: string,
+            allowSpectators?: boolean
         },
         maxResults: number = 20,
         searchListLength: number = 100
@@ -611,7 +615,7 @@ export default class Lobby {
         try {
             // Get the list of all lobbies with a limit to prevent timeout
             const lobbyIDs = await redisClient.lrange('LobbyList', 0, searchListLength);
-            
+
             if (lobbyIDs.length === 0) {
                 return [];
             }
@@ -653,7 +657,10 @@ export default class Lobby {
                 if (filters.creator !== undefined && lobby.creator !== filters.creator) {
                     return false;
                 }
-                
+                if (filters.allowSpectators !== undefined && lobby.allowSpectators !== filters.allowSpectators) {
+                    return false;
+                }
+
                 // If all criteria pass, include this lobby
                 return true;
             });

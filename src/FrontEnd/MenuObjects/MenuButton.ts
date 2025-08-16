@@ -136,6 +136,7 @@ export class MenuButton extends BaseMenuItem {
      */
     selectedButton(currentCanvasSize: number): void {
         this.getSketch().textFont('Arial');
+        this.getSketch().rectMode(this.getSketch().CENTER);
         //checking if the animation time is finished
         if (this.animationTime > MenuButton.SELECTED_ANIMATION_TIME) {
 
@@ -167,43 +168,37 @@ export class MenuButton extends BaseMenuItem {
      * @param currentCanvasSize The current canvas size
      */
     confirmedButton(currentCanvasSize: number): void {
-        this.getSketch().textFont('Arial');
-        let first_half: boolean = true
-        //checking if the animation time is finished
-        if (this.animationTime > MenuButton.CONFIRMED_ANIMATION_TIME) {
-            this.setOpacity(0);
-            this.confirmedAnimation = true;
-        } else {
-            this.cl += ((MenuButton.GROWTH_PERCENT / 100) * (this.currentLength * currentCanvasSize) + (this.currentLength * currentCanvasSize)) / MenuButton.CONFIRMED_ANIMATION_TIME;
-            this.cw += ((MenuButton.GROWTH_PERCENT / 100) * (this.currentWidth * currentCanvasSize) + (this.currentWidth * currentCanvasSize)) / MenuButton.CONFIRMED_ANIMATION_TIME;
-            this.currentTextFill += (MenuButton.SELECTED_BUTTON_SHADE - MenuButton.DEFAULT_BUTTON_SHADE) / MenuButton.CONFIRMED_ANIMATION_TIME;
-            this.setOpacity(this.getOpacity() - (255 / MenuButton.CONFIRMED_ANIMATION_TIME));
-            this.animationTime++;
-        }
-        this.getSketch().noStroke()
-        this.getSketch().fill(255);
-        //fill(this.currentButtonFill);
-        this.getSketch().rect(this.getX(currentCanvasSize), this.getY(currentCanvasSize), (this.currentWidth * currentCanvasSize) - this.cw, (this.currentLength * currentCanvasSize) - this.cl);
-        this.getSketch().textSize(this.currentTextSize * currentCanvasSize);
-        this.getSketch().fill(this.currentTextFill);
-        this.getSketch().tint(0, 255);
-        this.getSketch().textAlign(this.getSketch().CENTER, this.getSketch().CENTER);
-        this.getSketch().text(this.phrase, this.getX(currentCanvasSize), this.getY(currentCanvasSize), this.currentWidth * currentCanvasSize, this.currentLength * currentCanvasSize);
-        //this is the second rectangle that will be acting as the 
-        this.getSketch().stroke(255, this.getOpacity());
-        this.getSketch().fill(0);
-        this.getSketch().strokeWeight(MenuButton.OUTLINE_WEIGHT);
-        this.getSketch().rect(this.getX(currentCanvasSize), this.getY(currentCanvasSize), MenuButton.OUTLINE_WEIGHT + this.cw, this.cl + MenuButton.OUTLINE_WEIGHT);
+        this.getSketch().push();
+            this.getSketch().textFont('Arial');
+            this.getSketch().rectMode(this.getSketch().CENTER);
+            let first_half: boolean = true
+            //checking if the animation time is finished
+            if (this.animationTime > MenuButton.CONFIRMED_ANIMATION_TIME) {
+                this.setOpacity(0);
+                this.confirmedAnimation = true;
+            } else {
+                this.cl += ((MenuButton.GROWTH_PERCENT / 100) * (this.currentLength * currentCanvasSize) + (this.currentLength * currentCanvasSize)) / MenuButton.CONFIRMED_ANIMATION_TIME;
+                this.cw += ((MenuButton.GROWTH_PERCENT / 100) * (this.currentWidth * currentCanvasSize) + (this.currentWidth * currentCanvasSize)) / MenuButton.CONFIRMED_ANIMATION_TIME;
+                this.currentTextFill += (MenuButton.SELECTED_BUTTON_SHADE - MenuButton.DEFAULT_BUTTON_SHADE) / MenuButton.CONFIRMED_ANIMATION_TIME;
+                this.setOpacity(this.getOpacity() - (255 / MenuButton.CONFIRMED_ANIMATION_TIME));
+                this.animationTime++;
+            }
+            this.getSketch().noStroke()
+            this.getSketch().fill(255);
+            //fill(this.currentButtonFill);
+            this.getSketch().rect(this.getX(currentCanvasSize), this.getY(currentCanvasSize), (this.currentWidth * currentCanvasSize) - this.cw, (this.currentLength * currentCanvasSize) - this.cl);
+            this.getSketch().textSize(this.currentTextSize * currentCanvasSize);
+            this.getSketch().fill(this.currentTextFill);
+            this.getSketch().tint(0, 255);
+            this.getSketch().textAlign(this.getSketch().CENTER, this.getSketch().CENTER);
+            this.getSketch().text(this.phrase, this.getX(currentCanvasSize), this.getY(currentCanvasSize), this.currentWidth * currentCanvasSize, this.currentLength * currentCanvasSize);
+            //this is the second rectangle that will be acting as the 
+            this.getSketch().stroke(255, this.getOpacity());
+            this.getSketch().fill(0);
+            this.getSketch().strokeWeight(MenuButton.OUTLINE_WEIGHT);
+            this.getSketch().rect(this.getX(currentCanvasSize), this.getY(currentCanvasSize), MenuButton.OUTLINE_WEIGHT + this.cw, this.cl + MenuButton.OUTLINE_WEIGHT);
+        this.getSketch().pop();
     }
-
-    /**
-     * @method fade
-     * @description This method fades the button
-     */
-    fade(): void {
-        this.setOpacity(this.getOpacity() - (255 / (MenuButton.CONFIRMED_ANIMATION_TIME / 4)));
-    }
-
 
     /**
      * @method isConfirmedAnimationDone
@@ -223,15 +218,17 @@ export class MenuButton extends BaseMenuItem {
     public draw(currentCanvasSize?: number): void {
         const canvasSize = currentCanvasSize || getCanvasSize();
 
-        if (this.isConfirmed() == true) {
-            this.confirmedButton(canvasSize);
+        this.getSketch().push();
+            if (this.isConfirmed() == true) {
+                this.confirmedButton(canvasSize);
 
-        } else if (this.isSelected() == false) {
-            this.standardButton(canvasSize);
-        } else
-            if (this.isSelected() == true) {
-                this.selectedButton(canvasSize);
+            } else if (this.isSelected() == false) {
+                this.standardButton(canvasSize);
+            } else
+                if (this.isSelected() == true) {
+                    this.selectedButton(canvasSize);
             }
+        this.getSketch().pop();
     }
 
     /**
