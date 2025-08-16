@@ -64,7 +64,7 @@ export default class Toggle extends BaseMenuItem {
         this.getSketch().push();
         this.getSketch().noStroke();
         this.getSketch().noFill();
-        this.getSketch().fill(this.currentFill);
+        this.getSketch().fill(this.currentFill, this.getOpacity());
         this.getSketch().rectMode(this.getSketch().CENTER);
 
         //Draw a rectangle here for the fill
@@ -72,7 +72,7 @@ export default class Toggle extends BaseMenuItem {
 
 
         this.getSketch().strokeWeight(1);
-        this.getSketch().stroke(255);
+        this.getSketch().stroke(255, this.getOpacity());
 
 
         //Outside: two lines, two half circles
@@ -100,7 +100,7 @@ export default class Toggle extends BaseMenuItem {
         );
 
         //Inside oval
-        this.getSketch().fill(0);
+        this.getSketch().fill(0, this.getOpacity());
         this.getSketch().ellipse(this.getX() + this.selectorPos * getCanvasSize() * this.percentSize, this.getY(), ((this.percentSize * 0.8) / 2) * getCanvasSize(), ((this.percentSize * 0.8) / 2) * getCanvasSize());
 
         this.getSketch().pop();

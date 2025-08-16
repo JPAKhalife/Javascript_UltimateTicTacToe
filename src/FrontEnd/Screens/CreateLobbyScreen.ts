@@ -91,14 +91,14 @@ export default class CreateLobbyScreen implements Menu {
         // Only change screen when transition is complete
         if (this.transitionTimer >= this.transitionDuration) {
             if (this.selectedButton.getText() === 'Return') {
-                GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
+                GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
             } else if (this.selectedButton.getText() == 'Create') {
                 const action = () => {};
                 const condition = () => {
                     return true;   
                 }
 
-                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.GAME_SCREEN, "Creating Lobby", action, condition);
+                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.MULTIPLAYER_SCREEN, "Creating Lobby", action, condition);
             }
             this.transitionComplete = true;
         }
@@ -128,7 +128,7 @@ export default class CreateLobbyScreen implements Menu {
         
         // Draw "Spectators" text next to the toggle
         this.sketch.push();
-            this.sketch.fill(255);
+            this.sketch.fill(255, this.lineOpacity);
             this.sketch.textSize(0.025 * getCanvasSize());
             this.sketch.textAlign(this.sketch.CENTER);
             this.sketch.text("Spectators", getCanvasSize() * 0.5, 0.73 * getCanvasSize());

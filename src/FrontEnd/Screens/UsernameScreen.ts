@@ -127,7 +127,7 @@ export default class UsernameScreen implements Menu {
      */
     private transitionOut(): void {
         // Fade out UI elements
-        this.confirmButton.fade();
+        this.confirmButton.fade((255 / (MenuButton.CONFIRMED_ANIMATION_TIME / 4)));
         this.usernameField.setOpacity(this.usernameField.getOpacity() - 255 / (ANIMATION_TIME / 2));
 
         // Fade out text

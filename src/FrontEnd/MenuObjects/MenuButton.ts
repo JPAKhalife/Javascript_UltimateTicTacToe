@@ -201,15 +201,6 @@ export class MenuButton extends BaseMenuItem {
     }
 
     /**
-     * @method fade
-     * @description This method fades the button
-     */
-    fade(): void {
-        this.setOpacity(this.getOpacity() - (255 / (MenuButton.CONFIRMED_ANIMATION_TIME / 4)));
-    }
-
-
-    /**
      * @method isConfirmedAnimationDone
      * @description This method checks if the confirmed animation is done
      * @returns {boolean}

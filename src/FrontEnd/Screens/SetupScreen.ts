@@ -90,7 +90,7 @@ export default class SetupScreen implements Menu {
     private transitionOut(): void {
         for (let i = 0; i < this.multiplayer_MenuButton_list.getLength(); i++) {
             if (this.multiplayer_MenuButton_list.getAtIndex(i) !== this.multiplayer_MenuButton_list.getCurrentlySelected()) {
-                (this.multiplayer_MenuButton_list.getAtIndex(i) as MenuButton).fade();
+                (this.multiplayer_MenuButton_list.getAtIndex(i) as MenuButton).fade((255 / (MenuButton.CONFIRMED_ANIMATION_TIME / 4)));
             }
         }
         for (let i = 0; i < this.floater_array.length; i++) {
