@@ -150,6 +150,7 @@ async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Prom
             joinedPlayers,
             lobbyState,
             creator,
+            allowSpectators,
             maxResults = 20, 
             searchListLength = 100 
         } = parameters;
@@ -167,7 +168,8 @@ async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Prom
              gridSize: gridSize, 
              playersJoined:  joinedPlayers,
              creator: creator,
-             lobbyState: lobbyState
+             lobbyState: lobbyState,
+             allowSpectators: allowSpectators,
             },
             maxResults, 
             searchListLength

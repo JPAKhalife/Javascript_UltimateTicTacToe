@@ -52,6 +52,7 @@ export default class Lobby {
     private gameState: number[];
     private players: string[];
     private version?: number;
+    private allowSpectators: boolean;
 
     // This constructor shall only be called internally. static methods must be called in order to create a lobby object
     private constructor(lobbyID: string, lobbyData: LobbyData, creatorID: string) {
@@ -66,6 +67,7 @@ export default class Lobby {
         this.gameState = [];
         this.players = [];
         this.version = lobbyData.version;
+        this.allowSpectators = lobbyData.allowSpectators;
     }
 
     /**
@@ -606,7 +608,8 @@ export default class Lobby {
             gridSize?: number,
             playersJoined?: number,
             lobbyState?: string,
-            creator?: string
+            creator?: string,
+            allowSpectators?: boolean
         },
         maxResults: number = 20,
         searchListLength: number = 100
@@ -654,6 +657,9 @@ export default class Lobby {
                     return false;
                 }
                 if (filters.creator !== undefined && lobby.creator !== filters.creator) {
+                    return false;
+                }
+                if (filters.allowSpectators !== undefined && lobby.allowSpectators !== filters.allowSpectators) {
                     return false;
                 }
                 
