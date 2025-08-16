@@ -101,7 +101,6 @@ public getDeviceId(): string {
             this.socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('Message from server:', data);
                     // Handle response messages with messageID
                     if (data.messageID && this.messageCallbacks.has(data.messageID)) {
                         const callback = this.messageCallbacks.get(data.messageID);

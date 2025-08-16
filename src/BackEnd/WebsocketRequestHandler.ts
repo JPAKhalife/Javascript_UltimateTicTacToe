@@ -2,11 +2,11 @@ import Redis from 'ioredis';
 import Lobby, { LobbyData } from './Database/Lobby';
 import Player from './Database/Player';
 import {
-    newConnection, 
-    playerRegistered, 
-    getPlayerID, 
-    removeConnection, 
-    getConnectionByDeviceId, 
+    newConnection,
+    playerRegistered,
+    getPlayerID,
+    removeConnection,
+    getConnectionByDeviceId,
     getWebsocketObject,
     storeDeviceConnection,
 } from './Database/Connections';
@@ -27,7 +27,7 @@ type ReturnMessage = Record<string, any>
  */
 export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
     console.log("WebSocket connection established from client");
-    
+
     // Extract device ID from URL query parameters if present
     let deviceId: string | null = null;
     try {
@@ -39,13 +39,13 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
     } catch (error) {
         console.error('Error parsing URL:', error);
     }
-    
+
     // Check if this device already has an active connection
     if (deviceId) {
         const existingConnectionId = await getConnectionByDeviceId(redis, deviceId);
         if (existingConnectionId) {
             console.log(`Device ${deviceId} already has connection ${existingConnectionId}`);
-            
+
             // Get the existing websocket object
             const existingWs = getWebsocketObject(existingConnectionId);
             if (existingWs) {
@@ -61,12 +61,12 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                     console.error(`Error closing existing connection: ${error}`);
                 }
             }
-            
+
             // Clean up the old connection
             removeConnection(redis, existingConnectionId, deviceId);
         }
     }
-    
+
     // Assign a unique ID to the websocket connection
     if (!ws.id) {
         ws.id = uuidv4();
@@ -123,7 +123,7 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                     };
                 }
             }
-            
+
         } catch (error) {
             console.error('Error processing message:', error);
             returnMessage = {
@@ -135,14 +135,14 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
         if (messageID) {
             returnMessage['messageID'] = messageID;
         }
-        
+
         // Log the response being sent back to the client
         console.log('Sending response to client:', returnMessage);
-        
+
         // Stringify and send the response
         const responseString = JSON.stringify(returnMessage);
         console.log('Response size:', responseString.length, 'bytes');
-        
+
         try {
             ws.send(responseString);
             console.log('Response sent successfully');
@@ -164,16 +164,16 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
 async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Promise<object> {
     try {
         // Set default values for parameters to prevent timeout issues
-        const { 
-            playerNum, 
-            levelSize, 
-            gridSize, 
+        const {
+            playerNum,
+            levelSize,
+            gridSize,
             joinedPlayers,
             lobbyState,
             creator,
             allowSpectators,
-            maxResults = 20, 
-            searchListLength = 100 
+            maxResults = 20,
+            searchListLength = 100
         } = parameters;
 
         console.log('Searching lobbies with parameters:', {
@@ -182,29 +182,29 @@ async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Prom
 
         // Call getLobbies with the parameters
         const lobbySearchResults = await Lobby.getFilteredLobbies(
-            redis, 
+            redis,
             {
-             playerNum: playerNum, 
-             levelSize: levelSize, 
-             gridSize: gridSize, 
-             playersJoined:  joinedPlayers,
-             creator: creator,
-             lobbyState: lobbyState,
-             allowSpectators: allowSpectators,
+                playerNum: playerNum,
+                levelSize: levelSize,
+                gridSize: gridSize,
+                playersJoined: joinedPlayers,
+                creator: creator,
+                lobbyState: lobbyState,
+                allowSpectators: allowSpectators,
             },
-            maxResults, 
+            maxResults,
             searchListLength
         );
         console.log(`Found ${lobbySearchResults.length} matching lobbies`);
-        
+
         // Log the first lobby for debugging if any exist
         if (lobbySearchResults.length > 0) {
             console.log('First lobby sample:', JSON.stringify(lobbySearchResults[0]).substring(0, 200) + '...');
         }
-        
-        // Convert each lobby to its JSON representation
-        const lobbies = lobbySearchResults.map(lobby => lobby.toJSON());
-        
+
+        // Convert each lobby to its JSON representation and await all promises
+        const lobbies = await Promise.all(lobbySearchResults.map(lobby => lobby.lobbySummaryJson(redis)));
+
         // Log the size of the lobbies array
         console.log('Lobbies array size:', JSON.stringify(lobbies).length, 'bytes');
         return {
@@ -215,14 +215,14 @@ async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Prom
     } catch (error) {
         // Provide more detailed error information
         let errorMessage = 'Error searching lobbies';
-        
+
         if (error instanceof Error) {
             errorMessage = `Error searching lobbies: ${error.message}`;
             console.error(errorMessage, error.stack);
         } else {
             console.error('Error searching lobbies:', error);
         }
-        
+
         return {
             success: false,
             error: errorMessage
@@ -248,18 +248,18 @@ async function handleCreateLobby(ws: any, redis: Redis, parameters: any): Promis
         // Validate lobbyID and playerID
         if (!(checkValue(lobbyID, 36) && checkValue(playerID, 36))) {
             return {
-            success: false,
-            message: "The values passed in the request were not valid.",
+                success: false,
+                message: "The values passed in the request were not valid.",
             };
         }
 
         // Validate all values in lobbyData
         for (const [key, value] of Object.entries(lobbyDataObj)) {
             if (!checkValue(value as any, 36)) {
-            return {
-                success: false,
-                message: `Invalid value for ${key} in lobbyData.`,
-            };
+                return {
+                    success: false,
+                    message: `Invalid value for ${key} in lobbyData.`,
+                };
             }
         }
 
@@ -273,7 +273,7 @@ async function handleCreateLobby(ws: any, redis: Redis, parameters: any): Promis
         return {
             success: true,
             message: `Lobby ${lobbyID} created successfully`,
-            lobby: newLobby.toJSON()
+            lobby: await newLobby.lobbySummaryJson(redis)
         };
     } catch (error) {
         console.error('Error creating lobby:', error);
@@ -296,7 +296,7 @@ async function handleRegisterPlayer(ws: any, redis: Redis, parameters: any): Pro
     //Deconstruct the data
     const { identifier, checkUsername } = parameters
     console.log("Checking if player " + identifier + " exists.")
-       
+
     //Verify the values passed    
     if (!(checkValue(identifier, 36) && checkValue(checkUsername))) {
         return {
@@ -323,7 +323,7 @@ async function handleRegisterPlayer(ws: any, redis: Redis, parameters: any): Pro
                 playerID: newPlayer.getPlayerID()
             }
         }
-    } catch(error) {
+    } catch (error) {
         return {
             success: false,
             message: "There was an error attempting to check the existence of the player: " + error,
@@ -334,7 +334,7 @@ async function handleRegisterPlayer(ws: any, redis: Redis, parameters: any): Pro
         message: "The player already exists",
     }
 
-    
+
 }
 
 /**
