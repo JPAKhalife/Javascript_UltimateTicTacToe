@@ -17,6 +17,7 @@ import Slider from "../MenuObjects/Slider";
 import WebManager, { LobbyInfo as WebManagerLobbyInfo } from "../WebManager";
 import Field from "../MenuObjects/Field";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
+import Toggle from "../MenuObjects/Toggle";
 
 
 export default class CreateLobbyScreen implements Menu {
@@ -32,6 +33,7 @@ export default class CreateLobbyScreen implements Menu {
     private levelSizeSlider: Slider;
     private slotNumSlider: Slider;
     private playerNumSlider: Slider;
+    private spectatorToggle: Toggle;
     //Fields
     private lobbyNameField: Field;
     //Icon
@@ -54,25 +56,27 @@ export default class CreateLobbyScreen implements Menu {
 
         //This is where the menu buttons will be defined
         this.returnToOnlineScreen = new MenuButton(this.sketch, 0.5, 0.13, "Return", 0.05, 0.2, 0.015, 255);
-        let createLobbyButton = new MenuButton(this.sketch, 0.5, 0.86, "Create", 0.05, 0.2, 0.015, 255);
+        let createLobbyButton = new MenuButton(this.sketch, 0.5, 0.80, "Create", 0.05, 0.2, 0.015, 255);
         // Create the lobby name field with proper parameters (using percentage-based positioning)
-        this.lobbyNameField = new Field(this.sketch, 0.5, 0.30, 0.4, 0.08, this.keylistener, 36, "Lobby Name", 0.025, 0.5, 0.24);
+        this.lobbyNameField = new Field(this.sketch, 0.5, 0.28, 0.4, 0.08, this.keylistener, 36, "Lobby Name", 0.025, 0.5, 0.22);
         this.lobbyNameField.setOpacity(255);
-        this.levelSizeSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.46, 0.5, 0.005, 1, 9, 1, 2, "Level Size");
-        this.slotNumSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.76, 0.5, 0.005, 1, 9, 1, 3, "Slot Number");
-        this.playerNumSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.61, 0.5, 0.005, 2, 10, 1, 2, "Player Number");
+        this.levelSizeSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.40, 0.5, 0.005, 1, 9, 1, 2, "Level Size");
+        this.playerNumSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.52, 0.5, 0.005, 2, 10, 1, 2, "Player Number");
+        this.slotNumSlider = new Slider(this.sketch, this.keylistener, 0.5, 0.64, 0.5, 0.005, 1, 9, 1, 3, "Slot Number");
+        this.spectatorToggle = new Toggle(this.sketch, 0.55, 0.72, 0.05, 255);
         
-        this.loadingIcon = new LoadingSpinner(sketch, 0.5, 0.94, 0.04);
+        this.loadingIcon = new LoadingSpinner(sketch, 0.5, 0.94, 0.04,true);
         this.showLoadingIcon = false;
         this.selectedButton = this.returnToOnlineScreen;
 
         this.lobbyNav = new MenuNav([
             this.returnToOnlineScreen,
-            this.levelSizeSlider,
-            this.slotNumSlider,
             this.lobbyNameField,
-            createLobbyButton,
-            this.playerNumSlider
+            this.levelSizeSlider,
+            this.playerNumSlider,
+            this.slotNumSlider,
+            this.spectatorToggle,
+            createLobbyButton
         ], this.sketch);
 
         
@@ -121,6 +125,13 @@ export default class CreateLobbyScreen implements Menu {
     public draw(): void 
     {
         this.sketch.background(0);
+        
+        // Draw "Spectators" text next to the toggle
+        this.sketch.push();
+        this.sketch.fill(255);
+        this.sketch.textSize(0.025 * getCanvasSize());
+        this.sketch.text("Spectators", this.spectatorToggle.getX() - 0.1 * getCanvasSize(), this.spectatorToggle.getY() + 0.005 * getCanvasSize());
+        this.sketch.pop();
 
         //Add two lines along the left and right sides of the screen
         this.sketch.push();
@@ -135,14 +146,15 @@ export default class CreateLobbyScreen implements Menu {
         // Draw the buttons for options
         this.lobbyNav.drawAll();
 
+        if (this.showLoadingIcon) {
+            this.sketch.angleMode(this.sketch.RADIANS);
+            this.loadingIcon.draw();
+        }
+
         //Check for transitionout
         if (this.transition_out_active && !this.transitionComplete) {
             this.animateTransitionOut();
             this.handleTransitionOut();
-        }
-
-        if (this.showLoadingIcon) {
-            this.loadingIcon.draw();
         }
 
         // Detect any keypresses
@@ -167,6 +179,8 @@ export default class CreateLobbyScreen implements Menu {
                             this.keylistener.deactivate();
                             setTimeout(() => this.createLobby(), 1000);
                         }
+                    } else if (this.lobbyNav.getCurrentlySelected() instanceof Toggle) {
+                        this.lobbyNav.getCurrentlySelected().setConfirmed(!this.lobbyNav.getCurrentlySelected().isConfirmed())
                     }
                 }
             }
@@ -193,7 +207,8 @@ export default class CreateLobbyScreen implements Menu {
             this.playerNumSlider.getValue(),
             this.levelSizeSlider.getValue(),
             this.slotNumSlider.getValue(),
-            playerID
+            playerID,
+            this.spectatorToggle.isConfirmed()
         ).then(success => {
             console.log(`Lobby creation ${success ? 'successful' : 'failed'}: ${lobbyName}`);
             if (success) {

@@ -175,6 +175,7 @@ public getDeviceId(): string {
      * @param levelSize Size of the level
      * @param gridSize Size of the grid
      * @param playerID Unique ID of the player creating the lobby
+     * @param allowSpectators whether or not spectators should be allowed
      * @returns Promise that resolves with the result of the lobby creation
      */
     public async createLobby(
@@ -182,7 +183,8 @@ public getDeviceId(): string {
         playerNum: number,
         levelSize: number,
         gridSize: number,
-        playerID: string
+        playerID: string,
+        allowSpectators: boolean
     ): Promise<boolean> {
         try {
             // Create message payload
@@ -193,7 +195,8 @@ public getDeviceId(): string {
                     lobbyData: {
                         playerNum,
                         levelSize,
-                        gridSize
+                        gridSize,
+                        allowSpectators
                     },
                     playerID: playerID
                 }

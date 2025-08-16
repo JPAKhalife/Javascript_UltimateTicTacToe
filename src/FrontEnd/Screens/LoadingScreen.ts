@@ -46,7 +46,7 @@ export default class LoadingScreen implements Menu {
         this.titleText = titleText || HEADER.LOADING_SCREEN_TITLE_MESSAGES[0];
         this.nextScreen = nextScreen || Screens.START_SCREEN;
 
-        this.spinner = new LoadingSpinner(sketch, -0.125, 0.875, 0.10, whiteTicTac, (counter: number) => {
+        this.spinner = new LoadingSpinner(sketch, -0.125, 0.875, 0.10, false, whiteTicTac, (counter: number) => {
             this.sketch.angleMode(this.sketch.DEGREES);
             return 255 / 2 * this.sketch.cos(counter) + 255 / 2;
         }, 3);

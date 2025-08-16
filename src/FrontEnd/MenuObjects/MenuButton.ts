@@ -136,6 +136,7 @@ export class MenuButton extends BaseMenuItem {
      */
     selectedButton(currentCanvasSize: number): void {
         this.getSketch().textFont('Arial');
+        this.getSketch().rectMode(this.getSketch().CENTER);
         //checking if the animation time is finished
         if (this.animationTime > MenuButton.SELECTED_ANIMATION_TIME) {
 
@@ -223,15 +224,17 @@ export class MenuButton extends BaseMenuItem {
     public draw(currentCanvasSize?: number): void {
         const canvasSize = currentCanvasSize || getCanvasSize();
 
-        if (this.isConfirmed() == true) {
-            this.confirmedButton(canvasSize);
+        this.getSketch().push();
+            if (this.isConfirmed() == true) {
+                this.confirmedButton(canvasSize);
 
-        } else if (this.isSelected() == false) {
-            this.standardButton(canvasSize);
-        } else
-            if (this.isSelected() == true) {
-                this.selectedButton(canvasSize);
+            } else if (this.isSelected() == false) {
+                this.standardButton(canvasSize);
+            } else
+                if (this.isSelected() == true) {
+                    this.selectedButton(canvasSize);
             }
+        this.getSketch().pop();
     }
 
     /**

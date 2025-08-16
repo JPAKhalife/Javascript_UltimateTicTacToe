@@ -52,7 +52,7 @@ export default class Toggle extends BaseMenuItem {
         if (this.animating) {
             this.animateSlide();
         }
-        
+
         if (this.isSelected()) {
             this.targetFill = 255; // White when selected
         } else {
@@ -60,8 +60,10 @@ export default class Toggle extends BaseMenuItem {
         }
         //This function animates the fill based on selected state
         this.animateFill();
-
+        this.getSketch().angleMode(this.getSketch().RADIANS);
         this.getSketch().push();
+        this.getSketch().noStroke();
+        this.getSketch().noFill();
         this.getSketch().fill(this.currentFill);
         this.getSketch().rectMode(this.getSketch().CENTER);
 

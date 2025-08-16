@@ -34,6 +34,7 @@ export type LobbyData = {
     playerNum: number;
     levelSize: number;
     gridSize: number;
+    allowSpectators: boolean;
     version?: number; // Added for optimistic locking
 };
 
@@ -88,6 +89,7 @@ export default class Lobby {
                 playerNum: parseInt(lobbyHash.playerNum),
                 levelSize: parseInt(lobbyHash.levelSize),
                 gridSize: parseInt(lobbyHash.gridSize),
+                allowSpectators: lobbyHash.allowSpectators === "true",
                 version: lobbyHash.version ? parseInt(lobbyHash.version) : undefined
             },
             lobbyHash.creator
@@ -135,6 +137,7 @@ export default class Lobby {
                 gridSize: lobbyData.gridSize.toString(),
                 creator: playerID,
                 lobbyState: "waiting",
+                allowSpectators: lobbyData.allowSpectators,
                 version: "1" // Initial version
             };
 

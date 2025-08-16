@@ -92,6 +92,7 @@ export default class Slider extends BaseMenuItem {
             }
             
             //Center text on top of the slider
+            this.getSketch().textAlign(this.getSketch().CENTER);
             this.getSketch().fill(255);
             this.getSketch().strokeWeight(1);
             this.getSketch().textSize(0.025 * canvasSize);
