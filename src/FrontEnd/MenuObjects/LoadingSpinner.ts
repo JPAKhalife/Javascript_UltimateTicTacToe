@@ -26,7 +26,7 @@ export default class LoadingSpinner extends BaseMenuItem {
     private counter: number;
 
 
-    constructor(sketch: p5, xPercent: number, yPercent: number, widthPercent: number, doRadians: boolean = false, image: p5.Image = whiteTicTac, fadeFunction: ((counter: number) => number) | null = null, rotationSpeed: number = 4, initialRotation: number = 0, rotationFunction: ((counter: number) => number) | null = null, opacity: number = 255) {
+    constructor(sketch: p5, xPercent: number, yPercent: number, widthPercent: number, doRadians: boolean = false, rotationSpeed: number = 4, image: p5.Image = whiteTicTac, fadeFunction: ((counter: number) => number) | null = null, initialRotation: number = 0, rotationFunction: ((counter: number) => number) | null = null, opacity: number = 255) {
         super(sketch, xPercent, yPercent, opacity);
         this.rotationAngle = 0;
         this.image = image;
