@@ -1,7 +1,8 @@
 /**
  * @file Connections.ts
  * @description This file contains methods relating to 
- * maintaining information about active connections
+ * maintaining information about active connections.
+ * This includes connectionID, as well as active sessions.
  * @author John Khalife
  * @created 2024-06-9
  * @updated 2024-06-23
@@ -12,7 +13,7 @@ const deviceConnections = new Map<string, string>(); // Map of device IDs to con
 
 import Redis from "ioredis";
 import Player from "./Player";
-const EXPIRE_TIME = Math.floor(3600 / 4); // Ensure integer value for Redis expiration time
+import { AUTH_CONSTANTS } from "../Contants";
 
 /**
  * @method newConnection
@@ -25,7 +26,7 @@ const EXPIRE_TIME = Math.floor(3600 / 4); // Ensure integer value for Redis expi
 export function newConnection(redisClient: Redis, ws: any, connectionID: string, deviceID?: string) {
     activeWebsockets.set(connectionID, ws);
     // Use Math.floor to ensure integer value for Redis expiration time
-    redisClient.set(`connection:${connectionID}`, "", "EX", Math.floor(EXPIRE_TIME));
+    redisClient.set(`connection:${connectionID}`, "", "EX", Math.floor(AUTH_CONSTANTS.CONNECTION_EXPIRE_TIME));
     
     // If a device ID is provided, associate it with this connection
     if (deviceID) {
@@ -45,7 +46,7 @@ export function storeDeviceConnection(redisClient: Redis, deviceID: string, conn
     deviceConnections.set(deviceID, connectionID);
     
     // Store in Redis with the same expiration time as the connection
-    redisClient.set(`device:${deviceID}`, connectionID, "EX", Math.floor(EXPIRE_TIME));
+    redisClient.set(`device:${deviceID}`, connectionID, "EX", Math.floor(AUTH_CONSTANTS.CONNECTION_EXPIRE_TIME));
 }
 
 /**

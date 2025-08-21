@@ -11,6 +11,7 @@ import {
     storeDeviceConnection,
 } from './Database/Connections';
 import { URL } from 'url';
+import { LobbyCreateRequest, LobbySearchRequest, MESSAGE_TYPES, RegisterRequest } from './MessageSchema';
 const { v4: uuidv4 } = require('uuid');
 
 
@@ -94,9 +95,9 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                 const playerID = await getPlayerID(redis, ws.id);
                 if (playerID && playerID == sentPlayerID) {
                     // Handle message types for registered players
-                    if (data.type === 'createLobby') {
+                    if (data.type === MESSAGE_TYPES.CREATE_LOBBY) {
                         returnMessage = await handleCreateLobby(ws, redis, data.parameters)
-                    } else if (data.type === 'searchLobbies') {
+                    } else if (data.type === MESSAGE_TYPES.SEARCH_LOBBY) {
                         returnMessage = await handleSearchLobbies(ws, redis, data.parameters);
                     } else {
                         returnMessage = {
@@ -152,6 +153,42 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
     });
 }
 
+/**
+ * @function routeWebsocketRequest
+ * @description This function is responsible for casting + validating the message,
+ * then calling the appropriate handler.
+ * @param authenticated Whether the user is authenticated or not
+ * 
+ */
+async function routeWebsocketRequest(authenticated: boolean, data: any, ws: any, redis: Redis): Promise<object> {
+    if (authenticated) {
+        switch (data.type) {
+            case MESSAGE_TYPES.CREATE_LOBBY:
+                return await handleCreateLobby(ws, redis, LobbyCreateRequest.parse(data));
+            case MESSAGE_TYPES.SEARCH_LOBBY:
+                return await handleSearchLobbies(ws, redis, LobbySearchRequest.parse(data));
+            default:
+                return {
+                    success: false,
+                    error: 'Unknown message type for authenticated user'
+                };
+        }
+    } else {
+        switch (data.type) {
+            case MESSAGE_TYPES.REGISTER_PLAYER:
+                return await handleRegisterPlayer(ws, redis, RegisterRequest.parse(data));
+            default:
+                return {
+                    success: false,
+                    error: 'Unknown message type for unauthenticated user'
+                };
+        }
+
+    }
+
+
+}
+
 
 /**
  * @function handleSearchLobbies
@@ -161,39 +198,22 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
  * @param parameters Search parameters
  * @returns Promise resolving to response object
  */
-async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Promise<object> {
+async function handleSearchLobbies(ws: any, redis: Redis, data: LobbySearchRequest): Promise<object> {
     try {
-        // Set default values for parameters to prevent timeout issues
-        const {
-            playerNum,
-            levelSize,
-            gridSize,
-            joinedPlayers,
-            lobbyState,
-            creator,
-            allowSpectators,
-            maxResults = 20,
-            searchListLength = 100
-        } = parameters;
-
-        console.log('Searching lobbies with parameters:', {
-            playerNum, levelSize, gridSize, joinedPlayers, maxResults, searchListLength
-        });
-
         // Call getLobbies with the parameters
         const lobbySearchResults = await Lobby.getFilteredLobbies(
             redis,
             {
-                playerNum: playerNum,
-                levelSize: levelSize,
-                gridSize: gridSize,
-                playersJoined: joinedPlayers,
-                creator: creator,
-                lobbyState: lobbyState,
-                allowSpectators: allowSpectators,
+                playerNum: data.playerNum,
+                levelSize: data.levelSize,
+                gridSize: data.gridSize,
+                playersJoined: data.joinedPlayers,
+                creator: data.creator,
+                lobbyState: data.lobbyState,
+                allowSpectators: data.allowSpectators,
             },
-            maxResults,
-            searchListLength
+            data.maxResults,
+            data.searchListLength
         );
         console.log(`Found ${lobbySearchResults.length} matching lobbies`);
 
@@ -239,40 +259,27 @@ async function handleSearchLobbies(ws: any, redis: Redis, parameters: any): Prom
  * @param parameters Lobby creation parameters
  * @returns Promise resolving to response object
  */
-async function handleCreateLobby(ws: any, redis: Redis, parameters: any): Promise<object> {
+async function handleCreateLobby(ws: any, redis: Redis, data: LobbyCreateRequest): Promise<object> {
     try {
-        //Deconstruct the data received
-        const { lobbyID, lobbyData, playerID } = parameters;
         // Cast lobbyData to a LobbyData object
-        const lobbyDataObj: LobbyData = lobbyData as LobbyData;
+        const lobbyDataObj: LobbyData = {
+            playerNum: data.playerNum,
+            levelSize: data.levelSize,
+            gridSize: data.gridSize,
+            allowSpectators: data.allowSpectators,
+        }
         // Validate lobbyID and playerID
-        if (!(checkValue(lobbyID, 36) && checkValue(playerID, 36))) {
-            return {
-                success: false,
-                message: "The values passed in the request were not valid.",
-            };
-        }
 
-        // Validate all values in lobbyData
-        for (const [key, value] of Object.entries(lobbyDataObj)) {
-            if (!checkValue(value as any, 36)) {
-                return {
-                    success: false,
-                    message: `Invalid value for ${key} in lobbyData.`,
-                };
-            }
-        }
-
-        console.log(`Creating lobby ${lobbyID} with data:`, lobbyData, playerID);
+        console.log(`Creating lobby ${data.lobbyID} with data:`, lobbyDataObj, data.playerID);
 
         // Call RedisManager to create the lobby
-        let newLobby = await Lobby.createLobby(redis, lobbyID, lobbyData, playerID);
-        console.log(`Lobby ${lobbyID} created successfully`);
+        let newLobby = await Lobby.createLobby(redis, data.lobbyID, lobbyDataObj, data.playerID);
+        console.log(`Lobby ${data.lobbyID} created successfully`);
 
         // Send response back to client
         return {
             success: true,
-            message: `Lobby ${lobbyID} created successfully`,
+            message: `Lobby ${data.lobbyID} created successfully`,
             lobby: await newLobby.lobbySummaryJson(redis)
         };
     } catch (error) {
@@ -292,18 +299,9 @@ async function handleCreateLobby(ws: any, redis: Redis, parameters: any): Promis
  * @param parameters Player registration parameters
  * @returns Promise resolving to response object
  */
-async function handleRegisterPlayer(ws: any, redis: Redis, parameters: any): Promise<object> {
+async function handleRegisterPlayer(ws: any, redis: Redis, data: RegisterRequest): Promise<object> {
     //Deconstruct the data
-    const { identifier, checkUsername } = parameters
-    console.log("Checking if player " + identifier + " exists.")
-
-    //Verify the values passed    
-    if (!(checkValue(identifier, 36) && checkValue(checkUsername))) {
-        return {
-            success: false,
-            message: "The values passed in the request were not valid.",
-        }
-    }
+    console.log("Checking if player " + data.username + " exists.")
 
     //Check if the user is already registered.
     if ((await getPlayerID(redis, ws.id))) {
@@ -314,7 +312,7 @@ async function handleRegisterPlayer(ws: any, redis: Redis, parameters: any): Pro
     }
 
     try {
-        let newPlayer = await Player.createPlayer(redis, identifier);
+        let newPlayer = await Player.createPlayer(redis, data.username);
         if (newPlayer != null && newPlayer != undefined) {
             playerRegistered(redis, ws.id, newPlayer.getPlayerID());
             return {
@@ -337,20 +335,3 @@ async function handleRegisterPlayer(ws: any, redis: Redis, parameters: any): Pro
 
 }
 
-/**
- * @function checkValue
- * @description Checks that a number is within tha appropriate range
- * @param value: the value to be checked - any type
- * @param maxValue the max value or length of th value
- * @param minValue the min value or length of the value
- */
-function checkValue<T extends string | number>(value: T, maxValue: number = 0, minValue: number = 1): boolean {
-    if (typeof value === 'string') {
-        return value.length <= maxValue && value.length >= minValue;
-    } else if (typeof value === 'number') {
-        return value <= maxValue && value >= minValue;
-    } else if (typeof value === 'boolean') {
-        return true;
-    }
-    return false;
-}
