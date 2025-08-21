@@ -18,7 +18,7 @@ export const GAME_CONSTANTS = {
     MAX_LEVELSIZE_CAP: 10, // The maximum value for the levelsize
 }
 
-export enum GAME_STATES  {
+export enum GAME_STATES {
     WAITING = "waiting",
     RUNNING = "running",
     PAUSED = "paused"
@@ -34,13 +34,17 @@ export const AUTH_CONSTANTS = {
     TOKEN_EXPIRY: 24 * 60 * 60 * 1000, // 24 hours
     REFRESH_THRESHOLD: 2 * 60 * 60 * 1000, // 2 hours before expiry
     TOKEN_CLEANUP_INTERVAL: 60 * 60 * 1000, // 1 hour cleanup interval
-    
+
     // Rate limiting
     MAX_AUTH_ATTEMPTS: 5, // Maximum authentication attempts
     RATE_LIMIT_WINDOW: 15 * 60 * 1000, // 15 minutes rate limit window
-    
+
     // Connection settings
     CONNECTION_EXPIRE_TIME: Math.floor(3600 / 4), // 15 minutes for connection expiry
+
+    // Session settings
+    SESSION_EXPIRE_TIME: Math.floor(3600), // 1 hour for session expiry when disconnected
+    SESSION_ID_LENGTH: 21, // Default nanoid length
 } as const;
 
 // ============================================================================
@@ -48,17 +52,17 @@ export const AUTH_CONSTANTS = {
 // ============================================================================
 export const REDIS_KEYS = {
     // Session management
-    SESSION: (tokenID: string) => `session:${tokenID}`,
+    SESSION: (sessionID: string) => `session:${sessionID}`,
     PLAYER_SESSIONS: (playerID: string) => `player_sessions:${playerID}`,
-    DEVICE_SESSIONS: (deviceID: string) => `device_sessions:${deviceID}`,
-    
+
     // Existing patterns (maintained for compatibility)
     PLAYER: (playerID: string) => `player:${playerID}`,
     CONNECTION: (connectionID: string) => `connection:${connectionID}`,
-    DEVICE: (deviceID: string) => `device:${deviceID}`,
     LOBBY: (lobbyID: string) => `lobby:${lobbyID}`,
     LOBBY_PLAYERS: (lobbyID: string) => `lobbyplayers:${lobbyID}`,
     USERNAMES: 'usernames',
+
+    GAME_STATES: (lobbyID: string) => `gamestate:${lobbyID}`,
 } as const;
 
 // ============================================================================
@@ -69,26 +73,24 @@ export const ERROR_MESSAGES = {
     TOKEN_EXPIRED: 'Session token has expired. Please log in again.',
     TOKEN_INVALID: 'Invalid session token. Please log in again.',
     TOKEN_REVOKED: 'Session token has been revoked. Please log in again.',
-    DEVICE_MISMATCH: 'Token device mismatch. Please log in from the correct device.',
     PLAYER_MISMATCH: 'Token player mismatch. Please log in with the correct account.',
     SESSION_LIMIT_EXCEEDED: 'Maximum number of sessions exceeded. Please close other sessions.',
     RATE_LIMIT_EXCEEDED: 'Too many authentication attempts. Please try again later.',
     CONCURRENT_LOGIN: 'Another session is active. Please choose to continue or revoke other sessions.',
     SIGNATURE_INVALID: 'Token signature is invalid. Please log in again.',
-    
+
     // General errors
     AUTHENTICATION_REQUIRED: 'Authentication required for this operation.',
     INVALID_REQUEST_FORMAT: 'Invalid request format.',
     INTERNAL_ERROR: 'Internal server error. Please try again.',
-    
+
     // Registration errors
     USERNAME_EXISTS: 'Username already exists. Please choose a different username.',
     INVALID_USERNAME: 'Invalid username format.',
     REGISTRATION_FAILED: 'Registration failed. Please try again.',
-    
+
     // Connection errors
     CONNECTION_FAILED: 'Connection failed. Please check your network.',
-    DEVICE_ALREADY_CONNECTED: 'Device already has an active connection.',
 } as const;
 
 // ============================================================================
@@ -101,10 +103,10 @@ export const SUCCESS_MESSAGES = {
     LOGOUT_SUCCESS: 'Logout successful.',
     SESSION_REVOKED: 'Session revoked successfully.',
     ALL_SESSIONS_REVOKED: 'All sessions revoked successfully.',
-    
+
     // Registration success
     REGISTRATION_SUCCESS: 'Player registered successfully.',
-    
+
     // General success
     OPERATION_SUCCESS: 'Operation completed successfully.',
 } as const;
@@ -124,19 +126,14 @@ export const VALIDATION = {
     MAX_SEARCH_LIMIT: 50,
 
     MAX_MESSAGE_LENGTH: 1000,
-    
+
     // Token format validation
-    TOKEN_PARTS_COUNT: 3, 
+    TOKEN_PARTS_COUNT: 3,
     UUID_LENGTH: 36,
-    
-    // Device ID validation
-    MAX_DEVICE_ID_LENGTH: 128,
-    MIN_DEVICE_ID_LENGTH: 1,
-    
+
     // Connection limits
     MAX_CONNECTIONS_PER_DEVICE: 1,
 } as const;
-
 
 // ============================================================================
 // ENVIRONMENT CONFIGURATION
@@ -146,12 +143,11 @@ export const ENV_CONFIG = {
     DEFAULT_SECRET_KEY: process.env.AUTH_SECRET_KEY || 'default-secret-key-change-in-production',
     DEFAULT_TOKEN_EXPIRY: parseInt(process.env.TOKEN_EXPIRY_HOURS || '24') * 60 * 60 * 1000,
     DEFAULT_MAX_SESSIONS: parseInt(process.env.MAX_SESSIONS_PER_PLAYER || '5'),
-    
+
     // Security flags
-    REQUIRE_DEVICE_VALIDATION: process.env.REQUIRE_DEVICE_VALIDATION === 'true',
     ENABLE_TOKEN_REFRESH: process.env.ENABLE_TOKEN_REFRESH !== 'false',
     ENABLE_SESSION_CLEANUP: process.env.ENABLE_SESSION_CLEANUP !== 'false',
-    
+
     // Development flags
     IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
     ENABLE_DEBUG_LOGGING: process.env.ENABLE_DEBUG_LOGGING === 'true',

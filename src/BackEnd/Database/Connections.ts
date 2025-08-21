@@ -5,15 +5,14 @@
  * This includes connectionID, as well as active sessions.
  * @author John Khalife
  * @created 2024-06-9
- * @updated 2024-06-23
+ * @updated 2025-08-20
  */
 
 const activeWebsockets = new Map<string, any>(); // Map of connection IDs to WebSocket objects
-const deviceConnections = new Map<string, string>(); // Map of device IDs to connection IDs
 
 import Redis from "ioredis";
 import Player from "./Player";
-import { AUTH_CONSTANTS } from "../Contants";
+import { AUTH_CONSTANTS, REDIS_KEYS } from "../Contants";
 
 /**
  * @method newConnection
@@ -21,50 +20,11 @@ import { AUTH_CONSTANTS } from "../Contants";
  * @param redisClient Redis client for regular operations
  * @param ws WebSocket object
  * @param connectionID Unique connection ID
- * @param deviceID Optional device ID to associate with this connection
  */
-export function newConnection(redisClient: Redis, ws: any, connectionID: string, deviceID?: string) {
+export function newConnection(redisClient: Redis, ws: any, connectionID: string) {
     activeWebsockets.set(connectionID, ws);
     // Use Math.floor to ensure integer value for Redis expiration time
-    redisClient.set(`connection:${connectionID}`, "", "EX", Math.floor(AUTH_CONSTANTS.CONNECTION_EXPIRE_TIME));
-    
-    // If a device ID is provided, associate it with this connection
-    if (deviceID) {
-        storeDeviceConnection(redisClient, deviceID, connectionID);
-    }
-}
-
-/**
- * @method storeDeviceConnection
- * @description Associates a device ID with a connection ID
- * @param redisClient Redis client for regular operations
- * @param deviceID Device ID to associate
- * @param connectionID Connection ID to associate with
- */
-export function storeDeviceConnection(redisClient: Redis, deviceID: string, connectionID: string) {
-    // Store in memory
-    deviceConnections.set(deviceID, connectionID);
-    
-    // Store in Redis with the same expiration time as the connection
-    redisClient.set(`device:${deviceID}`, connectionID, "EX", Math.floor(AUTH_CONSTANTS.CONNECTION_EXPIRE_TIME));
-}
-
-/**
- * @method getConnectionByDeviceId
- * @description Gets the connection ID associated with a device ID
- * @param redisClient Redis client for regular operations
- * @param deviceID Device ID to look up
- * @returns Connection ID associated with the device, or null if not found
- */
-export async function getConnectionByDeviceId(redisClient: Redis, deviceID: string): Promise<string | null> {
-    // First check in-memory map for faster access
-    const connectionID = deviceConnections.get(deviceID);
-    if (connectionID) {
-        return connectionID;
-    }
-    
-    // If not found in memory, check Redis
-    return await redisClient.get(`device:${deviceID}`);
+    redisClient.set(REDIS_KEYS.CONNECTION(connectionID), "", "EX", Math.floor(AUTH_CONSTANTS.CONNECTION_EXPIRE_TIME));
 }
 
 /**
@@ -75,7 +35,7 @@ export async function getConnectionByDeviceId(redisClient: Redis, deviceID: stri
  * @param playerID Player ID to associate
  */
 export function playerRegistered(redisClient: Redis, connectionID: string, playerID: string) {
-    redisClient.set(`connection:${connectionID}`, playerID);
+    redisClient.set(REDIS_KEYS.CONNECTION(connectionID), playerID);
 }
 
 /**
@@ -86,7 +46,7 @@ export function playerRegistered(redisClient: Redis, connectionID: string, playe
  * @returns Player ID associated with the connection, or null if not found
  */
 export async function getPlayerID(redisClient: Redis, connectionID: string): Promise<string | null> {
-    return await redisClient.get("connection:" + connectionID);
+    return await redisClient.get(REDIS_KEYS.CONNECTION(connectionID));
 }
 
 /**
@@ -94,30 +54,14 @@ export async function getPlayerID(redisClient: Redis, connectionID: string): Pro
  * @description Removes a connection from the system
  * @param redisClient Redis client for regular operations
  * @param connectionID Connection ID to remove
- * @param deviceID Optional device ID associated with this connection
  */
-export async function removeConnection(redisClient: Redis, connectionID: string, deviceID?: string): Promise<void> {
+export async function removeConnection(redisClient: Redis, connectionID: string): Promise<void> {
     const playerID = await getPlayerID(redisClient, connectionID);
     if (playerID) {
         Player.removePlayer(redisClient, playerID);
     }
-    redisClient.del(`connection:${connectionID}`);
+    redisClient.del(REDIS_KEYS.CONNECTION(connectionID));
     activeWebsockets.delete(connectionID);
-    // If a device ID is provided, remove the device-to-connection mapping
-    if (deviceID) {
-        redisClient.del(`device:${deviceID}`);
-        deviceConnections.delete(deviceID);
-    } else {
-        // If no device ID is provided, try to find and remove any device mappings for this connection
-        for (const [deviceId, connId] of deviceConnections.entries()) {
-            if (connId === connectionID) {
-                redisClient.del(`device:${deviceId}`);
-                deviceConnections.delete(deviceId);
-                break; // Assuming one device can only have one connection
-            }
-        }
-    }
-
 }
 
 /**
@@ -128,7 +72,8 @@ export async function removeConnection(redisClient: Redis, connectionID: string,
  */
 export function disconnect(redisClient: Redis, key: string): void {
     // Extract the connection ID from the key if it's in the format "connection:connectionID"
-    const connectionID = key.startsWith('connection:') ? key.substring('connection:'.length) : key;
+    const prefix = 'connection:';
+    const connectionID = key.startsWith(prefix) ? key.substring(prefix.length) : key;
     
     const ws = activeWebsockets.get(connectionID);
     if (ws) {

@@ -232,11 +232,15 @@ export default class UsernameScreen implements Menu {
             this.showLoadingIcon = false;
             return;
         }
-        let playerIDPromise = this.webManager.checkAndRegisterPlayer(this.usernameField.getText()) as Promise<[string, string]>;
-        playerIDPromise.then(response => {
-            //Valid player ID
-            if (response[0].length > 0) {
-                localStorage.setItem("playerID", response[0]);
+        let sessionPromise = this.webManager.checkAndRegisterPlayer(this.usernameField.getText()) as Promise<[string, string]>;
+        sessionPromise.then(response => {
+            const [sessionID, message] = response;
+            
+            //Valid session ID
+            if (sessionID.length > 0) {
+                // Session ID is already stored in WebManager.setSessionId
+                // No need to store playerID anymore
+                
                 this.usernameField.setError("");
                 this.keylistener.deactivate();
                 this.transitionOutActive = true;
@@ -244,7 +248,7 @@ export default class UsernameScreen implements Menu {
                 this.confirmButton.setConfirmed(true);
                 this.showLoadingIcon = false;
             } else {
-                this.usernameField.setError(response[1]);
+                this.usernameField.setError(message);
                 this.usernameField.shake();
                 this.showLoadingIcon = false;
             }

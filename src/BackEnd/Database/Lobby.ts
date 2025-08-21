@@ -8,6 +8,7 @@
 
 import Redis from "ioredis";
 import Player from "./Player";
+import { REDIS_KEYS } from "../Contants";
 
 /*
 example of a lobby hash:
@@ -120,7 +121,7 @@ export default class Lobby {
     static async createLobby(redisClient: Redis, lobbyID: string, lobbyData: LobbyData, playerID: string): Promise<Lobby> {
         try {
             // Check if lobby already exists
-            const lobbyKey = `lobby:${lobbyID}`;
+            const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
             const lobbyExists = await redisClient.exists(lobbyKey);
             if (lobbyExists) {
                 throw new Error(`Lobby ${lobbyID} already exists`);
@@ -150,18 +151,18 @@ export default class Lobby {
             multi.hset(lobbyKey, lobbyHash);
 
             // Store game state as a separate list
-            const gameStateKey = `gamestate:${lobbyID}`;
+            const gameStateKey = REDIS_KEYS.GAME_STATES(lobbyID); 
             if (gameState.length > 0) {
                 multi.del(gameStateKey); // Ensure the list is empty
                 multi.rpush(gameStateKey, ...gameState.map(val => val.toString()));
             }
 
             // Create empty players list
-            const playersKey = `lobbyplayers:${lobbyID}`;
+            const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
             multi.del(playersKey);
 
             // Add to lobby list
-            multi.rpush('LobbyList', lobbyID);
+            multi.rpush('LobbyList', lobbyID); // Note: No REDIS_KEYS constant for LobbyList
 
             // Execute the transaction
             await multi.exec();
@@ -218,9 +219,9 @@ export default class Lobby {
      */
     public async removeLobby(redisClient: Redis, lobbyID: string): Promise<boolean> {
         try {
-            const lobbyKey = `lobby:${lobbyID}`;
-            const gameStateKey = `gamestate:${lobbyID}`;
-            const playersKey = `lobbyplayers:${lobbyID}`;
+            const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
+            const gameStateKey = `gamestate:${lobbyID}`; // Note: No REDIS_KEYS constant for gamestate
+            const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
 
             // Check if lobby exists
             const lobbyExists = await redisClient.exists(lobbyKey);
@@ -239,7 +240,7 @@ export default class Lobby {
             multi.del(lobbyKey);
             multi.del(gameStateKey);
             multi.del(playersKey);
-            multi.lrem('LobbyList', 0, lobbyID);
+            multi.lrem('LobbyList', 0, lobbyID); // Note: No REDIS_KEYS constant for LobbyList
 
             await multi.exec();
 
@@ -262,7 +263,7 @@ export default class Lobby {
      */
     static async doesLobbyExist(redisClient: Redis, lobbyID: string): Promise<boolean> {
         try {
-            const lobbyKey = `lobby:${lobbyID}`;
+            const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
             return (await redisClient.exists(lobbyKey)) > 0;
         } catch (error) {
             if (error instanceof Error) {
@@ -283,8 +284,8 @@ export default class Lobby {
      */
     static async removePlayerFromLobby(redisClient: Redis, lobbyID: string, playerID: string): Promise<boolean> {
         try {
-            const lobbyKey = `lobby:${lobbyID}`;
-            const playersKey = `lobbyplayers:${lobbyID}`;
+            const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
+            const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
 
             // Check if lobby exists
             const lobbyExists = await redisClient.exists(lobbyKey);
@@ -396,8 +397,8 @@ export default class Lobby {
      */
     static async getPlayersInLobby(redisClient: Redis, lobbyID: string): Promise<Player[]> {
         try {
-            const lobbyKey = `lobby:${lobbyID}`;
-            const playersKey = `lobbyplayers:${lobbyID}`;
+            const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
+            const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
 
             // Check if lobby exists
             const lobbyExists = await redisClient.exists(lobbyKey);
@@ -459,9 +460,9 @@ export default class Lobby {
      */
     static async getLobby(redisClient: Redis, lobbyID: string): Promise<Lobby | null> {
         try {
-            const lobbyKey = `lobby:${lobbyID}`;
-            const gameStateKey = `gamestate:${lobbyID}`;
-            const playersKey = `lobbyplayers:${lobbyID}`;
+            const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
+            const gameStateKey = `gamestate:${lobbyID}`; // Note: No REDIS_KEYS constant for gamestate
+            const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
 
             // Check if the lobby exists
             const doesLobbyExist = await redisClient.exists(lobbyKey);
@@ -508,7 +509,7 @@ export default class Lobby {
     ): Promise<Lobby[]> {
         try {
             // Get the list of all lobbies with a limit to prevent timeout
-            const lobbyIDs = await redisClient.lrange('LobbyList', 0, searchListLength);
+            const lobbyIDs = await redisClient.lrange('LobbyList', 0, searchListLength); // Note: No REDIS_KEYS constant for LobbyList
 
             if (lobbyIDs.length === 0) {
                 return [];

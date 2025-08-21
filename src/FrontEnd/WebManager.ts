@@ -31,40 +31,54 @@ export default class WebManager {
     private reconnectAttempts: number = 0;
     private maxReconnectAttempts: number = -1;
     private reconnectDelay: number = 1000; // Base delay in ms
-    private deviceId: string;
+private sessionId: string | null = null;
     
 /**
  * Private constructor to enforce singleton pattern
  */
 private constructor() {
     // Private constructor to enforce singleton pattern
-    this.deviceId = this.getOrCreateDeviceId();
+    this.sessionId = this.getStoredSessionId();
 }
 
 /**
- * @method getOrCreateDeviceId
- * @description Get the device ID from localStorage or create a new one if it doesn't exist
- * @returns {string} The device ID
+ * @method getStoredSessionId
+ * @description Get the session ID from localStorage if it exists
+ * @returns {string|null} The session ID or null if it doesn't exist
  * @private
  */
-private getOrCreateDeviceId(): string {
-    const storedId = localStorage.getItem('device_id');
-    if (!storedId) {
-        const newId = uuidv4();
-        localStorage.setItem('device_id', newId);
-        return newId;
-    }
-    return storedId;
+private getStoredSessionId(): string | null {
+    return localStorage.getItem('session_id');
 }
 
 /**
- * @method getDeviceId
- * @description Get the device ID
- * @returns {string} The device ID
+ * @method setSessionId
+ * @description Store the session ID in localStorage
+ * @param {string} sessionId The session ID to store
  */
-public getDeviceId(): string {
-    return this.deviceId;
+public setSessionId(sessionId: string): void {
+    this.sessionId = sessionId;
+    localStorage.setItem('session_id', sessionId);
 }
+
+/**
+ * @method clearSessionId
+ * @description Clear the stored session ID
+ */
+public clearSessionId(): void {
+    this.sessionId = null;
+    localStorage.removeItem('session_id');
+}
+
+/**
+ * @method getSessionId
+ * @description Get the current session ID
+ * @returns {string|null} The session ID or null if not set
+ */
+public getSessionId(): string | null {
+    return this.sessionId;
+}
+
     
     /**
      * @method getInstance
@@ -86,8 +100,9 @@ public getDeviceId(): string {
     public async initiateWebsocketConnection(): Promise<boolean> {
         return new Promise((resolve) => {
             const serverAddress = process.env.REMOTE_SERVER_ADDRESS || 'ws://localhost:3000';
-            // Append the device ID as a query parameter
-            const connectionUrl = `${serverAddress}?deviceId=${encodeURIComponent(this.deviceId)}`;
+            // No longer append the device ID as a query parameter for security
+            // Instead, we'll use the session ID in the message body
+            const connectionUrl = serverAddress;
 
             this.socket = new WebSocket(connectionUrl);
 
@@ -330,11 +345,22 @@ public getDeviceId(): string {
             if (!message.messageID) {
                 message.messageID = messageID;
             }
+            
+            // Add the session ID to the message if available (except for registration)
+            if (this.sessionId && action !== 'registerPlayer') {
+                message.sessionID = this.sessionId;
+            }
 
             //Register callbacks for the message
             this.messageCallbacks.set(messageID, (response) => {
                 // Store the response for future reference
                 console.log(`Received response for ${action}:`, response);
+                
+                // If this is a registration response and it contains a session ID, store it
+                if (action === 'registerPlayer' && response.success && response.sessionID) {
+                    this.setSessionId(response.sessionID);
+                    console.log('Session ID stored:', response.sessionID);
+                }
                 
                 if (response.success) {
                     // Return the entire response object since it contains all the data we need
@@ -374,24 +400,28 @@ public getDeviceId(): string {
     /**
      * @method checkAndRegisterPlayer
      * @description This method makes a request for a new player to be generated. This allows the
-     * client to join game servers when it receives a player id.
+     * client to join game servers when it receives a session id.
      * @param username the username that the player chose
-     * @return The playerID, or an empty string.
+     * @return The sessionID and message.
      */
     public async checkAndRegisterPlayer(username: string): Promise<[string, string]> {
         try {
             const message = {
-                type: 'registerPlayer',
+                type: 'register_player',
                 parameters: {
-                    identifier: username,
+                    username: username,
                     checkUsername: true
                 }
             }
 
-            const response = await this.sendRequest<{ success: boolean, message: string, playerID: string }>(message, 'registerPlayer');
+            const response = await this.sendRequest<{ success: boolean, message: string, sessionID: string }>(message, 'registerPlayer');
             console.log("Response received: ", response);
 
-            return [response.playerID ? response.playerID : "", response.message];
+            // The session ID will be automatically stored by the sendRequest method
+            return [
+                response.sessionID ? response.sessionID : "",
+                response.message
+            ];
 
         } catch(error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
