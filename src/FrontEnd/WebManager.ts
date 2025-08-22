@@ -202,8 +202,8 @@ public getSessionId(): string | null {
         try {
             // Create message payload
             const message = {
-                type: 'createLobby',
-                playerID: playerID,
+                type: 'create_lobby',
+                sessionID: this.getSessionId(),
                 parameters: {
                     lobbyID,
                     lobbyData: {
@@ -217,7 +217,7 @@ public getSessionId(): string | null {
             };
 
             // Use the sendRequest method to create the lobby
-            const response = await this.sendRequest<{ success: boolean }>(message, 'createLobby');
+            const response = await this.sendRequest<{ success: boolean }>(message, 'create_lobby');
             console.log("Response received: ", response);
 
             // Return the success status from the response
@@ -286,8 +286,8 @@ public getSessionId(): string | null {
             let playerID = localStorage.getItem('playerID');
             // Create the message payload
             const message = {
-                type: 'searchLobbies',
-                playerID: playerID,
+                type: 'search_lobby',
+                sessionID: this.getSessionId(),
                 parameters: {
                     lobbyID: parameters.lobbyID,
                     playerNum: parameters.playerNum,
@@ -301,7 +301,7 @@ public getSessionId(): string | null {
             };
             
             // Use the sendRequest method to get the lobby list
-            const response = await this.sendRequest<{ success: boolean; lobbies: any[] }>(message, 'searchLobbies');
+            const response = await this.sendRequest<{ success: boolean; lobbies: any[] }>(message, 'search_lobby');
             
             // Parse the response into LobbyInfo objects
             if (response && response.success && Array.isArray(response.lobbies)) {
@@ -356,12 +356,6 @@ public getSessionId(): string | null {
                 // Store the response for future reference
                 console.log(`Received response for ${action}:`, response);
                 
-                // If this is a registration response and it contains a session ID, store it
-                if (action === 'registerPlayer' && response.success && response.sessionID) {
-                    this.setSessionId(response.sessionID);
-                    console.log('Session ID stored:', response.sessionID);
-                }
-                
                 if (response.success) {
                     // Return the entire response object since it contains all the data we need
                     resolve(response as T);
@@ -415,7 +409,11 @@ public getSessionId(): string | null {
             }
 
             const response = await this.sendRequest<{ success: boolean, message: string, sessionID: string }>(message, 'registerPlayer');
-            console.log("Response received: ", response);
+            //Store the session ID
+            if (response.success && response.sessionID) {
+                this.setSessionId(response.sessionID);
+                console.log('Session ID stored:', response.sessionID);
+            }
 
             // The session ID will be automatically stored by the sendRequest method
             return [

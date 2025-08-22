@@ -1,4 +1,3 @@
-import { DEFAULT_PLAYER_NUMBER } from '../FrontEnd/TicTac';
 /**
  * @file Constants.ts
  * @description Contains constants that will be used for the back-end
@@ -11,6 +10,8 @@ import { DEFAULT_PLAYER_NUMBER } from '../FrontEnd/TicTac';
 // ============================================================================
 // GAME CONSTANTS
 // ============================================================================
+export const DEFAULT_PLAYER_NUMBER = 2; // Defined here instead of importing from FrontEnd
+
 export const GAME_CONSTANTS = {
     MAX_PLAYER_CAP: 10, // The maximum number of players that can be in a game at once
     MAX_SPECTATOR_CAP: 10, // The maximum number of spectators that can be in a game at once
@@ -61,7 +62,6 @@ export const REDIS_KEYS = {
     LOBBY: (lobbyID: string) => `lobby:${lobbyID}`,
     LOBBY_PLAYERS: (lobbyID: string) => `lobbyplayers:${lobbyID}`,
     USERNAMES: 'usernames',
-
     GAME_STATES: (lobbyID: string) => `gamestate:${lobbyID}`,
 } as const;
 

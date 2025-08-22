@@ -29,8 +29,6 @@ type ReturnMessage = Record<string, any>
 export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
     console.log("WebSocket connection established from client");
 
-    // Connection management is handled through session IDs
-
     // Assign a unique ID to the websocket connection
     if (!ws.id) {
         ws.id = uuidv4();
@@ -55,7 +53,8 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
             // Check for session ID in authenticated requests
             if (data.sessionID && data.type !== MESSAGE_TYPES.REGISTER_PLAYER) {
                 // Validate the session
-                const sessionData = await validateSession(redis, data.sessionID);
+                console.log("Validating session with ID:", data.sessionID);
+                const sessionData = await validateSession(redis, data.sessionID, req);
                 if (sessionData && sessionData.connectionID === ws.id) {
                     // Session is valid and belongs to this connection
                     // Refresh the session (remove expiry if it has one)
@@ -83,7 +82,7 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
             } else {
                 // Handle message types for unauthenticated users
                 if (data.type === MESSAGE_TYPES.REGISTER_PLAYER) {
-                    returnMessage = await handleRegisterPlayer(ws, redis, data);
+                    returnMessage = await handleRegisterPlayer(ws, redis, data, req);
                 } else {
                     returnMessage = {
                         success: false,
@@ -226,9 +225,10 @@ async function handleCreateLobby(ws: any, redis: Redis, data: any, playerID: str
  * @param ws WebSocket connection
  * @param redis Redis client for regular operations
  * @param data Player registration request data
+ * @param req HTTP request object
  * @returns Promise resolving to response object
  */
-async function handleRegisterPlayer(ws: any, redis: Redis, data: any): Promise<object> {
+async function handleRegisterPlayer(ws: any, redis: Redis, data: any, req: any): Promise<object> {
     const params = data.parameters || {};
     const username = params.username;
     
@@ -258,7 +258,7 @@ async function handleRegisterPlayer(ws: any, redis: Redis, data: any): Promise<o
             playerRegistered(redis, ws.id, playerID);
             
             // Create a session for the player
-            const sessionID = await createSession(redis, playerID, ws.id);
+            const sessionID = await createSession(redis, playerID, ws.id, req);
             
             return {
                 success: true,

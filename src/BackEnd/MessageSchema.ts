@@ -13,7 +13,7 @@ import { GAME_CONSTANTS, VALIDATION } from "./Contants";
 //These are the message types that the player can send.
 export enum MESSAGE_TYPES {
     REGISTER_PLAYER = "register_player",
-    SEARCH_LOBBY = "search_lobbies",
+    SEARCH_LOBBY = "search_lobby",
     CREATE_LOBBY = "create_lobby"
 }
 
