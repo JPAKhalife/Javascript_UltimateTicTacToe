@@ -9,8 +9,16 @@ import {
     getWebsocketObject,
 } from './Database/Connections';
 import { URL } from 'url';
-import { LobbyCreateRequest, LobbySearchRequest, MESSAGE_TYPES, RegisterRequest } from './MessageSchema';
-import { createSession, validateSession, setSessionExpiry, refreshSession } from './Utils/SessionManager';
+import { LobbyCreateRequest, LobbySearchRequest, MESSAGE_TYPES, RegisterRequest, ReconnectRequest } from './MessageSchema';
+import { 
+    createSession, 
+    validateSession, 
+    setSessionExpiry, 
+    refreshSession, 
+    updateSessionConnectionID, 
+    isConnectionActive,
+    getSessionConnectionID
+} from './Utils/SessionManager';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from './Contants';
 const { v4: uuidv4 } = require('uuid');
 
@@ -50,11 +58,17 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
             console.log('Received message from client:', data);
             messageID = data.messageID;
             
+            // Handle reconnect requests
+            if (data.type === MESSAGE_TYPES.RECONNECT && data.sessionID) {
+                returnMessage = await handleReconnect(ws, redis, data, req);
+            }
             // Check for session ID in authenticated requests
-            if (data.sessionID && data.type !== MESSAGE_TYPES.REGISTER_PLAYER) {
+            else if (data.sessionID && data.type !== MESSAGE_TYPES.REGISTER_PLAYER) {
                 // Validate the session
                 console.log("Validating session with ID:", data.sessionID);
                 const sessionData = await validateSession(redis, data.sessionID, req);
+                
+                // Check if session is valid and either belongs to this connection or is a reconnect attempt
                 if (sessionData && sessionData.connectionID === ws.id) {
                     // Session is valid and belongs to this connection
                     // Refresh the session (remove expiry if it has one)
@@ -275,5 +289,68 @@ async function handleRegisterPlayer(ws: any, redis: Redis, data: any, req: any):
     return {
         success: true,
         message: ERROR_MESSAGES.USERNAME_EXISTS,
+    }
+}
+
+/**
+ * @function handleReconnect
+ * @description Handles the reconnection of a client using an existing session ID
+ * @param ws WebSocket connection
+ * @param redis Redis client for regular operations
+ * @param data Reconnect request data
+ * @param req HTTP request object
+ * @returns Promise resolving to response object
+ */
+async function handleReconnect(ws: any, redis: Redis, data: any, req: any): Promise<object> {
+    try {
+        // Validate the session
+        console.log("Validating session for reconnection:", data.sessionID);
+        const sessionData = await validateSession(redis, data.sessionID, req);
+        
+        if (!sessionData) {
+            return {
+                success: false,
+                error: ERROR_MESSAGES.TOKEN_INVALID
+            };
+        }
+        
+        // Get the current connection ID associated with the session
+        const currentConnectionID = sessionData.connectionID;
+        
+        // Check if the current connection is still active
+        const isActive = await isConnectionActive(redis, currentConnectionID);
+        
+        if (isActive) {
+            return {
+                success: false,
+                error: ERROR_MESSAGES.CONCURRENT_LOGIN
+            };
+        }
+        
+        // Update the session with the new connection ID
+        const updated = await updateSessionConnectionID(redis, data.sessionID, ws.id);
+        
+        if (!updated) {
+            return {
+                success: false,
+                error: ERROR_MESSAGES.INTERNAL_ERROR
+            };
+        }
+        
+        // Register the player with the connection
+        playerRegistered(redis, ws.id, sessionData.playerID);
+        
+        // Return success
+        return {
+            success: true,
+            message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
+            playerID: sessionData.playerID
+        };
+    } catch (error) {
+        console.error('Error handling reconnect:', error);
+        return {
+            success: false,
+            error: ERROR_MESSAGES.INTERNAL_ERROR
+        };
     }
 }

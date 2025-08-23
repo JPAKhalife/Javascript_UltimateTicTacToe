@@ -370,3 +370,83 @@ export async function refreshSession(
     await redisClient.persist(key);
     return true;
 }
+
+/**
+ * @function updateSessionConnectionID
+ * @description Updates the connectionID associated with a session
+ * @param {Redis} redisClient Redis client for database operations
+ * @param {string} token The session token to update
+ * @param {string} newConnectionID The new connection ID to associate with the session
+ * @returns {Promise<boolean>} A promise that resolves to true if successful
+ */
+export async function updateSessionConnectionID(
+    redisClient: Redis,
+    token: string,
+    newConnectionID: string
+): Promise<boolean> {
+    // Parse the token to get the baseId
+    const tokenData = parseAndVerifyToken(token);
+    if (!tokenData) {
+        return false; // Invalid token
+    }
+
+    const { baseId } = tokenData;
+    const key = REDIS_KEYS.SESSION(baseId);
+    const exists = await redisClient.exists(key);
+
+    if (!exists) {
+        return false;
+    }
+
+    // Update connectionID and last active timestamp
+    const now = Date.now();
+    await redisClient.hset(
+        key,
+        'connectionID', newConnectionID,
+        'lastActive', now.toString()
+    );
+
+    // Remove expiry
+    await redisClient.persist(key);
+    return true;
+}
+
+/**
+ * @function isConnectionActive
+ * @description Checks if a connection is active
+ * @param {Redis} redisClient Redis client for database operations
+ * @param {string} connectionID The connection ID to check
+ * @returns {Promise<boolean>} A promise that resolves to true if the connection is active
+ */
+export async function isConnectionActive(
+    redisClient: Redis,
+    connectionID: string
+): Promise<boolean> {
+    // Check if the connection exists in Redis
+    const exists = await redisClient.exists(REDIS_KEYS.CONNECTION(connectionID));
+    return exists === 1;
+}
+
+/**
+ * @function getSessionConnectionID
+ * @description Gets the connectionID associated with a session
+ * @param {Redis} redisClient Redis client for database operations
+ * @param {string} token The session token
+ * @returns {Promise<string | null>} A promise that resolves to the connectionID or null if not found
+ */
+export async function getSessionConnectionID(
+    redisClient: Redis,
+    token: string
+): Promise<string | null> {
+    // Parse the token to get the baseId
+    const tokenData = parseAndVerifyToken(token);
+    if (!tokenData) {
+        return null; // Invalid token
+    }
+
+    const { baseId } = tokenData;
+    const key = REDIS_KEYS.SESSION(baseId);
+    
+    // Get the connectionID from the session
+    return await redisClient.hget(key, 'connectionID');
+}

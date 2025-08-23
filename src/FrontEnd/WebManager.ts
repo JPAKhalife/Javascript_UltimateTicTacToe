@@ -106,10 +106,28 @@ public getSessionId(): string | null {
 
             this.socket = new WebSocket(connectionUrl);
 
-            this.socket.onopen = () => {
+            this.socket.onopen = async () => {
                 console.log('WebSocket connection established - clientside');
-                this.socket?.send(JSON.stringify({ message: 'Hello from the client' }));
-                this.reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+                
+                // Reset reconnect attempts on successful connection
+                this.reconnectAttempts = 0;
+                
+                // Check if we have a stored session ID for reconnection
+                const sessionId = this.getSessionId();
+                if (sessionId) {
+                    // Attempt to reconnect with the stored session ID
+                    const reconnected = await this.attemptReconnect(sessionId);
+                    if (reconnected) {
+                        console.log('Successfully reconnected with existing session');
+                    } else {
+                        console.log('Failed to reconnect with existing session, clearing session ID');
+                        this.clearSessionId();
+                    }
+                } else {
+                    // Just send a simple hello message if no session ID
+                    this.socket?.send(JSON.stringify({ message: 'Hello from the client' }));
+                }
+                
                 resolve(true);
             };
         
@@ -177,6 +195,33 @@ public getSessionId(): string | null {
             }, delay);
         } else {
             console.error('Maximum reconnection attempts reached');
+        }
+    }
+    
+    /**
+     * @method attemptReconnect
+     * @description Attempts to reconnect using a stored session ID
+     * @param {string} sessionId The session ID to use for reconnection
+     * @returns {Promise<boolean>} A promise that resolves to true if reconnection was successful
+     * @private
+     */
+    private async attemptReconnect(sessionId: string): Promise<boolean> {
+        try {
+            // Create the reconnect message
+            const message = {
+                type: 'reconnect',
+                sessionID: sessionId,
+                messageID: this.generateMessageID('reconnect')
+            };
+            
+            // Send the reconnect request
+            const response = await this.sendRequest<{ success: boolean, playerID: string }>(message, 'reconnect');
+            
+            // If successful, return true
+            return response && response.success === true;
+        } catch (error) {
+            console.error('Error attempting to reconnect:', error);
+            return false;
         }
     }
 

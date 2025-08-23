@@ -51,17 +51,43 @@ export async function getPlayerID(redisClient: Redis, connectionID: string): Pro
 
 /**
  * @method removeConnection
- * @description Removes a connection from the system
+ * @description Removes a connection from the system and sets expiry on associated sessions
  * @param redisClient Redis client for regular operations
  * @param connectionID Connection ID to remove
  */
 export async function removeConnection(redisClient: Redis, connectionID: string): Promise<void> {
     const playerID = await getPlayerID(redisClient, connectionID);
+    
+    // Find all sessions associated with this connection and set expiry
+    await setExpiryOnConnectionSessions(redisClient, connectionID);
+    
     if (playerID) {
         Player.removePlayer(redisClient, playerID);
     }
     redisClient.del(REDIS_KEYS.CONNECTION(connectionID));
     activeWebsockets.delete(connectionID);
+}
+
+/**
+ * @method setExpiryOnConnectionSessions
+ * @description Sets expiry on all sessions associated with a connection ID
+ * @param redisClient Redis client for regular operations
+ * @param connectionID Connection ID to find sessions for
+ */
+async function setExpiryOnConnectionSessions(redisClient: Redis, connectionID: string): Promise<void> {
+    // This is a simplified implementation. In a production system, you might want to
+    // use a secondary index or a more efficient lookup method.
+    const sessionPrefix = 'session:';
+    const keys = await redisClient.keys(`${sessionPrefix}*`);
+
+    for (const key of keys) {
+        const connID = await redisClient.hget(key, 'connectionID');
+        if (connID === connectionID) {
+            // Set expiry on this session
+            await redisClient.expire(key, AUTH_CONSTANTS.SESSION_EXPIRE_TIME);
+            console.log(`Set expiry on session ${key} associated with disconnected connection ${connectionID}`);
+        }
+    }
 }
 
 /**

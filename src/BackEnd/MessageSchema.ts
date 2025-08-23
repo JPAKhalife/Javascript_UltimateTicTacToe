@@ -14,7 +14,8 @@ import { GAME_CONSTANTS, VALIDATION } from "./Contants";
 export enum MESSAGE_TYPES {
     REGISTER_PLAYER = "register_player",
     SEARCH_LOBBY = "search_lobby",
-    CREATE_LOBBY = "create_lobby"
+    CREATE_LOBBY = "create_lobby",
+    RECONNECT = "reconnect"
 }
 
 //This is the base request that contains information all requests should have
@@ -70,3 +71,10 @@ export const LobbyCreateRequest = AuthenticatedRequest.extend({
     })
 });
 export type LobbyCreateRequest = z.infer<typeof LobbyCreateRequest>;
+
+//This request is used when a client wants to reconnect using an existing session ID
+export const ReconnectRequest = BaseRequest.extend({
+    sessionID: z.string().min(1), // Session ID is required for reconnection
+    parameters: z.object({}).optional() // No additional parameters required for reconnection
+});
+export type ReconnectRequest = z.infer<typeof ReconnectRequest>;
