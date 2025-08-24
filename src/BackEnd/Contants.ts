@@ -44,7 +44,7 @@ export const AUTH_CONSTANTS = {
     CONNECTION_EXPIRE_TIME: Math.floor(3600 / 4), // 15 minutes for connection expiry
 
     // Session settings
-    SESSION_EXPIRE_TIME: Math.floor(3600), // 1 hour for session expiry when disconnected
+    SESSION_EXPIRE_TIME: Math.floor(3600) / 10, // 1 hour for session expiry when disconnected
     SESSION_ID_LENGTH: 21, // Default nanoid length
 } as const;
 

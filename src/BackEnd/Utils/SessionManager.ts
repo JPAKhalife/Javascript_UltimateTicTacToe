@@ -422,9 +422,20 @@ export async function isConnectionActive(
     redisClient: Redis,
     connectionID: string
 ): Promise<boolean> {
+    console.log(`[SessionManager] Checking if connection ID ${connectionID} is active`);
+    
     // Check if the connection exists in Redis
-    const exists = await redisClient.exists(REDIS_KEYS.CONNECTION(connectionID));
-    return exists === 1;
+    const redisKey = REDIS_KEYS.CONNECTION(connectionID);
+    console.log(`[SessionManager] Looking up Redis key: ${redisKey}`);
+    
+    const startTime = Date.now();
+    const exists = await redisClient.exists(redisKey);
+    const checkTime = Date.now() - startTime;
+    
+    const isActive = exists === 1;
+    console.log(`[SessionManager] Connection check took ${checkTime}ms, result: ${isActive ? 'active' : 'inactive'}`);
+    
+    return isActive;
 }
 
 /**

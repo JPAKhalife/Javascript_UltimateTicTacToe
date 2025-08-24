@@ -22,8 +22,23 @@ import { AUTH_CONSTANTS, REDIS_KEYS } from "../Contants";
  * @param connectionID Unique connection ID
  */
 export function newConnection(redisClient: Redis, ws: any, connectionID: string) {
+    console.log(`[Connections] Registering new WebSocket connection with ID: ${connectionID}`);
+    console.log(`[Connections] WebSocket readyState: ${ws.readyState}`);
+    
+    // Store the WebSocket object in the activeWebsockets map
     activeWebsockets.set(connectionID, ws);
+    console.log(`[Connections] activeWebsockets map size after adding: ${activeWebsockets.size}`);
+    
+    // Verify the WebSocket was added correctly
+    const storedWs = activeWebsockets.get(connectionID);
+    if (storedWs === ws) {
+        console.log(`[Connections] WebSocket object successfully stored in activeWebsockets map`);
+    } else {
+        console.error(`[Connections] Failed to store WebSocket object in activeWebsockets map`);
+    }
+    
     // Use Math.floor to ensure integer value for Redis expiration time
+    console.log(`[Connections] Setting Redis key for connection: ${REDIS_KEYS.CONNECTION(connectionID)}`);
     redisClient.set(REDIS_KEYS.CONNECTION(connectionID), "", "EX", Math.floor(AUTH_CONSTANTS.CONNECTION_EXPIRE_TIME));
 }
 
@@ -35,7 +50,23 @@ export function newConnection(redisClient: Redis, ws: any, connectionID: string)
  * @param playerID Player ID to associate
  */
 export function playerRegistered(redisClient: Redis, connectionID: string, playerID: string) {
-    redisClient.set(REDIS_KEYS.CONNECTION(connectionID), playerID);
+    console.log(`[Connections] Registering player ID ${playerID} with connection ID ${connectionID}`);
+    
+    // Check if the connection exists in the activeWebsockets map
+    if (activeWebsockets.has(connectionID)) {
+        console.log(`[Connections] Connection ID ${connectionID} found in activeWebsockets map`);
+    } else {
+        console.warn(`[Connections] Connection ID ${connectionID} NOT found in activeWebsockets map`);
+    }
+    
+    // Set the player ID in Redis
+    redisClient.set(REDIS_KEYS.CONNECTION(connectionID), playerID)
+        .then(() => {
+            console.log(`[Connections] Successfully set player ID ${playerID} for connection ${connectionID} in Redis`);
+        })
+        .catch(error => {
+            console.error(`[Connections] Error setting player ID in Redis:`, error);
+        });
 }
 
 /**
@@ -57,10 +88,10 @@ export async function getPlayerID(redisClient: Redis, connectionID: string): Pro
  */
 export async function removeConnection(redisClient: Redis, connectionID: string): Promise<void> {
     const playerID = await getPlayerID(redisClient, connectionID);
-    
+
     // Find all sessions associated with this connection and set expiry
     await setExpiryOnConnectionSessions(redisClient, connectionID);
-    
+
     if (playerID) {
         Player.removePlayer(redisClient, playerID);
     }
@@ -100,7 +131,7 @@ export function disconnect(redisClient: Redis, key: string): void {
     // Extract the connection ID from the key if it's in the format "connection:connectionID"
     const prefix = 'connection:';
     const connectionID = key.startsWith(prefix) ? key.substring(prefix.length) : key;
-    
+
     const ws = activeWebsockets.get(connectionID);
     if (ws) {
         try {
@@ -112,12 +143,22 @@ export function disconnect(redisClient: Redis, key: string): void {
     } else {
         console.log(`No active WebSocket found for connection ${connectionID}`);
     }
-    
+
     removeConnection(redisClient, connectionID);
 }
 
 
 
 export function getWebsocketObject(connectionID: string) {
-    return activeWebsockets.get(connectionID);
+    console.log(`[Connections] Getting WebSocket object for connection ID: ${connectionID}`);
+    
+    const ws = activeWebsockets.get(connectionID);
+    
+    if (ws) {
+        console.log(`[Connections] WebSocket object found for connection ID: ${connectionID}, readyState: ${ws.readyState}`);
+        return ws;
+    } else {
+        console.warn(`[Connections] No WebSocket object found for connection ID: ${connectionID}`);
+        return null;
+    }
 }
