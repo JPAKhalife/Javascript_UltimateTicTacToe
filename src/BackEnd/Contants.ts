@@ -61,6 +61,7 @@ export const REDIS_KEYS = {
     CONNECTION: (connectionID: string) => `connection:${connectionID}`,
     LOBBY: (lobbyID: string) => `lobby:${lobbyID}`,
     LOBBY_PLAYERS: (lobbyID: string) => `lobbyplayers:${lobbyID}`,
+    LOBBY_SPECTATORS: (lobbyID: string) => `lobbyspectators:${lobbyID}`,
     USERNAMES: 'usernames',
     GAME_STATES: (lobbyID: string) => `gamestate:${lobbyID}`,
 } as const;

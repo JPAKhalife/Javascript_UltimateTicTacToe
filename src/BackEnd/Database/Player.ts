@@ -7,7 +7,7 @@
  */
 
 import Redis from "ioredis";
-import { REDIS_KEYS } from "../Contants";
+import { GAME_CONSTANTS, REDIS_KEYS } from "../Contants";
 const { v4: uuidv4 } = require('uuid');
 
 
@@ -160,7 +160,6 @@ export default class Player {
         const MAX_RETRIES = 3;
         let retries = 0;
         const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
-        const lobbyPlayersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
         const playerKey = REDIS_KEYS.PLAYER(playerID);
         while(retries < MAX_RETRIES) {
             try {
@@ -186,12 +185,19 @@ export default class Player {
                     throw new Error(`Failed to retrieve lobby data for ${lobbyID}`);
                 }
 
-
-                // Check if lobby is full
+                let isSpectator = false;
+                // Check if lobby is full - If it is the joining player must become a spectator.
                 if (lobby.playersJoined >= lobby.playerNum) {
-                    await redisClient.unwatch();
-                    throw new Error(`Lobby ${lobbyID} is full`);
+                    
+                    if (parseInt(lobby.playersJoined) >= (GAME_CONSTANTS.MAX_PLAYER_CAP + GAME_CONSTANTS.MAX_SPECTATOR_CAP)) {
+                        await redisClient.unwatch();
+                        throw new Error(`Lobby ${lobbyID} is full`);
+                    }
+                    //If the lobby is full, then we can add the player as a spectator.
+                    //!! This is a temporary solution, as the spectator list is not implemented yet.
+                    isSpectator = true;
                 }
+                const lobbyPlayersKey = isSpectator ? REDIS_KEYS.LOBBY_SPECTATORS(lobbyID) : REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
 
                 // Check if player is already in the lobby
                 const lobbyPlayers = await redisClient.lrange(lobbyPlayersKey, 0, -1);
