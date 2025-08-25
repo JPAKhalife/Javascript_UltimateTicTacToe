@@ -31,40 +31,65 @@ export default class WebManager {
     private reconnectAttempts: number = 0;
     private maxReconnectAttempts: number = -1;
     private reconnectDelay: number = 1000; // Base delay in ms
-    private deviceId: string;
+    private sessionId: string | null = null;
     
-/**
- * Private constructor to enforce singleton pattern
- */
-private constructor() {
-    // Private constructor to enforce singleton pattern
-    this.deviceId = this.getOrCreateDeviceId();
-}
-
-/**
- * @method getOrCreateDeviceId
- * @description Get the device ID from localStorage or create a new one if it doesn't exist
- * @returns {string} The device ID
- * @private
- */
-private getOrCreateDeviceId(): string {
-    const storedId = localStorage.getItem('device_id');
-    if (!storedId) {
-        const newId = uuidv4();
-        localStorage.setItem('device_id', newId);
-        return newId;
+    /**
+     * Private constructor to enforce singleton pattern
+     */
+    private constructor() {
+        // Private constructor to enforce singleton pattern
+        this.sessionId = this.getStoredSessionId();
     }
-    return storedId;
-}
 
-/**
- * @method getDeviceId
- * @description Get the device ID
- * @returns {string} The device ID
- */
-public getDeviceId(): string {
-    return this.deviceId;
-}
+    /**
+     * @method getStoredSessionId
+     * @description Get the session ID from localStorage if it exists
+     * @returns {string|null} The session ID or null if it doesn't exist
+     * @private
+     */
+    private getStoredSessionId(): string | null {
+        return localStorage.getItem('session_id');
+    }
+
+    /**
+     * @method setSessionId
+     * @description Store the session ID in localStorage
+     * @param {string} sessionId The session ID to store
+     */
+    public setSessionId(sessionId: string): void {
+        this.sessionId = sessionId;
+        localStorage.setItem('session_id', sessionId);
+    }
+
+    /**
+     * @method clearSessionId
+     * @description Clear the stored session ID
+     */
+    public clearSessionId(): void {
+        this.sessionId = null;
+        localStorage.removeItem('session_id');
+    }
+
+    /**
+     * @method getSessionId
+     * @description Get the current session ID
+     * @returns {string|null} The session ID or null if not set
+     */
+    public getSessionId(): string | null {
+        return this.sessionId;
+    }
+
+    /**
+     * @method generateMessageID
+     * @description This method is used to automatically generate a message ID
+     * This is done with the format action_time_messagenum
+     * @param action a string that describes the action being requested by the message
+     * @returns a string representing the message ID
+     */
+    private generateMessageID(action: string): string {
+        const now = new Date();
+        return action + "_" + now.toISOString() + "_" + this.messageIDCounter++;
+    }
     
     /**
      * @method getInstance
@@ -85,16 +110,44 @@ public getDeviceId(): string {
      */
     public async initiateWebsocketConnection(): Promise<boolean> {
         return new Promise((resolve) => {
+            console.log('[Connection] Initiating WebSocket connection');
+            
             const serverAddress = process.env.REMOTE_SERVER_ADDRESS || 'ws://localhost:3000';
-            // Append the device ID as a query parameter
-            const connectionUrl = `${serverAddress}?deviceId=${encodeURIComponent(this.deviceId)}`;
+            // No longer append the device ID as a query parameter for security
+            // Instead, we'll use the session ID in the message body
+            const connectionUrl = serverAddress;
+            
+            console.log(`[Connection] Connecting to: ${serverAddress}`);
 
             this.socket = new WebSocket(connectionUrl);
 
-            this.socket.onopen = () => {
-                console.log('WebSocket connection established - clientside');
-                this.socket?.send(JSON.stringify({ message: 'Hello from the client' }));
-                this.reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+            this.socket.onopen = async () => {
+                console.log('[Connection] WebSocket connection established - clientside');
+                
+                // Reset reconnect attempts on successful connection
+                this.reconnectAttempts = 0;
+                
+                // Check if we have a stored session ID for reconnection
+                const sessionId = this.getSessionId();
+                if (sessionId) {
+                    console.log(`[Connection] Found stored session ID: ${sessionId.substring(0, 8)}...`);
+                    
+                    // Attempt to reconnect with the stored session ID
+                    console.log('[Connection] Attempting to reconnect with stored session ID');
+                    const reconnected = await this.attemptReconnect(sessionId);
+                    
+                    if (reconnected) {
+                        console.log('[Connection] Successfully reconnected with existing session');
+                    } else {
+                        console.log('[Connection] Failed to reconnect with existing session, clearing session ID');
+                        this.clearSessionId();
+                    }
+                } else {
+                    console.log('[Connection] No stored session ID found, sending hello message');
+                    // Just send a simple hello message if no session ID
+                    this.socket?.send(JSON.stringify({ message: 'Hello from the client' }));
+                }
+                
                 resolve(true);
             };
         
@@ -164,6 +217,84 @@ public getDeviceId(): string {
             console.error('Maximum reconnection attempts reached');
         }
     }
+    
+    /**
+     * @method attemptReconnect
+     * @description Attempts to reconnect using a stored session ID
+     * @param {string} sessionId The session ID to use for reconnection
+     * @returns {Promise<boolean>} A promise that resolves to true if reconnection was successful
+     * @private
+     */
+    private async attemptReconnect(sessionId: string): Promise<boolean> {
+        try {
+            console.log(`[Reconnect] Starting reconnection attempt with session ID: ${sessionId.substring(0, 8)}...`);
+            
+            // Create the reconnect message
+            const message = {
+                type: 'reconnect',
+                sessionID: sessionId,
+                messageID: this.generateMessageID('reconnect')
+            };
+            
+            console.log(`[Reconnect] Sending reconnect request with message ID: ${message.messageID}`);
+            
+            // Set up a listener for any message that might come back
+            const reconnectPromise = new Promise<boolean>((resolve) => {
+                // Set up a one-time message handler to catch any response
+                const onMessageHandler = (event: MessageEvent) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log(`[Reconnect] Received potential reconnect response:`, data);
+                        
+                        // Check if this is a response to our reconnect request
+                        if (data.messageID === message.messageID) {
+                            console.log(`[Reconnect] Matched message ID, processing response`);
+                            this.socket?.removeEventListener('message', onMessageHandler);
+                            resolve(data.success === true);
+                        }
+                    } catch (error) {
+                        console.error('[Reconnect] Error processing potential reconnect response:', error);
+                    }
+                };
+                
+                // Add the temporary message handler
+                this.socket?.addEventListener('message', onMessageHandler);
+                
+                // Also set a timeout to remove the handler
+                setTimeout(() => {
+                    this.socket?.removeEventListener('message', onMessageHandler);
+                }, 30000); // 30 second timeout
+            });
+            
+            // Send the reconnect request
+            this.socket?.send(JSON.stringify(message));
+            console.log(`[Reconnect] Reconnect request sent, waiting for direct response`);
+            
+            // Wait for either the direct response or the normal sendRequest response
+            const [directResult, normalResult] = await Promise.allSettled([
+                reconnectPromise,
+                this.sendRequest<{ success: boolean, playerID: string }>(message, 'reconnect')
+            ]);
+            
+            console.log(`[Reconnect] Direct response result:`, directResult);
+            console.log(`[Reconnect] Normal response result:`, normalResult);
+            
+            // Check if either method succeeded
+            if (directResult.status === 'fulfilled' && directResult.value === true) {
+                console.log(`[Reconnect] Reconnection successful via direct response`);
+                return true;
+            } else if (normalResult.status === 'fulfilled' && normalResult.value.success === true) {
+                console.log(`[Reconnect] Reconnection successful via normal response`);
+                return true;
+            }
+            
+            console.error(`[Reconnect] Both reconnection methods failed`);
+            return false;
+        } catch (error) {
+            console.error('[Reconnect] Error attempting to reconnect:', error);
+            return false;
+        }
+    }
 
     /**
      * @method createLobby
@@ -187,8 +318,8 @@ public getDeviceId(): string {
         try {
             // Create message payload
             const message = {
-                type: 'createLobby',
-                playerID: playerID,
+                type: 'create_lobby',
+                sessionID: this.getSessionId(),
                 parameters: {
                     lobbyID,
                     lobbyData: {
@@ -202,7 +333,7 @@ public getDeviceId(): string {
             };
 
             // Use the sendRequest method to create the lobby
-            const response = await this.sendRequest<{ success: boolean }>(message, 'createLobby');
+            const response = await this.sendRequest<{ success: boolean }>(message, 'create_lobby');
             console.log("Response received: ", response);
 
             // Return the success status from the response
@@ -271,8 +402,8 @@ public getDeviceId(): string {
             let playerID = localStorage.getItem('playerID');
             // Create the message payload
             const message = {
-                type: 'searchLobbies',
-                playerID: playerID,
+                type: 'search_lobby',
+                sessionID: this.getSessionId(),
                 parameters: {
                     lobbyID: parameters.lobbyID,
                     playerNum: parameters.playerNum,
@@ -286,7 +417,7 @@ public getDeviceId(): string {
             };
             
             // Use the sendRequest method to get the lobby list
-            const response = await this.sendRequest<{ success: boolean; lobbies: any[] }>(message, 'searchLobbies');
+            const response = await this.sendRequest<{ success: boolean; lobbies: any[] }>(message, 'search_lobby');
             
             // Parse the response into LobbyInfo objects
             if (response && response.success && Array.isArray(response.lobbies)) {
@@ -319,6 +450,7 @@ public getDeviceId(): string {
         return new Promise((resolve, reject) => {
             // Check if WebSocket is connected
             if (!this.isConnected()) {
+                console.error(`[${action}] WebSocket connection not established`);
                 reject(new Error('WebSocket connection not established'));
                 return;
             }
@@ -330,73 +462,88 @@ public getDeviceId(): string {
             if (!message.messageID) {
                 message.messageID = messageID;
             }
+            
+            // Add the session ID to the message if available (except for registration)
+            if (this.sessionId && action !== 'registerPlayer') {
+                message.sessionID = this.sessionId;
+                console.log(`[${action}] Using session ID: ${this.sessionId.substring(0, 8)}...`);
+            }
 
+            console.log(`[${action}] Registering callback for message ID: ${messageID}`);
+            
             //Register callbacks for the message
             this.messageCallbacks.set(messageID, (response) => {
                 // Store the response for future reference
-                console.log(`Received response for ${action}:`, response);
+                console.log(`[${action}] Received response for message ID ${messageID}:`, response);
                 
                 if (response.success) {
+                    console.log(`[${action}] Request successful`);
                     // Return the entire response object since it contains all the data we need
                     resolve(response as T);
                 } else {
-                    console.error('Failed to ' + action +':', response.error);
+                    console.error(`[${action}] Failed:`, response.error);
                     reject(new Error(response.error || `Failed to ${action}`));
                 }
             });
 
+            // Log the message being sent (excluding sensitive data)
+            const logMessage = { ...message };
+            if (logMessage.sessionID) {
+                logMessage.sessionID = `${logMessage.sessionID.substring(0, 8)}...`;
+            }
+            console.log(`[${action}] Sending message:`, logMessage);
+
             // Send the message
             this.socket?.send(JSON.stringify(message));
+            
+            // Determine timeout based on action type
+            const timeout = action === 'reconnect' ? 30000 : 10000; // 30 seconds for reconnect, 10 seconds for others
+            console.log(`[${action}] Message sent, waiting for response (timeout: ${timeout/1000}s)`);
             
             // Add a timeout for the response
             setTimeout(() => {
                 if (this.messageCallbacks.has(messageID)) {
+                    console.error(`[${action}] Request timed out after ${timeout/1000} seconds for message ID: ${messageID}`);
                     this.messageCallbacks.delete(messageID);
-                    console.error(action + ' request timed out');
                     reject(new Error(`${action} request timed out`));
                 }
-            }, 10000); // 10 second timeout
+            }, timeout);
         });
-    }
-
-    /**
-     * @method generateMethodID
-     * @description This method is used to automatically generate a message ID
-     * This is done with the format action_time_messagenum
-     * @param action a string that describes the action being requested by the message
-     * @returns a string representing the message ID
-     */
-    private generateMessageID(action: string): string {
-        const now = new Date();
-        return action + "_" + now.toISOString() + "_" + this.messageIDCounter++;
     }
 
     /**
      * @method checkAndRegisterPlayer
      * @description This method makes a request for a new player to be generated. This allows the
-     * client to join game servers when it receives a player id.
+     * client to join game servers when it receives a session id.
      * @param username the username that the player chose
-     * @return The playerID, or an empty string.
+     * @return The sessionID and message.
      */
     public async checkAndRegisterPlayer(username: string): Promise<[string, string]> {
         try {
             const message = {
-                type: 'registerPlayer',
+                type: 'register_player',
                 parameters: {
-                    identifier: username,
+                    username: username,
                     checkUsername: true
                 }
             }
 
-            const response = await this.sendRequest<{ success: boolean, message: string, playerID: string }>(message, 'registerPlayer');
-            console.log("Response received: ", response);
+            const response = await this.sendRequest<{ success: boolean, message: string, sessionID: string }>(message, 'registerPlayer');
+            //Store the session ID
+            if (response.success && response.sessionID) {
+                this.setSessionId(response.sessionID);
+                console.log('Session ID stored:', response.sessionID);
+            }
 
-            return [response.playerID ? response.playerID : "", response.message];
+            // The session ID will be automatically stored by the sendRequest method
+            return [
+                response.sessionID ? response.sessionID : "",
+                response.message
+            ];
 
         } catch(error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             return ["", errorMessage]
         }
     }
-
 }

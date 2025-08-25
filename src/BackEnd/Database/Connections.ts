@@ -1,18 +1,18 @@
 /**
  * @file Connections.ts
  * @description This file contains methods relating to 
- * maintaining information about active connections
+ * maintaining information about active connections.
+ * This includes connectionID, as well as active sessions.
  * @author John Khalife
  * @created 2024-06-9
- * @updated 2024-06-23
+ * @updated 2025-08-20
  */
 
 const activeWebsockets = new Map<string, any>(); // Map of connection IDs to WebSocket objects
-const deviceConnections = new Map<string, string>(); // Map of device IDs to connection IDs
 
 import Redis from "ioredis";
 import Player from "./Player";
-const EXPIRE_TIME = Math.floor(3600 / 4); // Ensure integer value for Redis expiration time
+import { AUTH_CONSTANTS, REDIS_KEYS } from "../Contants";
 
 /**
  * @method newConnection
@@ -20,50 +20,26 @@ const EXPIRE_TIME = Math.floor(3600 / 4); // Ensure integer value for Redis expi
  * @param redisClient Redis client for regular operations
  * @param ws WebSocket object
  * @param connectionID Unique connection ID
- * @param deviceID Optional device ID to associate with this connection
  */
-export function newConnection(redisClient: Redis, ws: any, connectionID: string, deviceID?: string) {
+export function newConnection(redisClient: Redis, ws: any, connectionID: string) {
+    console.log(`[Connections] Registering new WebSocket connection with ID: ${connectionID}`);
+    console.log(`[Connections] WebSocket readyState: ${ws.readyState}`);
+    
+    // Store the WebSocket object in the activeWebsockets map
     activeWebsockets.set(connectionID, ws);
+    console.log(`[Connections] activeWebsockets map size after adding: ${activeWebsockets.size}`);
+    
+    // Verify the WebSocket was added correctly
+    const storedWs = activeWebsockets.get(connectionID);
+    if (storedWs === ws) {
+        console.log(`[Connections] WebSocket object successfully stored in activeWebsockets map`);
+    } else {
+        console.error(`[Connections] Failed to store WebSocket object in activeWebsockets map`);
+    }
+    
     // Use Math.floor to ensure integer value for Redis expiration time
-    redisClient.set(`connection:${connectionID}`, "", "EX", Math.floor(EXPIRE_TIME));
-    
-    // If a device ID is provided, associate it with this connection
-    if (deviceID) {
-        storeDeviceConnection(redisClient, deviceID, connectionID);
-    }
-}
-
-/**
- * @method storeDeviceConnection
- * @description Associates a device ID with a connection ID
- * @param redisClient Redis client for regular operations
- * @param deviceID Device ID to associate
- * @param connectionID Connection ID to associate with
- */
-export function storeDeviceConnection(redisClient: Redis, deviceID: string, connectionID: string) {
-    // Store in memory
-    deviceConnections.set(deviceID, connectionID);
-    
-    // Store in Redis with the same expiration time as the connection
-    redisClient.set(`device:${deviceID}`, connectionID, "EX", Math.floor(EXPIRE_TIME));
-}
-
-/**
- * @method getConnectionByDeviceId
- * @description Gets the connection ID associated with a device ID
- * @param redisClient Redis client for regular operations
- * @param deviceID Device ID to look up
- * @returns Connection ID associated with the device, or null if not found
- */
-export async function getConnectionByDeviceId(redisClient: Redis, deviceID: string): Promise<string | null> {
-    // First check in-memory map for faster access
-    const connectionID = deviceConnections.get(deviceID);
-    if (connectionID) {
-        return connectionID;
-    }
-    
-    // If not found in memory, check Redis
-    return await redisClient.get(`device:${deviceID}`);
+    console.log(`[Connections] Setting Redis key for connection: ${REDIS_KEYS.CONNECTION(connectionID)}`);
+    redisClient.set(REDIS_KEYS.CONNECTION(connectionID), "", "EX", Math.floor(AUTH_CONSTANTS.CONNECTION_EXPIRE_TIME));
 }
 
 /**
@@ -74,7 +50,23 @@ export async function getConnectionByDeviceId(redisClient: Redis, deviceID: stri
  * @param playerID Player ID to associate
  */
 export function playerRegistered(redisClient: Redis, connectionID: string, playerID: string) {
-    redisClient.set(`connection:${connectionID}`, playerID);
+    console.log(`[Connections] Registering player ID ${playerID} with connection ID ${connectionID}`);
+    
+    // Check if the connection exists in the activeWebsockets map
+    if (activeWebsockets.has(connectionID)) {
+        console.log(`[Connections] Connection ID ${connectionID} found in activeWebsockets map`);
+    } else {
+        console.warn(`[Connections] Connection ID ${connectionID} NOT found in activeWebsockets map`);
+    }
+    
+    // Set the player ID in Redis
+    redisClient.set(REDIS_KEYS.CONNECTION(connectionID), playerID)
+        .then(() => {
+            console.log(`[Connections] Successfully set player ID ${playerID} for connection ${connectionID} in Redis`);
+        })
+        .catch(error => {
+            console.error(`[Connections] Error setting player ID in Redis:`, error);
+        });
 }
 
 /**
@@ -85,38 +77,48 @@ export function playerRegistered(redisClient: Redis, connectionID: string, playe
  * @returns Player ID associated with the connection, or null if not found
  */
 export async function getPlayerID(redisClient: Redis, connectionID: string): Promise<string | null> {
-    return await redisClient.get("connection:" + connectionID);
+    return await redisClient.get(REDIS_KEYS.CONNECTION(connectionID));
 }
 
 /**
  * @method removeConnection
- * @description Removes a connection from the system
+ * @description Removes a connection from the system and sets expiry on associated sessions
  * @param redisClient Redis client for regular operations
  * @param connectionID Connection ID to remove
- * @param deviceID Optional device ID associated with this connection
  */
-export async function removeConnection(redisClient: Redis, connectionID: string, deviceID?: string): Promise<void> {
+export async function removeConnection(redisClient: Redis, connectionID: string): Promise<void> {
     const playerID = await getPlayerID(redisClient, connectionID);
+
+    // Find all sessions associated with this connection and set expiry
+    await setExpiryOnConnectionSessions(redisClient, connectionID);
+
     if (playerID) {
         Player.removePlayer(redisClient, playerID);
     }
-    redisClient.del(`connection:${connectionID}`);
+    redisClient.del(REDIS_KEYS.CONNECTION(connectionID));
     activeWebsockets.delete(connectionID);
-    // If a device ID is provided, remove the device-to-connection mapping
-    if (deviceID) {
-        redisClient.del(`device:${deviceID}`);
-        deviceConnections.delete(deviceID);
-    } else {
-        // If no device ID is provided, try to find and remove any device mappings for this connection
-        for (const [deviceId, connId] of deviceConnections.entries()) {
-            if (connId === connectionID) {
-                redisClient.del(`device:${deviceId}`);
-                deviceConnections.delete(deviceId);
-                break; // Assuming one device can only have one connection
-            }
+}
+
+/**
+ * @method setExpiryOnConnectionSessions
+ * @description Sets expiry on all sessions associated with a connection ID
+ * @param redisClient Redis client for regular operations
+ * @param connectionID Connection ID to find sessions for
+ */
+async function setExpiryOnConnectionSessions(redisClient: Redis, connectionID: string): Promise<void> {
+    // This is a simplified implementation. In a production system, you might want to
+    // use a secondary index or a more efficient lookup method.
+    const sessionPrefix = 'session:';
+    const keys = await redisClient.keys(`${sessionPrefix}*`);
+
+    for (const key of keys) {
+        const connID = await redisClient.hget(key, 'connectionID');
+        if (connID === connectionID) {
+            // Set expiry on this session
+            await redisClient.expire(key, AUTH_CONSTANTS.SESSION_EXPIRE_TIME);
+            console.log(`Set expiry on session ${key} associated with disconnected connection ${connectionID}`);
         }
     }
-
 }
 
 /**
@@ -127,8 +129,9 @@ export async function removeConnection(redisClient: Redis, connectionID: string,
  */
 export function disconnect(redisClient: Redis, key: string): void {
     // Extract the connection ID from the key if it's in the format "connection:connectionID"
-    const connectionID = key.startsWith('connection:') ? key.substring('connection:'.length) : key;
-    
+    const prefix = 'connection:';
+    const connectionID = key.startsWith(prefix) ? key.substring(prefix.length) : key;
+
     const ws = activeWebsockets.get(connectionID);
     if (ws) {
         try {
@@ -140,12 +143,22 @@ export function disconnect(redisClient: Redis, key: string): void {
     } else {
         console.log(`No active WebSocket found for connection ${connectionID}`);
     }
-    
+
     removeConnection(redisClient, connectionID);
 }
 
 
 
 export function getWebsocketObject(connectionID: string) {
-    return activeWebsockets.get(connectionID);
+    console.log(`[Connections] Getting WebSocket object for connection ID: ${connectionID}`);
+    
+    const ws = activeWebsockets.get(connectionID);
+    
+    if (ws) {
+        console.log(`[Connections] WebSocket object found for connection ID: ${connectionID}, readyState: ${ws.readyState}`);
+        return ws;
+    } else {
+        console.warn(`[Connections] No WebSocket object found for connection ID: ${connectionID}`);
+        return null;
+    }
 }

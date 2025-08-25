@@ -7,6 +7,7 @@
  */
 
 import Redis from "ioredis";
+import { GAME_CONSTANTS, REDIS_KEYS } from "../Contants";
 const { v4: uuidv4 } = require('uuid');
 
 
@@ -70,18 +71,18 @@ export default class Player {
         try {
             if (byUsername) {
                 //Check the existence of the usernames hash
-                let doesUserNamesExist = await redisClient.exists("usernames");
+                let doesUserNamesExist = await redisClient.exists(REDIS_KEYS.USERNAMES);
                 if (doesUserNamesExist) {
-                let playerID = await redisClient.hget("usernames", identifier);
+                let playerID = await redisClient.hget(REDIS_KEYS.USERNAMES, identifier);
                 if (playerID) {
-                    let retrievedPlayer = await redisClient.hgetall("player:" + playerID);
+                    let retrievedPlayer = await redisClient.hgetall(REDIS_KEYS.PLAYER(playerID));
                     if (retrievedPlayer && retrievedPlayer.playerID && retrievedPlayer.username) {
                         return new Player(retrievedPlayer.playerID, retrievedPlayer.username, retrievedPlayer.lobbyID);
                     }
                 }
             } 
             } else {
-                let retrievedPlayer = await redisClient.hgetall("player:" + identifier);
+                let retrievedPlayer = await redisClient.hgetall(REDIS_KEYS.PLAYER(identifier));
                 if (retrievedPlayer && retrievedPlayer.playerID && retrievedPlayer.username) {
                     return new Player(retrievedPlayer.playerID, retrievedPlayer.username, retrievedPlayer.lobbyID);
                 }
@@ -109,18 +110,18 @@ export default class Player {
         while (retries < MAX_RETRIES) {
             try {
                 //First grab the username of the player
-                const username = await redisClient.hget("player:" + playerID, "username");
-                const lobbyID = await redisClient.hget("player:" + playerID, "lobbyID");
+                const username = await redisClient.hget(REDIS_KEYS.PLAYER(playerID), "username");
+                const lobbyID = await redisClient.hget(REDIS_KEYS.PLAYER(playerID), "lobbyID");
                 if (!username) {retries++; continue}
                 //Create multi operation
                 const multi = redisClient.multi();
                 //Remove the username hash entry
-                multi.hdel("usernames", username);
+                multi.hdel(REDIS_KEYS.USERNAMES, username);
                 //Remove the player key entry
-                multi.del("player:" + playerID);
+                multi.del(REDIS_KEYS.PLAYER(playerID));
                 //remove player from playerlobbylist (no point in removing the creator yet)
                 if (lobbyID) {
-                    multi.lrem("lobbyplayers:" + lobbyID, 0, playerID);
+                    multi.lrem(REDIS_KEYS.LOBBY_PLAYERS(lobbyID), 0, playerID);
                 }
                 //Execute the transaction
                 const results = await multi.exec();
@@ -158,9 +159,8 @@ export default class Player {
         // Maximum number of retries for optimistic locking
         const MAX_RETRIES = 3;
         let retries = 0;
-        const lobbyKey = "lobby:" + lobbyID;
-        const lobbyPlayersKey = "lobbyplayers:" + lobbyID
-        const playerKey = "player:" + playerID;
+        const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
+        const playerKey = REDIS_KEYS.PLAYER(playerID);
         while(retries < MAX_RETRIES) {
             try {
                 // Watch the keys we're going to modify to detect changes
@@ -185,12 +185,19 @@ export default class Player {
                     throw new Error(`Failed to retrieve lobby data for ${lobbyID}`);
                 }
 
-
-                // Check if lobby is full
+                let isSpectator = false;
+                // Check if lobby is full - If it is the joining player must become a spectator.
                 if (lobby.playersJoined >= lobby.playerNum) {
-                    await redisClient.unwatch();
-                    throw new Error(`Lobby ${lobbyID} is full`);
+                    
+                    if (parseInt(lobby.playersJoined) >= (GAME_CONSTANTS.MAX_PLAYER_CAP + GAME_CONSTANTS.MAX_SPECTATOR_CAP)) {
+                        await redisClient.unwatch();
+                        throw new Error(`Lobby ${lobbyID} is full`);
+                    }
+                    //If the lobby is full, then we can add the player as a spectator.
+                    //!! This is a temporary solution, as the spectator list is not implemented yet.
+                    isSpectator = true;
                 }
+                const lobbyPlayersKey = isSpectator ? REDIS_KEYS.LOBBY_SPECTATORS(lobbyID) : REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
 
                 // Check if player is already in the lobby
                 const lobbyPlayers = await redisClient.lrange(lobbyPlayersKey, 0, -1);
@@ -280,7 +287,7 @@ export default class Player {
                 //Set the player
                 let newPlayerID = uuidv4();
                 multi.hset(
-                    "player:" + newPlayerID,
+                    REDIS_KEYS.PLAYER(newPlayerID),
                     {
                         'playerID': newPlayerID,
                         'username': username,
@@ -289,7 +296,7 @@ export default class Player {
                     }
                 )
                 //Set the player's username hash
-                multi.hset("usernames", username, newPlayerID);
+                multi.hset(REDIS_KEYS.USERNAMES, username, newPlayerID);
                     
                 // Execute transaction
                 console.log("Execute transaction")
