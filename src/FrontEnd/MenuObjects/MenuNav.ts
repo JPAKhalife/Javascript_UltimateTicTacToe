@@ -10,6 +10,7 @@ import p5 from 'p5';
 import KeyListener, { KEY_EVENTS } from '../KeyListener';
 import BaseMenuItem from './BaseMenuItem'
 import { getCanvasSize } from '../sketch';
+import { MenuButton } from './MenuButton';
 
 /**
  * @class ButtonNav
@@ -30,8 +31,13 @@ export default class MenuNav {
         //this is the array of buttons
         this.itemArray = itemArray;
         //currently selected button
-        this.currentlySelected = itemArray[0];
-        this.currentlySelected.setSelected(true);
+        if (itemArray.length != 0) {
+            this.currentlySelected = itemArray[0];
+            this.currentlySelected.setSelected(true);
+        } else {
+            //This is a placeholder object if there are no elements in the itemArray
+            this.currentlySelected = new MenuButton(sketch, 0, 0, "No Items", 0.1, 0.1, 0.015, 0);
+        }
         this.itemDistances = Array.from({ length: itemArray.length }, () => Array(4).fill(0));
         this.keylistener = new KeyListener(sketch);
         this.currentKeyEvent = KEY_EVENTS.NONE;
@@ -124,6 +130,10 @@ export default class MenuNav {
      * @description This method will save a the closest four elements in each direction to a given element. 
      */
     public mapElementLocations(): void {
+        if (this.itemArray.length == 0) {
+            return;
+        }
+
         this.itemDistances = Array.from({ length: this.itemArray.length }, () => Array(4).fill(0));
         for (let i = 0 ; i < this.itemArray.length; i++) {
             let allDistancesAndDirections: { distance: number, direction: number, destination: BaseMenuItem }[] = [];
