@@ -15,20 +15,19 @@ import TicTacBoard from "../MenuObjects/TicTacBoard";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
 import p5 from "p5";
 import { getCanvasSize } from "../sketch";
+import MenuNav from "../MenuObjects/MenuNav";
 
 
 export default class TestScreen implements Menu {
 
-    private game: GameManager;
-    private board: TicTacBoard;
+    private lobbyNav: MenuNav;
     private keylistener: KeyListener;
     private sketch: p5
     
     constructor(sketch: p5) {
         this.sketch = sketch
-        this.game = new GameManager(GameType.LOCAL, 3, 3);
-        this.board = new TicTacBoard(sketch,this.game,getCanvasSize()/2,getCanvasSize()/2,getCanvasSize() - 100);
         this.keylistener = new KeyListener(sketch);
+        this.lobbyNav = new MenuNav([], this.sketch);
     }
     
     public init(): void {
@@ -37,21 +36,18 @@ export default class TestScreen implements Menu {
 
     public draw(): void {
         this.sketch.background(0);
-        this.board.draw();
-        let keyEvent = this.keylistener.listen();
-        if (keyEvent == KEY_EVENTS.UP) {
-            this.board.cursorUp();
-        } else if (keyEvent == KEY_EVENTS.DOWN) {
-            this.board.cursorDown();
-        } else if (keyEvent == KEY_EVENTS.LEFT) {
-            this.board.cursorLeft();
-        } else if (keyEvent == KEY_EVENTS.RIGHT) {
-            this.board.cursorRight();
-        } else if (keyEvent == KEY_EVENTS.SELECT) {
-            this.board.selectTicTac();
-        } else if (keyEvent == KEY_EVENTS.ESCAPE) {
-            //!TODO ADD an exit feature
-        }
-        
+
+        let keypress = this.keylistener.listen();
+            if (keypress === KEY_EVENTS.UP) {
+                this.lobbyNav.selectClosest(270);
+            } else if (keypress === KEY_EVENTS.RIGHT) {
+                this.lobbyNav.selectClosest(0);
+            } else if (keypress === KEY_EVENTS.DOWN) {
+                this.lobbyNav.selectClosest(90);
+            } else if (keypress === KEY_EVENTS.LEFT) {
+                this.lobbyNav.selectClosest(180);
+            } else if (keypress === KEY_EVENTS.SELECT) {
+                // this.keylistener.deactivate();
+            }
     }
 }
