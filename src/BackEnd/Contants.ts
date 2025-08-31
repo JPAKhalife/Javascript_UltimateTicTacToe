@@ -82,6 +82,7 @@ export const ERROR_MESSAGES = {
 
     // General errors
     AUTHENTICATION_REQUIRED: 'Authentication required for this operation.',
+    INVALID_SCHEMA: "This message doesn't match any known schemas.",
     INVALID_REQUEST_FORMAT: 'Invalid request format.',
     INTERNAL_ERROR: 'Internal server error. Please try again.',
 

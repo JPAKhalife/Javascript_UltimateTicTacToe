@@ -99,10 +99,17 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                 if (data.type === MESSAGE_TYPES.REGISTER_PLAYER) {
                     returnMessage = await handleRegisterPlayer(ws, redis, data, req);
                 } else {
-                    returnMessage = {
-                        success: false,
-                        error: ERROR_MESSAGES.AUTHENTICATION_REQUIRED
-                    };
+                    if (Object.values(MESSAGE_TYPES).includes(data.type)) {
+                        returnMessage = {
+                            success: false,
+                            error: ERROR_MESSAGES.AUTHENTICATION_REQUIRED
+                        };
+                    } else {
+                        returnMessage = {
+                            success: false,
+                            error: ERROR_MESSAGES.INVALID_SCHEMA
+                        }; 
+                    }
                 }
             }
 

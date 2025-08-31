@@ -179,8 +179,6 @@ export default class MultiplayerScreen implements Menu {
             }
         }
         
-        // Always draw everything normally
-        
         // Draw border lines
         this.drawBorderLines(canvasSize);
         
@@ -265,13 +263,9 @@ export default class MultiplayerScreen implements Menu {
                 if (this.lobbyNav.getCurrentlySelected() instanceof LobbyDot) {
                     // Start the selection transition animation
                     const selectedLobbyDot = this.lobbyNav.getCurrentlySelected() as LobbyDot;
-                    
-                    // Trigger the selection transition with a callback for when it completes
-                    selectedLobbyDot.startSelectionTransition(() => {
-                        // Show loading icon and join lobby after transition completes
-                        this.showLoadingIcon = true;
-                        setTimeout(() => this.joinLobby(), 0);
-                    });
+                    this.keylistener.deactivate();
+                    this.showLoadingIcon = true;
+                    setTimeout(() => this.joinLobby(selectedLobbyDot), 1000);
                 } else {
                     this.lobbyNav.confirm();
                     this.transition_out_active = true;
@@ -467,7 +461,14 @@ export default class MultiplayerScreen implements Menu {
      * @method joinLobby
      * @description join the lobby
      */
-    private joinLobby(): void {
+    private joinLobby(selectedLobbyDot: LobbyDot): void {
+
+
+        
+        // Success case: Trigger the selection transition with a callback for when it completes
+        selectedLobbyDot.startSelectionTransition(() => {
+            GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.GAME_SCREEN);
+        });
 
     }
 }

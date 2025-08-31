@@ -147,9 +147,7 @@ export default class WebManager {
                         this.clearSessionId();
                     }
                 } else {
-                    console.log('[Connection] No stored session ID found, sending hello message');
-                    // Just send a simple hello message if no session ID
-                    this.socket?.send(JSON.stringify({ message: 'Hello from the client' }));
+                    console.log('[Connection] No stored session ID found.');
                 }
                 
                 resolve(true);
@@ -246,7 +244,7 @@ export default class WebManager {
                 const response = await this.sendRequest<{ success: boolean, playerID: string }>(message, 'reconnect');
                 
                 if (response && response.success === true) {
-                    console.log(`[Reconnect] Reconnection successful via standard request`);
+                    console.log(`[Reconnect] Reconnection successful`);
                     return true;
                 } else {
                     console.log(`[Reconnect] Reconnection failed: Server returned unsuccessful response`);
