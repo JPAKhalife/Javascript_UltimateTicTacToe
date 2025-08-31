@@ -169,12 +169,21 @@ export default class MultiplayerScreen implements Menu {
         this.sketch.background(0);
         const canvasSize = getCanvasSize();
         
+        // Find any LobbyDot that is in transition mode
+        let transitioningLobbyDot: LobbyDot | null = null;
+        for (let i = 0; i < this.lobbyNav.getLength(); i++) {
+            const item = this.lobbyNav.getAtIndex(i);
+            if (item instanceof LobbyDot && item.isSelectionTransitionActive()) {
+                transitioningLobbyDot = item;
+                break;
+            }
+        }
+        
+        // Always draw everything normally
+        
         // Draw border lines
         this.drawBorderLines(canvasSize);
         
-        // Draw all menu items
-        this.lobbyNav.drawAll();
-
         // Handle lobby refresh timer
         if (this.lobbyRefreshTime <= 0) {
             this.displayMutiplayerLobby();
@@ -185,15 +194,14 @@ export default class MultiplayerScreen implements Menu {
         } else {
             this.lobbyRefreshTime--;
         }
-
-        //Check for loading Icon
-        if (this.showLoadingIcon) {
-            this.loadingSpinner.draw();
-        }
-
+        
+        // Draw all menu items using the lobbyNav's drawAll method
+        // This ensures buttons work correctly
+        this.lobbyNav.drawAll();
+        
         // Display lobby information on the left panel
         this.displayLobbyInfo();
-
+        
         // Handle transitions
         if (this.transition_in_active) {
             this.animateTransitionIn();
@@ -201,8 +209,18 @@ export default class MultiplayerScreen implements Menu {
             this.animateTransitionOut();
             this.handleTransitionOut();
         }
+        
+        //Check for loading Icon
+        if (this.showLoadingIcon) {
+            this.loadingSpinner.draw();
+        }
+        
+        // If there's a transitioning LobbyDot, draw it again to ensure it's on top
+        if (transitioningLobbyDot) {
+            transitioningLobbyDot.draw(canvasSize);
+        }
 
-        // Handle key navigation
+        // Handle key navigation (always active)
         this.handleKeyNavigation();
     }
     
@@ -245,9 +263,15 @@ export default class MultiplayerScreen implements Menu {
             } else if (keypress === KEY_EVENTS.SELECT) {
                 //Functionality for if the user selects a lobby
                 if (this.lobbyNav.getCurrentlySelected() instanceof LobbyDot) {
-                    let lobbyInfo = (this.lobbyNav.getCurrentlySelected() as LobbyDot).getLobbyInfo();
-                    this.showLoadingIcon = true;
-                    setTimeout(() => this.joinLobby(), 0);
+                    // Start the selection transition animation
+                    const selectedLobbyDot = this.lobbyNav.getCurrentlySelected() as LobbyDot;
+                    
+                    // Trigger the selection transition with a callback for when it completes
+                    selectedLobbyDot.startSelectionTransition(() => {
+                        // Show loading icon and join lobby after transition completes
+                        this.showLoadingIcon = true;
+                        setTimeout(() => this.joinLobby(), 0);
+                    });
                 } else {
                     this.lobbyNav.confirm();
                     this.transition_out_active = true;

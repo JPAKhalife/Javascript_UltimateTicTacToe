@@ -45,6 +45,7 @@ export default class UsernameScreen implements Menu {
 
     constructor(sketch: p5) {
         this.sketch = sketch;
+
         this.keylistener = new KeyListener(sketch);
         this.webManager = WebManager.getInstance();
 
@@ -152,6 +153,12 @@ export default class UsernameScreen implements Menu {
      * @description Draws the username screen
      */
     public draw(): void {
+        //This check is to make sure that the session is not already drawn (while also ensuring that transitions and registering the user are not interfered with)
+        if (WebManager.isAuthenticated && !this.showLoadingIcon && !this.transitionOutActive) {
+            GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
+            return;
+        }
+        
         this.sketch.background(0);
 
         // Draw title and subtitle with stroke

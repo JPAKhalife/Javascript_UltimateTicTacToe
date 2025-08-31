@@ -25,6 +25,7 @@ export interface LobbyInfo {
 
 export default class WebManager {
     private static instance: WebManager | null = null;
+    public static isAuthenticated: boolean = false;
     private socket: WebSocket | null = null;
     private messageCallbacks: Map<string, (response: any) => void> = new Map();
     private messageIDCounter: number = 0;
@@ -59,6 +60,7 @@ export default class WebManager {
     public setSessionId(sessionId: string): void {
         this.sessionId = sessionId;
         localStorage.setItem('session_id', sessionId);
+        WebManager.isAuthenticated = true;
     }
 
     /**
@@ -137,8 +139,10 @@ export default class WebManager {
                     const reconnected = await this.attemptReconnect(sessionId);
                     
                     if (reconnected) {
+                        WebManager.isAuthenticated = true;
                         console.log('[Connection] Successfully reconnected with existing session');
                     } else {
+                        WebManager.isAuthenticated = false;
                         console.log('[Connection] Failed to reconnect with existing session, clearing session ID');
                         this.clearSessionId();
                     }

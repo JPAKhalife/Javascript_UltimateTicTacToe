@@ -134,12 +134,11 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
 function sendResponseToClient(ws: any, returnMessage: ReturnMessage, messageID: string | null) {
     // Log the response being sent back to the client
     console.log(`[WebSocket] Preparing to send response for message ID ${messageID}:`, returnMessage);
-
+    
     // Stringify the response
     const responseString = JSON.stringify(returnMessage);
     console.log(`[WebSocket] Response size: ${responseString.length} bytes`);
 
-    // First, try to send using the provided WebSocket
     try {
         // Check WebSocket state
         console.log(`[WebSocket] Direct WebSocket readyState: ${ws.readyState}`);
@@ -155,29 +154,7 @@ function sendResponseToClient(ws: any, returnMessage: ReturnMessage, messageID: 
         console.error(`[WebSocket] Error sending with direct WebSocket:`, error);
     }
 
-    // If direct send failed, try to get the WebSocket from the activeWebsockets map
-    try {
-        console.log(`[WebSocket] Attempting to retrieve WebSocket from activeWebsockets map for ID: ${ws.id}`);
-        const storedWs = getWebsocketObject(ws.id);
-        
-        if (storedWs) {
-            console.log(`[WebSocket] Found WebSocket in map, readyState: ${storedWs.readyState}`);
-            
-            if (storedWs.readyState === 1) {
-                storedWs.send(responseString);
-                console.log(`[WebSocket] Response sent successfully using stored WebSocket`);
-                return;
-            } else {
-                console.warn(`[WebSocket] Stored WebSocket not in OPEN state (state: ${storedWs.readyState})`);
-            }
-        } else {
-            console.warn(`[WebSocket] No WebSocket found in activeWebsockets map for ID: ${ws.id}`);
-        }
-    } catch (fallbackError) {
-        console.error(`[WebSocket] Error sending with stored WebSocket:`, fallbackError);
-    }
-
-    // If we get here, both attempts failed
+    // If we get here, attempt failed
     console.error(`[WebSocket] Failed to send response - all attempts failed`);
 }
 
