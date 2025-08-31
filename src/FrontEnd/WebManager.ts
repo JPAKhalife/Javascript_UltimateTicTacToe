@@ -236,64 +236,26 @@ export default class WebManager {
             // Create the reconnect message
             const message = {
                 type: 'reconnect',
-                sessionID: sessionId,
-                messageID: this.generateMessageID('reconnect')
+                sessionID: sessionId
             };
             
-            console.log(`[Reconnect] Sending reconnect request with message ID: ${message.messageID}`);
+            console.log(`[Reconnect] Sending reconnect request.`);
             
-            // Set up a listener for any message that might come back
-            const reconnectPromise = new Promise<boolean>((resolve) => {
-                // Set up a one-time message handler to catch any response
-                const onMessageHandler = (event: MessageEvent) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        console.log(`[Reconnect] Received potential reconnect response:`, data);
-                        
-                        // Check if this is a response to our reconnect request
-                        if (data.messageID === message.messageID) {
-                            console.log(`[Reconnect] Matched message ID, processing response`);
-                            this.socket?.removeEventListener('message', onMessageHandler);
-                            resolve(data.success === true);
-                        }
-                    } catch (error) {
-                        console.error('[Reconnect] Error processing potential reconnect response:', error);
-                    }
-                };
+            // Use the standard sendRequest method with a longer timeout for reconnection
+            try {
+                const response = await this.sendRequest<{ success: boolean, playerID: string }>(message, 'reconnect');
                 
-                // Add the temporary message handler
-                this.socket?.addEventListener('message', onMessageHandler);
-                
-                // Also set a timeout to remove the handler
-                setTimeout(() => {
-                    this.socket?.removeEventListener('message', onMessageHandler);
-                }, 30000); // 30 second timeout
-            });
-            
-            // Send the reconnect request
-            this.socket?.send(JSON.stringify(message));
-            console.log(`[Reconnect] Reconnect request sent, waiting for direct response`);
-            
-            // Wait for either the direct response or the normal sendRequest response
-            const [directResult, normalResult] = await Promise.allSettled([
-                reconnectPromise,
-                this.sendRequest<{ success: boolean, playerID: string }>(message, 'reconnect')
-            ]);
-            
-            console.log(`[Reconnect] Direct response result:`, directResult);
-            console.log(`[Reconnect] Normal response result:`, normalResult);
-            
-            // Check if either method succeeded
-            if (directResult.status === 'fulfilled' && directResult.value === true) {
-                console.log(`[Reconnect] Reconnection successful via direct response`);
-                return true;
-            } else if (normalResult.status === 'fulfilled' && normalResult.value.success === true) {
-                console.log(`[Reconnect] Reconnection successful via normal response`);
-                return true;
+                if (response && response.success === true) {
+                    console.log(`[Reconnect] Reconnection successful via standard request`);
+                    return true;
+                } else {
+                    console.log(`[Reconnect] Reconnection failed: Server returned unsuccessful response`);
+                    return false;
+                }
+            } catch (error) {
+                console.error(`[Reconnect] Reconnection failed:`, error);
+                return false;
             }
-            
-            console.error(`[Reconnect] Both reconnection methods failed`);
-            return false;
         } catch (error) {
             console.error('[Reconnect] Error attempting to reconnect:', error);
             return false;
@@ -536,6 +498,7 @@ export default class WebManager {
             //Store the session ID
             if (response.success && response.sessionID) {
                 this.setSessionId(response.sessionID);
+                WebManager.isAuthenticated = true;
                 console.log('Session ID stored:', response.sessionID);
             }
 
