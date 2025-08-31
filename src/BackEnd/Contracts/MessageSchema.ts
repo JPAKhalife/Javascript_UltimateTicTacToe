@@ -8,7 +8,7 @@
  */
 
 import * as z from "zod";
-import { GAME_CONSTANTS, VALIDATION } from "./Contants";
+import { GAME_CONSTANTS, VALIDATION } from "../Contants";
 
 //These are the message types that the player can send.
 export enum MESSAGE_TYPES {
@@ -39,7 +39,7 @@ export type RegisterRequest = z.infer<typeof RegisterRequest>;
 export const AuthenticatedRequest = BaseRequest.extend({
     sessionID: z.string().min(1) // Session ID is required for authenticated requests
 });
-export type AuthenticatedRequest = z.infer<typeof AuthenticatedRequest>; 
+export type AuthenticatedRequest = z.infer<typeof AuthenticatedRequest>;
 
 //This request is used when the player wants to search for a lobby
 export const LobbySearchRequest = AuthenticatedRequest.extend({
@@ -60,7 +60,7 @@ export type LobbySearchRequest = z.infer<typeof LobbySearchRequest>;
 //This request is used by clients to request the creation of a lobby.
 export const LobbyCreateRequest = AuthenticatedRequest.extend({
     parameters: z.object({
-        lobbyID: z.string().uuid({ version: "v4"}),
+        lobbyID: z.string().uuid({ version: "v4" }),
         lobbyData: z.object({
             playerNum: z.number().int().lte(GAME_CONSTANTS.MAX_PLAYER_CAP).gte(0),
             levelSize: z.number().int().lte(GAME_CONSTANTS.MAX_LEVELSIZE_CAP).gte(0),

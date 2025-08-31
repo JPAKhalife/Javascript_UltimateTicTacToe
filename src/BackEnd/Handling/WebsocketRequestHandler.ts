@@ -1,25 +1,26 @@
+/**
+ * @file WebsocketRequestHandler.ts
+ * @description This is the file that processes websocket requests
+ * 
+ * @author John Khalife
+ * @created 2025-08-18
+ * @updated 2025-08-20
+ */
+
 import Redis from 'ioredis';
-import Lobby, { LobbyData } from './Database/Lobby';
-import Player from './Database/Player';
+import Lobby, { LobbyData } from '../Database/Lobby';
+import Player from '../Database/Player';
 import {
     newConnection,
     playerRegistered,
     getPlayerID,
     removeConnection,
     getWebsocketObject,
-} from './Database/Connections';
+} from '../Database/Connections';
 import { URL } from 'url';
-import { LobbyCreateRequest, LobbySearchRequest, MESSAGE_TYPES, RegisterRequest, ReconnectRequest } from './MessageSchema';
-import {
-    createSession,
-    validateSession,
-    setSessionExpiry,
-    refreshSession,
-    updateSessionConnectionID,
-    isConnectionActive,
-    getSessionConnectionID
-} from './Utils/SessionManager';
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from './Contants';
+import { LobbyCreateRequest, LobbySearchRequest, MESSAGE_TYPES, RegisterRequest, ReconnectRequest } from '../Contracts/MessageSchema';
+import Session from '../Database/Session';
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../Contants';
 const { v4: uuidv4 } = require('uuid');
 
 
@@ -67,19 +68,19 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
             else if (data.sessionID && data.type !== MESSAGE_TYPES.REGISTER_PLAYER) {
                 // Validate the session
                 console.log(`[WebSocket] Validating session with ID: ${data.sessionID.substring(0, 8)}...`);
-                const sessionData = await validateSession(redis, data.sessionID, req);
+                const sessionData = await Session.validateSession(redis, data.sessionID, req);
 
                 // Check if session is valid and either belongs to this connection or is a reconnect attempt
-                if (sessionData && sessionData.connectionID === ws.id) {
+                if (sessionData && sessionData.getConnectionID() === ws.id) {
                     // Session is valid and belongs to this connection
                     // Refresh the session (remove expiry if it has one)
-                    await refreshSession(redis, data.sessionID);
+                    await Session.refreshSession(redis, data.sessionID);
 
                     // Handle message types for authenticated users
                     if (data.type === MESSAGE_TYPES.CREATE_LOBBY) {
-                        returnMessage = await handleCreateLobby(ws, redis, data, sessionData.playerID);
+                        returnMessage = await handleCreateLobby(ws, redis, data, sessionData.getPlayerID());
                     } else if (data.type === MESSAGE_TYPES.SEARCH_LOBBY) {
-                        returnMessage = await handleSearchLobbies(ws, redis, data, sessionData.playerID);
+                        returnMessage = await handleSearchLobbies(ws, redis, data, sessionData.getPlayerID());
                     } else {
                         returnMessage = {
                             messageID: data.messageID,
@@ -108,7 +109,7 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                         returnMessage = {
                             success: false,
                             error: ERROR_MESSAGES.INVALID_SCHEMA
-                        }; 
+                        };
                     }
                 }
             }
@@ -120,7 +121,7 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                 error: ERROR_MESSAGES.INTERNAL_ERROR
             };
         }
-        
+
         // Append the MessageID back to the return message before responding.
         if (messageID) {
             returnMessage['messageID'] = messageID;
@@ -141,7 +142,7 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
 function sendResponseToClient(ws: any, returnMessage: ReturnMessage, messageID: string | null) {
     // Log the response being sent back to the client
     console.log(`[WebSocket] Preparing to send response for message ID ${messageID}:`, returnMessage);
-    
+
     // Stringify the response
     const responseString = JSON.stringify(returnMessage);
     console.log(`[WebSocket] Response size: ${responseString.length} bytes`);
@@ -149,7 +150,7 @@ function sendResponseToClient(ws: any, returnMessage: ReturnMessage, messageID: 
     try {
         // Check WebSocket state
         console.log(`[WebSocket] Direct WebSocket readyState: ${ws.readyState}`);
-        
+
         if (ws.readyState === 1) { // 1 = OPEN
             ws.send(responseString);
             console.log(`[WebSocket] Response sent successfully using direct WebSocket`);
@@ -303,7 +304,7 @@ async function handleRegisterPlayer(ws: any, redis: Redis, data: any, req: any):
             playerRegistered(redis, ws.id, playerID);
 
             // Create a session for the player
-            const sessionID = await createSession(redis, playerID, ws.id, req);
+            const sessionID = await Session.createSession(redis, playerID, ws.id, req);
 
             return {
                 success: true,
@@ -336,14 +337,14 @@ async function handleReconnect(ws: any, redis: Redis, data: any, req: any): Prom
     try {
         console.log(`[Reconnect] Starting reconnection process for connection ID: ${ws.id}`);
         console.log(`[Reconnect] Session ID provided: ${data.sessionID.substring(0, 8)}...`);
-        
+
         // Validate the session
         console.log(`[Reconnect] Validating session token`);
         const startValidation = Date.now();
-        const sessionData = await validateSession(redis, data.sessionID, req);
+        const sessionData = await Session.validateSession(redis, data.sessionID, req);
         const validationTime = Date.now() - startValidation;
         console.log(`[Reconnect] Session validation took ${validationTime}ms`);
-        
+
         if (!sessionData) {
             console.log(`[Reconnect] Session validation failed - invalid token`);
             return {
@@ -351,20 +352,20 @@ async function handleReconnect(ws: any, redis: Redis, data: any, req: any): Prom
                 error: ERROR_MESSAGES.TOKEN_INVALID
             };
         }
-        
-        console.log(`[Reconnect] Session validation successful for player ID: ${sessionData.playerID}`);
-        
+
+        console.log(`[Reconnect] Session validation successful for player ID: ${sessionData.getPlayerID()}`);
+
         // Get the current connection ID associated with the session
-        const currentConnectionID = sessionData.connectionID;
+        const currentConnectionID = sessionData.getConnectionID();
         console.log(`[Reconnect] Current connection ID from session: ${currentConnectionID}`);
-        
+
         // Check if the current connection is still active
         console.log(`[Reconnect] Checking if current connection is still active`);
         const startConnectionCheck = Date.now();
-        const isActive = await isConnectionActive(redis, currentConnectionID);
+        const isActive = await Session.isConnectionActive(redis, currentConnectionID);
         const connectionCheckTime = Date.now() - startConnectionCheck;
         console.log(`[Reconnect] Connection check took ${connectionCheckTime}ms, result: ${isActive ? 'active' : 'inactive'}`);
-        
+
         if (isActive) {
             console.log(`[Reconnect] Current connection is still active - concurrent login not allowed`);
             return {
@@ -372,18 +373,18 @@ async function handleReconnect(ws: any, redis: Redis, data: any, req: any): Prom
                 error: ERROR_MESSAGES.CONCURRENT_LOGIN
             };
         }
-        
+
         // Ensure the WebSocket object is properly stored in the activeWebsockets map
         console.log(`[Reconnect] Re-registering WebSocket object in activeWebsockets map`);
         newConnection(redis, ws, ws.id);
-        
+
         // Update the session with the new connection ID
         console.log(`[Reconnect] Updating session with new connection ID: ${ws.id}`);
         const startUpdate = Date.now();
-        const updated = await updateSessionConnectionID(redis, data.sessionID, ws.id);
+        const updated = await Session.updateSessionConnectionID(redis, data.sessionID, ws.id);
         const updateTime = Date.now() - startUpdate;
         console.log(`[Reconnect] Session update took ${updateTime}ms, result: ${updated ? 'success' : 'failed'}`);
-        
+
         if (!updated) {
             console.log(`[Reconnect] Failed to update session with new connection ID`);
             return {
@@ -391,28 +392,28 @@ async function handleReconnect(ws: any, redis: Redis, data: any, req: any): Prom
                 error: ERROR_MESSAGES.INTERNAL_ERROR
             };
         }
-        
+
         // Register the player with the connection
-        console.log(`[Reconnect] Registering player ID ${sessionData.playerID} with connection ID ${ws.id}`);
+        console.log(`[Reconnect] Registering player ID ${sessionData.getPlayerID()} with connection ID ${ws.id}`);
         const startRegistration = Date.now();
-        playerRegistered(redis, ws.id, sessionData.playerID);
+        playerRegistered(redis, ws.id, sessionData.getPlayerID());
         const registrationTime = Date.now() - startRegistration;
         console.log(`[Reconnect] Player registration took ${registrationTime}ms`);
-        
+
         // Verify the WebSocket is still valid
         console.log(`[Reconnect] Verifying WebSocket state: ${ws.readyState}`);
         if (ws.readyState !== 1) { // 1 = OPEN
             console.warn(`[Reconnect] WebSocket not in OPEN state (state: ${ws.readyState})`);
         }
-        
+
         // Create a direct response to ensure it's sent immediately
         const directResponse = {
             success: true,
             message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
-            playerID: sessionData.playerID,
+            playerID: sessionData.getPlayerID(),
             messageID: data.messageID
         };
-        
+
         // Try to send the response directly
         console.log(`[Reconnect] Attempting to send response directly`);
         try {
@@ -422,13 +423,13 @@ async function handleReconnect(ws: any, redis: Redis, data: any, req: any): Prom
         } catch (sendError) {
             console.error(`[Reconnect] Error sending direct response:`, sendError);
         }
-        
+
         // Return success for the normal response flow as well
-        console.log(`[Reconnect] Reconnection successful for player ID: ${sessionData.playerID}`);
+        console.log(`[Reconnect] Reconnection successful for player ID: ${sessionData.getPlayerID()}`);
         return {
             success: true,
             message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
-            playerID: sessionData.playerID
+            playerID: sessionData.getPlayerID()
         };
     } catch (error) {
         console.error('[Reconnect] Error handling reconnect:', error);

@@ -40,8 +40,9 @@ export const AUTH_CONSTANTS = {
     MAX_AUTH_ATTEMPTS: 5, // Maximum authentication attempts
     RATE_LIMIT_WINDOW: 15 * 60 * 1000, // 15 minutes rate limit window
 
+    //TODO: change this back
     // Connection settings
-    CONNECTION_EXPIRE_TIME: Math.floor(3600 / 4), // 15 minutes for connection expiry
+    CONNECTION_EXPIRE_TIME: Math.floor(3600 / 10), // 15 minutes for connection expiry
 
     // Session settings
     SESSION_EXPIRE_TIME: Math.floor(3600) / 10, // 1 hour for session expiry when disconnected

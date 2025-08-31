@@ -16,9 +16,10 @@ const port = 6379; // The port of the database
 import express from 'express'; // This is the express framework
 import rateLimit from 'express-rate-limit'; // This is the express-rate-limit framework - used for limiting the number of requests a client can make
 import cors from 'cors'; // The cors framework allows for resources (assets like fonts, ect) to be shared across different domains
-import { handleWebsocketRequest } from './WebsocketRequestHandler'
+import { handleWebsocketRequest } from './Handling/WebsocketRequestHandler'
 import Redis from 'ioredis';
-import { disconnect, getWebsocketObject, removeConnection } from './Database/Connections';
+import { REDIS_KEYS } from './Contants';
+import { handleSessionExpiry, handleConnectionExpiry } from './Handling/InternalHandler';
 
 const ratelimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -109,7 +110,14 @@ function createRedisSubscriberConnection(host: string, port: number, regularClie
     // Listen for expiration events - disconnect users when this happens
     redisClient.on('pmessage', (pattern, channel, expiredKey) => {
         console.log(`Key expired: ${expiredKey}`);
-        disconnect(regularClient, expiredKey);
+
+        if (expiredKey.includes(REDIS_KEYS.SESSION(""))) {
+            handleSessionExpiry(regularClient, expiredKey);
+        } else if (expiredKey.includes(REDIS_KEYS.CONNECTION(""))) {
+            handleSessionExpiry(regularClient, expiredKey);
+            
+        }
+
     });
 
     return redisClient;

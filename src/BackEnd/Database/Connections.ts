@@ -92,9 +92,10 @@ export async function removeConnection(redisClient: Redis, connectionID: string)
     // Find all sessions associated with this connection and set expiry
     await setExpiryOnConnectionSessions(redisClient, connectionID);
 
-    if (playerID) {
-        Player.removePlayer(redisClient, playerID);
-    }
+    //! It should not be neccessary to remove the player when removing a connection - we want reconnections to be possible
+    // if (playerID) {
+    //     Player.removePlayer(redisClient, playerID);
+    // } 
     redisClient.del(REDIS_KEYS.CONNECTION(connectionID));
     activeWebsockets.delete(connectionID);
 }
