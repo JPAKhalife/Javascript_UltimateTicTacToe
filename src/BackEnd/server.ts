@@ -110,11 +110,10 @@ function createRedisSubscriberConnection(host: string, port: number, regularClie
     // Listen for expiration events - disconnect users when this happens
     redisClient.on('pmessage', (pattern, channel, expiredKey) => {
         console.log(`Key expired: ${expiredKey}`);
-
         if (expiredKey.includes(REDIS_KEYS.SESSION(""))) {
             handleSessionExpiry(regularClient, expiredKey);
         } else if (expiredKey.includes(REDIS_KEYS.CONNECTION(""))) {
-            handleSessionExpiry(regularClient, expiredKey);
+            handleConnectionExpiry(regularClient, expiredKey);
             
         }
 
