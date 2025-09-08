@@ -462,11 +462,15 @@ export default class MultiplayerScreen implements Menu {
      * @description join the lobby
      */
     private joinLobby(selectedLobbyDot: LobbyDot): void {
-
-
-        
         // Success case: Trigger the selection transition with a callback for when it completes
         selectedLobbyDot.startSelectionTransition(() => {
+            
+            
+            const proceedCondition = () => {
+                
+            }
+
+
             GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.GAME_SCREEN);
         });
 

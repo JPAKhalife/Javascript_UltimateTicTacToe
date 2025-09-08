@@ -15,8 +15,12 @@ export enum MESSAGE_TYPES {
     REGISTER_PLAYER = "register_player",
     SEARCH_LOBBY = "search_lobby",
     CREATE_LOBBY = "create_lobby",
-    RECONNECT = "reconnect"
-}
+    RECONNECT = "reconnect",
+    JOIN_LOBBY = "join_lobby",
+    LEAVE_LOBBY = "leave_lobby",
+    MAKE_MOVE = "make_move",
+    GAME_UPDATE = "game_update",
+}   
 
 //This is the base request that contains information all requests should have
 export const BaseRequest = z.object({
@@ -78,3 +82,30 @@ export const ReconnectRequest = BaseRequest.extend({
     parameters: z.object({}).optional() // No additional parameters required for reconnection
 });
 export type ReconnectRequest = z.infer<typeof ReconnectRequest>;
+
+//This request is used when a player makes a move in a game
+export const MakeMoveRequest = AuthenticatedRequest.extend({
+    parameters: z.object({
+        lobbyID: z.string().uuid({ version: "v4" }),
+        position: z.object({
+            col: z.number().int().gte(0),
+            row: z.number().int().gte(0)
+        })
+    })
+});
+export type MakeMoveRequest = z.infer<typeof MakeMoveRequest>;
+
+//This is the game update message sent from server to client
+export const GameUpdateMessage = z.object({
+    type: z.literal('game_update'),
+    gameState: z.array(z.number()),
+    turn: z.number().int().gte(1),
+    lastMove: z.object({
+        player: z.string(),
+        position: z.object({
+            col: z.number().int().gte(0),
+            row: z.number().int().gte(0)
+        })
+    }).optional()
+});
+export type GameUpdateMessage = z.infer<typeof GameUpdateMessage>;

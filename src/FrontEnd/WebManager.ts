@@ -23,6 +23,22 @@ export interface LobbyInfo {
     allowSpectators: boolean;
 }
 
+/**
+ * Interface representing a game update from the server
+ */
+export interface GameUpdate {
+    type: 'game_update';
+    gameState: number[];    // The current game state array
+    turn: number;          // Current turn
+    lastMove?: {          // Optional info about the last move
+        player: string;
+        position: {
+            col: number;
+            row: number;
+        }
+    };
+}
+
 export default class WebManager {
     private static instance: WebManager | null = null;
     public static isAuthenticated: boolean = false;
@@ -34,12 +50,47 @@ export default class WebManager {
     private reconnectDelay: number = 1000; // Base delay in ms
     private sessionId: string | null = null;
     
+    //Event listener list
+    private gameListeners: Array<(data: GameUpdate) => void> = [];
+
     /**
      * Private constructor to enforce singleton pattern
      */
     private constructor() {
         // Private constructor to enforce singleton pattern
         this.sessionId = this.getStoredSessionId();
+    }
+
+    /**
+     * @method addGameListener
+     * @description Add a listener for game updates
+     * @param listener Function to be called when a game update is received
+     */
+    public addGameListener(listener: (update: GameUpdate) => void): void {
+        this.gameListeners.push(listener);
+        console.log('[WebManager] Added game listener, total listeners:', this.gameListeners.length);
+    }
+
+    /**
+     * @method removeGameListener
+     * @description Remove a specific game update listener
+     * @param listener The listener function to remove
+     */
+    public removeGameListener(listener: (update: GameUpdate) => void): void {
+        const index = this.gameListeners.indexOf(listener);
+        if (index > -1) {
+            this.gameListeners.splice(index, 1);
+            console.log('[WebManager] Removed game listener, remaining listeners:', this.gameListeners.length);
+        }
+    }
+
+    /**
+     * @method clearGameListeners
+     * @description Remove all game update listeners
+     */
+    public clearGameListeners(): void {
+        this.gameListeners = [];
+        console.log('[WebManager] Cleared all game listeners');
     }
 
     /**
@@ -115,8 +166,6 @@ export default class WebManager {
             console.log('[Connection] Initiating WebSocket connection');
             
             const serverAddress = process.env.REMOTE_SERVER_ADDRESS || 'ws://localhost:3000';
-            // No longer append the device ID as a query parameter for security
-            // Instead, we'll use the session ID in the message body
             const connectionUrl = serverAddress;
             
             console.log(`[Connection] Connecting to: ${serverAddress}`);
@@ -156,6 +205,21 @@ export default class WebManager {
             this.socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+
+                    // Handle game updates
+                    if (data.type === 'game_update') {
+                        console.log('[WebSocket] Received game update:', data);
+                        // Notify all registered listeners
+                        this.gameListeners.forEach(listener => {
+                            try {
+                                listener(data as GameUpdate);
+                            } catch (error) {
+                                console.error('[WebSocket] Error in game listener:', error);
+                            }
+                        });
+                        return;
+                    }
+                    
                     // Handle response messages with messageID
                     if (data.messageID && this.messageCallbacks.has(data.messageID)) {
                         const callback = this.messageCallbacks.get(data.messageID);
@@ -165,25 +229,25 @@ export default class WebManager {
                         }
                     }
                 } catch (error) {
-                    console.error('Error processing message:', error);
-                    return
+                    console.error('[WebSocket] Error processing message:', error);
+                    return;
                 }
             };
         
             this.socket.onclose = (event) => {
-                console.log('WebSocket connection closed', event);
+                console.log('[WebSocket] Connection closed', event);
                 this.scheduleReconnect();
             };
         
             this.socket.onerror = (error) => {
-                console.error('WebSocket error:', error);
+                console.error('[WebSocket] Error:', error);
                 resolve(false);
             };
             
             // Add a timeout for the connection attempt
             setTimeout(() => {
                 if (this.socket?.readyState !== WebSocket.OPEN) {
-                    console.error('WebSocket connection timeout');
+                    console.error('[WebSocket] Connection timeout');
                     resolve(false);
                 }
             }, 5000);
@@ -209,14 +273,14 @@ export default class WebManager {
             this.reconnectAttempts++;
             const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 120000);
             
-            console.log(`Scheduling reconnection attempt ${this.reconnectAttempts} in ${delay}ms`);
+            console.log(`[WebSocket] Scheduling reconnection attempt ${this.reconnectAttempts} in ${delay}ms`);
             
             setTimeout(() => {
-                console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+                console.log(`[WebSocket] Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
                 this.initiateWebsocketConnection();
             }, delay);
         } else {
-            console.error('Maximum reconnection attempts reached');
+            console.error('[WebSocket] Maximum reconnection attempts reached');
         }
     }
     
@@ -298,12 +362,12 @@ export default class WebManager {
 
             // Use the sendRequest method to create the lobby
             const response = await this.sendRequest<{ success: boolean }>(message, 'create_lobby');
-            console.log("Response received: ", response);
+            console.log("[WebSocket] Response received: ", response);
 
             // Return the success status from the response
             return response && response.success === true;
         } catch (error) {
-            console.error('Error creating lobby:', error);
+            console.error('[WebSocket] Error creating lobby:', error);
             return false;
         }
     }
@@ -339,7 +403,6 @@ export default class WebManager {
         // Otherwise, initiate a new connection
         return this.initiateWebsocketConnection();
     }
-    
     
     /**
      * @method closeConnection
@@ -509,6 +572,56 @@ export default class WebManager {
         } catch(error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             return ["", errorMessage]
+        }
+    }
+
+    /**
+     * @method joinLobby
+     * @description This method is used to join a lobby on the server
+     * @param lobbyID the ID of the lobby to join
+     * @returns Promise<boolean> true if the join was successful, false otherwise
+     */
+    public async joinLobby(lobbyID: string): Promise<boolean> {
+        try {
+            const message = {
+                type: 'join_lobby',
+                sessionID: this.getSessionId(),
+                parameters: {
+                    lobbyID: lobbyID
+                }
+            };
+
+            const response = await this.sendRequest<{ success: boolean }>(message, 'join_lobby');
+            return response && response.success === true;
+        } catch (error) {
+            console.error('Error joining lobby:', error);
+            return false;
+        }
+    }
+
+    /**
+     * @method makeMove
+     * @description Send a move to the server in a game
+     * @param lobbyID The ID of the lobby where the game is happening
+     * @param position The position of the move (column and row)
+     * @returns Promise<boolean> true if the move was successful, false otherwise
+     */
+    public async makeMove(lobbyID: string, position: { col: number, row: number }): Promise<boolean> {
+        try {
+            const message = {
+                type: 'make_move',
+                sessionID: this.getSessionId(),
+                parameters: {
+                    lobbyID,
+                    position
+                }
+            };
+
+            const response = await this.sendRequest<{ success: boolean }>(message, 'make_move');
+            return response && response.success === true;
+        } catch (error) {
+            console.error('[WebSocket] Error making move:', error);
+            return false;
         }
     }
 }
