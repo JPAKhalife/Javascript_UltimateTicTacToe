@@ -6,7 +6,7 @@
  * @updated 2024-06-23
  */
 
-import TicTac from "./TicTac";
+import TicTac, { TictacStateObject } from "./TicTac";
 import {DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER} from "./TicTac";
 import { TicTacState } from "./TicTac";
 import WebManager, { GameUpdate } from "./WebManager";
@@ -78,7 +78,7 @@ export default class GameManager {
      * @description This method is used whenever the player makes a move on the grid.
      * @returns A boolean representing whether or not a move was played
      */
-    public async playMove(cursorCol: number, cursorRow: number): Promise<any> {
+    public async playMove(cursorCol: number, cursorRow: number): Promise<TictacStateObject> {
         if (this.gameType === GameType.ONLINE) {
             if (!this.webManager || !this.lobbyId) {
                 console.error('Cannot make move: WebManager or lobbyId not initialized');
@@ -96,7 +96,7 @@ export default class GameManager {
             }
 
             // Server will send game_update if move is valid
-            //return { state: success ? TicTacState.ONGOING : TicTacState.INVALID };
+            return { state: TicTacState.ONGOING, wonLevelSize: 0, cursorCol, cursorRow };
         } else {
             // Local game logic
             let state = this.board.updateSlot(this.turn, cursorCol, cursorRow);

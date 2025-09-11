@@ -277,12 +277,12 @@ export default class TicTacBoard extends BaseMenuItem {
     /**
      * This method requests a change to be made to the board
      */
-    private playMove(): void {
+    private async playMove(): Promise<void> {
         //*Modify the tictac. at the spot that is currently selected 
         //*This method must be called assuming that the player is on the right tile
         //TODO: This method must already know the current turn. should take no parameters.
         //* invoke these methods through the game manag
-        let state = this.game.playMove(this.cursorCol,this.cursorRow)
+        let state = await this.game.playMove(this.cursorCol,this.cursorRow)
         if (state.state != TicTacState.ERROR) {
             this.cursorCol = state.cursorCol;
             this.cursorRow = state.cursorRow;

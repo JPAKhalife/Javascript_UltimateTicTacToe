@@ -16,8 +16,15 @@ export enum TicTacState {
     ERROR
 }
 
+export interface TictacStateObject {
+    state: TicTacState,
+    wonLevelSize: number,
+    cursorCol: number,
+    cursorRow: number
+}
+
 //This is an object type that is used to send back information whenever the player makes a move.
-export function moveResponse(state: TicTacState, wonLevelSize: number = 0) {
+export function moveResponse(state: TicTacState, wonLevelSize: number = 0): TictacStateObject {
     return {
         state: state,
         wonLevelSize: wonLevelSize,
@@ -176,7 +183,7 @@ export default class TicTac {
      * @param cursorRow - the row of the tictac that the cursor was in 
      * @returns boolean that says whether or not the placement was successful
      */
-    public updateSlot(turn: number, cursorCol: number, cursorRow: number): any {
+    public updateSlot(turn: number, cursorCol: number, cursorRow: number): TictacStateObject {
         if (this.grid[this.selectedIndex + cursorCol + cursorRow*this.GRID_SIZE] != 0) {
             return moveResponse(TicTacState.ERROR);
         }
@@ -304,7 +311,7 @@ export default class TicTac {
      * @description This method checks whenever a tictac is placed to see whether or not a grid has been won.
      * 
      */
-    private checkForWinOrFull(index: number): any {
+    private checkForWinOrFull(index: number): TictacStateObject {
         //We start by checking for win. This entails first checking only the tictac played in
         //If that tictac has been won, then check higher levels of tictac, and so on.
         //In addition, a win is only needed to be checked in rows and columns from where an item was placed.
