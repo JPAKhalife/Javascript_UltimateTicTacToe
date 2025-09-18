@@ -18,7 +18,16 @@ import {
     getWebsocketObject,
 } from '../Database/Connections';
 import { URL } from 'url';
-import { LobbyCreateRequest, LobbySearchRequest, MESSAGE_TYPES, RegisterRequest, ReconnectRequest } from '../Contracts/MessageSchema';
+import {
+    LobbyCreateRequest,
+    LobbySearchRequest,
+    MESSAGE_TYPES,
+    RegisterRequest,
+    ReconnectRequest,
+    BaseRequest,
+    AuthenticatedRequest,
+    LobbyJoinRequest,
+} from '../Contracts/MessageSchema';
 import Session from '../Database/Session';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../Contants';
 const { v4: uuidv4 } = require('uuid');
@@ -59,75 +68,125 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
             console.log(`[WebSocket] Received message from client (connection ID: ${ws.id}):`, data);
             messageID = data.messageID;
 
+            // Validate the base request schema
+            const baseRequestValidation = BaseRequest.safeParse(data);
+            if (!baseRequestValidation.success) {
+                console.error('[WebSocket] Invalid base request schema:', baseRequestValidation.error);
+                returnMessage = {
+                    success: false,
+                    error: ERROR_MESSAGES.INVALID_SCHEMA,
+                };
+                sendResponseToClient(ws, returnMessage, messageID);
+                return;
+            }
+
             // Handle reconnect requests
-            if (data.type === MESSAGE_TYPES.RECONNECT && data.sessionID) {
-                console.log(`[WebSocket] Processing reconnect request with message ID: ${messageID}`);
-                returnMessage = await handleReconnect(ws, redis, data, req);
+            if (data.type === MESSAGE_TYPES.RECONNECT) {
+                const reconnectValidation = ReconnectRequest.safeParse(data);
+                if (!reconnectValidation.success) {
+                    console.error('[WebSocket] Invalid reconnect request schema:', reconnectValidation.error);
+                    returnMessage = {
+                        success: false,
+                        error: ERROR_MESSAGES.INVALID_SCHEMA,
+                    };
+                } else {
+                    console.log(`[WebSocket] Processing reconnect request with message ID: ${messageID}`);
+                    returnMessage = await handleReconnect(ws, redis, reconnectValidation.data, req);
+                }
             }
             // Check for session ID in authenticated requests
             else if (data.sessionID && data.type !== MESSAGE_TYPES.REGISTER_PLAYER) {
-                // Validate the session
-                console.log(`[WebSocket] Validating session with ID: ${data.sessionID.substring(0, 8)}...`);
-                const sessionData = await Session.validateSession(redis, data.sessionID, req);
-
-                // Check if session is valid and either belongs to this connection or is a reconnect attempt
-                if (sessionData && sessionData.getConnectionID() === ws.id) {
-                    // Session is valid and belongs to this connection
-                    // Refresh the session (remove expiry if it has one)
-                    await Session.refreshSession(redis, data.sessionID);
-
-                    // Handle message types for authenticated users
-                    if (data.type === MESSAGE_TYPES.CREATE_LOBBY) {
-                        returnMessage = await handleCreateLobby(ws, redis, data, sessionData.getPlayerID());
-                    } else if (data.type === MESSAGE_TYPES.SEARCH_LOBBY) {
-                        returnMessage = await handleSearchLobbies(ws, redis, data, sessionData.getPlayerID());
-                    } else {
-                        returnMessage = {
-                            messageID: data.messageID,
-                            message: 'Message received',
-                            data
-                        };
-                    }
-                } else {
-                    // Invalid session
+                const authRequestValidation = AuthenticatedRequest.safeParse(data);
+                if (!authRequestValidation.success) {
+                    console.error('[WebSocket] Invalid authenticated request schema:', authRequestValidation.error);
                     returnMessage = {
                         success: false,
-                        error: ERROR_MESSAGES.TOKEN_INVALID
+                        error: ERROR_MESSAGES.INVALID_SCHEMA,
                     };
+                } else {
+                    // Validate the session
+                    console.log(`[WebSocket] Validating session with ID: ${data.sessionID.substring(0, 8)}...`);
+                    const sessionData = await Session.validateSession(redis, data.sessionID, req);
+
+                    if (sessionData && sessionData.getConnectionID() === ws.id) {
+                        await Session.refreshSession(redis, data.sessionID);
+
+                        if (data.type === MESSAGE_TYPES.CREATE_LOBBY) {
+                            const createLobbyValidation = LobbyCreateRequest.safeParse(data);
+                            if (!createLobbyValidation.success) {
+                                console.error('[WebSocket] Invalid create lobby request schema:', createLobbyValidation.error);
+                                returnMessage = {
+                                    success: false,
+                                    error: ERROR_MESSAGES.INVALID_SCHEMA,
+                                };
+                            } else {
+                                returnMessage = await handleCreateLobby(ws, redis, createLobbyValidation.data, sessionData.getPlayerID());
+                            }
+                        } else if (data.type === MESSAGE_TYPES.SEARCH_LOBBY) {
+                            const searchLobbyValidation = LobbySearchRequest.safeParse(data);
+                            if (!searchLobbyValidation.success) {
+                                console.error('[WebSocket] Invalid search lobby request schema:', searchLobbyValidation.error);
+                                returnMessage = {
+                                    success: false,
+                                    error: ERROR_MESSAGES.INVALID_SCHEMA,
+                                };
+                            } else {
+                                returnMessage = await handleSearchLobbies(ws, redis, searchLobbyValidation.data, sessionData.getPlayerID());
+                            }
+                        } else if (data.type === MESSAGE_TYPES.JOIN_LOBBY) {
+                            returnMessage = await handleJoinLobby(ws, redis, data, sessionData.getPlayerID());
+                        } else {
+                            returnMessage = {
+                                messageID: data.messageID,
+                                message: 'Message received',
+                                data,
+                            };
+                        }
+                    } else {
+                        returnMessage = {
+                            success: false,
+                            error: ERROR_MESSAGES.TOKEN_INVALID,
+                        };
+                    }
                 }
             } else {
-                // Handle message types for unauthenticated users
                 if (data.type === MESSAGE_TYPES.REGISTER_PLAYER) {
-                    returnMessage = await handleRegisterPlayer(ws, redis, data, req);
+                    const registerValidation = RegisterRequest.safeParse(data);
+                    if (!registerValidation.success) {
+                        console.error('[WebSocket] Invalid register player request schema:', registerValidation.error);
+                        returnMessage = {
+                            success: false,
+                            error: ERROR_MESSAGES.INVALID_SCHEMA,
+                        };
+                    } else {
+                        returnMessage = await handleRegisterPlayer(ws, redis, registerValidation.data, req);
+                    }
                 } else {
                     if (Object.values(MESSAGE_TYPES).includes(data.type)) {
                         returnMessage = {
                             success: false,
-                            error: ERROR_MESSAGES.AUTHENTICATION_REQUIRED
+                            error: ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
                         };
                     } else {
                         returnMessage = {
                             success: false,
-                            error: ERROR_MESSAGES.INVALID_SCHEMA
+                            error: ERROR_MESSAGES.INVALID_SCHEMA,
                         };
                     }
                 }
             }
-
         } catch (error) {
             console.error('[WebSocket] Error processing message:', error);
             returnMessage = {
                 success: false,
-                error: ERROR_MESSAGES.INTERNAL_ERROR
+                error: ERROR_MESSAGES.INTERNAL_ERROR,
             };
         }
 
-        // Append the MessageID back to the return message before responding.
         if (messageID) {
             returnMessage['messageID'] = messageID;
         }
 
-        // Send the response back to the client
         sendResponseToClient(ws, returnMessage, messageID);
     });
 }
@@ -175,7 +234,7 @@ function sendResponseToClient(ws: any, returnMessage: ReturnMessage, messageID: 
  * @param playerID Player ID from the validated session
  * @returns Promise resolving to response object
  */
-async function handleSearchLobbies(ws: any, redis: Redis, data: any, playerID: string): Promise<object> {
+async function handleSearchLobbies(ws: any, redis: Redis, data: LobbySearchRequest, playerID: string): Promise<object> {
     try {
         const params = data.parameters || {};
         // Call getLobbies with the parameters
@@ -231,7 +290,7 @@ async function handleSearchLobbies(ws: any, redis: Redis, data: any, playerID: s
  * @param playerID Player ID from the validated session
  * @returns Promise resolving to response object
  */
-async function handleCreateLobby(ws: any, redis: Redis, data: any, playerID: string): Promise<object> {
+async function handleCreateLobby(ws: any, redis: Redis, data: LobbyCreateRequest, playerID: string): Promise<object> {
     try {
         const params = data.parameters || {};
         const lobbyData = params.lobbyData || {};
@@ -274,7 +333,7 @@ async function handleCreateLobby(ws: any, redis: Redis, data: any, playerID: str
  * @param req HTTP request object
  * @returns Promise resolving to response object
  */
-async function handleRegisterPlayer(ws: any, redis: Redis, data: any, req: any): Promise<object> {
+async function handleRegisterPlayer(ws: any, redis: Redis, data: RegisterRequest, req: any): Promise<object> {
     const params = data.parameters || {};
     const username = params.username;
 
@@ -333,7 +392,7 @@ async function handleRegisterPlayer(ws: any, redis: Redis, data: any, req: any):
  * @param req HTTP request object
  * @returns Promise resolving to response object
  */
-async function handleReconnect(ws: any, redis: Redis, data: any, req: any): Promise<object> {
+async function handleReconnect(ws: any, redis: Redis, data: ReconnectRequest, req: any): Promise<object> {
     try {
         console.log(`[Reconnect] Starting reconnection process for connection ID: ${ws.id}`);
         console.log(`[Reconnect] Session ID provided: ${data.sessionID.substring(0, 8)}...`);
@@ -433,6 +492,62 @@ async function handleReconnect(ws: any, redis: Redis, data: any, req: any): Prom
         };
     } catch (error) {
         console.error('[Reconnect] Error handling reconnect:', error);
+        return {
+            success: false,
+            error: ERROR_MESSAGES.INTERNAL_ERROR
+        };
+    }
+}
+
+/**
+ * @function handleJoinLobby
+ * @description Handles the joinLobby message from the client
+ * @param ws WebSocket connection
+ * @param redis Redis client for regular operations
+ * @param data Join lobby request data
+ */
+async function handleJoinLobby(ws: any, redis: Redis, data: LobbyJoinRequest, playerID: string): Promise<object> {
+    try {
+        const params = data.parameters || {};
+        const lobbyID = params.lobbyID;
+
+        if (!lobbyID) {
+            return {
+                success: false,
+                error: ERROR_MESSAGES.INVALID_REQUEST_FORMAT
+            };
+        }
+
+        console.log(`Player ${playerID} attempting to join lobby ${lobbyID}`);
+
+        // Fetch the lobby
+        const lobby = await Lobby.getLobby(redis, lobbyID);
+        if (!lobby) {
+            return {
+                success: false,
+                error: ERROR_MESSAGES.LOBBY_NOT_FOUND
+            };
+        }
+
+        // Attempt to add the player to the lobby
+        const joinResult = await Player.addPlayer(redis, lobbyID, playerID);
+        if (!joinResult) {
+            return {
+                success: false,
+                error: ERROR_MESSAGES.LOBBY_JOIN_FAILED
+            };
+        }
+
+        console.log(`Player ${playerID} joined lobby ${lobbyID} successfully`);
+
+        // Return success response with updated lobby info
+        return {
+            success: true,
+            message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
+            lobby: await lobby.lobbySummaryJson(redis)
+        };
+    } catch (error) {
+        console.error('Error joining lobby:', error);
         return {
             success: false,
             error: ERROR_MESSAGES.INTERNAL_ERROR

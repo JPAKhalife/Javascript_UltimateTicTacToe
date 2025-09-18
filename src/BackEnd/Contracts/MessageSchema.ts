@@ -76,6 +76,14 @@ export const LobbyCreateRequest = AuthenticatedRequest.extend({
 });
 export type LobbyCreateRequest = z.infer<typeof LobbyCreateRequest>;
 
+//This request is used when a player wants to join a lobby
+export const LobbyJoinRequest = AuthenticatedRequest.extend({
+    parameters: z.object({
+        lobbyID: z.string().uuid({ version: "v4" }),
+    })
+})
+export type LobbyJoinRequest = z.infer<typeof LobbyJoinRequest>;
+
 //This request is used when a client wants to reconnect using an existing session ID
 export const ReconnectRequest = BaseRequest.extend({
     sessionID: z.string().min(1), // Session ID is required for reconnection

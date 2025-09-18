@@ -94,6 +94,15 @@ export const ERROR_MESSAGES = {
 
     // Connection errors
     CONNECTION_FAILED: 'Connection failed. Please check your network.',
+
+    // Lobby errors
+    LOBBY_NOT_FOUND: 'Lobby not found.',
+    LOBBY_FULL: 'Lobby is full. Cannot join.',
+    LOBBY_CLOSED: 'Lobby is closed. Cannot join.',
+    NOT_IN_LOBBY: 'You are not part of this lobby.',
+    ALREADY_IN_LOBBY: 'You are already in a lobby.',
+    LOBBY_CREATION_FAILED: 'Failed to create lobby. Please try again.',
+    LOBBY_JOIN_FAILED: 'Failed to join lobby. Please try again.',
 } as const;
 
 // ============================================================================
