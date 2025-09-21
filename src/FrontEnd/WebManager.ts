@@ -44,7 +44,8 @@ export default class WebManager {
     private static instance: WebManager | null = null;
     public static isAuthenticated: boolean = false;
     private socket: WebSocket | null = null;
-    private messageCallbacks: Map<string, (response: any) => void> = new Map();
+    private exactMessageCallbacks: Map<string, (response: any) => void> = new Map();
+    private typeMessageCallbacks: Map<string, (response: any) => void> = new Map();
     private messageIDCounter: number = 0;
     private reconnectAttempts: number = 0;
     private maxReconnectAttempts: number = -1;
@@ -145,6 +146,27 @@ export default class WebManager {
         return action + "_" + now.toISOString() + "_" + this.messageIDCounter++;
     }
     
+
+    /**
+     * @method splitMessageID
+     * @description This method is used to split a message ID into its components
+     * @param messageID 
+     * @returns the array of messageID components (action, timestamp, messageNum)
+     */
+    private splitMessageID(messageID: string): { action: string; timestamp: Date; messageNum: number } | null {
+        const parts = messageID.split('_');
+        if (parts.length < 3) {
+            return null;
+        }
+        const action = parts[0];
+        const timestamp = new Date(parts[1]);
+        const messageNum = parseInt(parts[2], 10);
+        if (isNaN(messageNum)) {
+            return null;
+        }
+        return { action, timestamp, messageNum }
+}
+
     /**
      * @method getInstance
      * @description Get the singleton instance of WebManager
@@ -206,27 +228,21 @@ export default class WebManager {
             this.socket.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-
-                    // Handle game updates
-                    if (data.type === 'game_update') {
-                        console.log('[WebSocket] Received game update:', data);
-                        // Notify all registered listeners
-                        this.gameListeners.forEach(listener => {
-                            try {
-                                listener(data as GameUpdate);
-                            } catch (error) {
-                                console.error('[WebSocket] Error in game listener:', error);
+                    // Handle exact message callbacks
+                    if (data.messageID) {
+                        if (this.exactMessageCallbacks.has(data.messageID)) {
+                            const callback = this.exactMessageCallbacks.get(data.messageID);
+                            if (callback) {
+                                callback(data);
+                                this.exactMessageCallbacks.delete(data.messageID);
                             }
-                        });
-                        return;
-                    }
-                    
-                    // Handle response messages with messageID
-                    if (data.messageID && this.messageCallbacks.has(data.messageID)) {
-                        const callback = this.messageCallbacks.get(data.messageID);
-                        if (callback) {
-                            callback(data);
-                            this.messageCallbacks.delete(data.messageID);
+                        }
+                        // Handle type-based message callbacks
+                        if (this.typeMessageCallbacks.has(data.type)) {
+                            const callback = this.typeMessageCallbacks.get(data.type);
+                            if (callback) {
+                                callback(data);
+                            }
                         }
                     }
                 } catch (error) {
@@ -501,7 +517,7 @@ export default class WebManager {
             console.log(`[${action}] Registering callback for message ID: ${messageID}`);
             
             //Register callbacks for the message
-            this.messageCallbacks.set(messageID, (response) => {
+            this.exactMessageCallbacks.set(messageID, (response) => {
                 // Store the response for future reference
                 console.log(`[${action}] Received response for message ID ${messageID}:`, response);
                 
@@ -531,9 +547,9 @@ export default class WebManager {
             
             // Add a timeout for the response
             setTimeout(() => {
-                if (this.messageCallbacks.has(messageID)) {
+                if (this.exactMessageCallbacks.has(messageID)) {
                     console.error(`[${action}] Request timed out after ${timeout/1000} seconds for message ID: ${messageID}`);
-                    this.messageCallbacks.delete(messageID);
+                    this.exactMessageCallbacks.delete(messageID);
                     reject(new Error(`${action} request timed out`));
                 }
             }, timeout);
@@ -594,6 +610,10 @@ export default class WebManager {
             };
 
             const response = await this.sendRequest<{ success: boolean }>(message, 'join_lobby');
+            if (response && response.success) {
+                //If the response is a success, This means we can begin accepting game updates
+                this.registerTypeCallback('game_update', (update) => this.handleGameUpdate(update as GameUpdate));
+            }
             return response && response.success === true;
         } catch (error) {
             console.error('Error joining lobby:', error);
@@ -626,4 +646,30 @@ export default class WebManager {
             return false;
         }
     }
+
+    /**
+     * @method registerTypeCallback
+     * @description Register a callback for messages of a specific type
+     * @param type The message type to listen for
+     * @param callback The callback function to invoke when a message of the specified type is received
+     */
+    public registerTypeCallback(type: string, callback: (response: any) => void ): void {
+        this.typeMessageCallbacks.set(type, callback);
+    }
+
+    /**
+     * @method handleGameUpdate() {
+     * @description Handle incoming game update messages and notify listeners
+     * @param update The game update data received from the server}
+     */
+    private handleGameUpdate(update: GameUpdate): void {
+        console.log('[Game Update] Received game update:', update);
+        // Notify all registered listeners
+        this.gameListeners.forEach(listener => {
+            try {
+                listener(update);
+            } catch (error) {
+                console.error('[Game Update] Error in listener:', error);
+            }
+        });
 }
