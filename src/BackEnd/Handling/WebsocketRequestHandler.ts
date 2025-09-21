@@ -36,6 +36,14 @@ const { v4: uuidv4 } = require('uuid');
 
 type ReturnMessage = Record<string, any>
 
+// Type definition for message handler functions
+type MessageHandler = (data: any, sessionData?: any) => Promise<object | ReturnMessage>;
+
+// Type definition for message handlers map
+type MessageHandlers = {
+    [K in MESSAGE_TYPES]: MessageHandler;
+};
+
 //This map is for connectionID to ws object.
 
 /**
@@ -46,7 +54,6 @@ type ReturnMessage = Record<string, any>
  * @param redis Redis client for regular operations (non-subscriber)
  */
 export async function handleWebsocketRequest(ws: any, req: any) {
-    const redis = DatabaseManager.getInstance().getRegularClient();
     console.log(`[WebSocket] Connection established from client, IP: ${req.connection.remoteAddress}`);
 
     // Assign a unique ID to the websocket connection
@@ -55,142 +62,94 @@ export async function handleWebsocketRequest(ws: any, req: any) {
         newConnection(ws, ws.id);
         console.log(`[WebSocket] Assigning connection ID: ${ws.id}`);
     }
+
     // Handle cleanup when the connection is closed
     ws.on('close', () => {
         console.log(`[WebSocket] Connection ${ws.id} closed`);
         removeConnection(ws.id);
     });
 
+    // Message handler map
+    const messageHandlers: MessageHandlers = {
+        [MESSAGE_TYPES.RECONNECT]: async (data: any) => {
+            const validation = ReconnectRequest.safeParse(data);
+            return validation.success ? handleReconnect(ws, validation.data, req) : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+        },
+        [MESSAGE_TYPES.REGISTER_PLAYER]: async (data: any) => {
+            const validation = RegisterRequest.safeParse(data);
+            return validation.success ? handleRegisterPlayer(ws, validation.data, req) : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+        },
+        [MESSAGE_TYPES.CREATE_LOBBY]: async (data: any, sessionData: any) => {
+            const validation = LobbyCreateRequest.safeParse(data);
+            return validation.success ? handleCreateLobby(ws, validation.data, sessionData.getPlayerID()) : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+        },
+        [MESSAGE_TYPES.SEARCH_LOBBY]: async (data: any, sessionData: any) => {
+            const validation = LobbySearchRequest.safeParse(data);
+            return validation.success ? handleSearchLobbies(ws, validation.data, sessionData.getPlayerID()) : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+        },
+        [MESSAGE_TYPES.JOIN_LOBBY]: async (data: any, sessionData: any) => {
+            return handleJoinLobby(ws, data, sessionData.getPlayerID());
+        },
+        [MESSAGE_TYPES.LEAVE_LOBBY]: async (data: any, sessionData: any) => {
+            return createErrorResponse(ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
+        },
+        [MESSAGE_TYPES.MAKE_MOVE]: async (data: any, sessionData: any) => {
+            return createErrorResponse(ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
+        },
+        [MESSAGE_TYPES.GAME_UPDATE]: async (data: any, sessionData: any) => {
+            return createErrorResponse(ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
+        }
+    };
+
     // Handle incoming messages from the client
     ws.on('message', async (message: any) => {
         let returnMessage: ReturnMessage = {};
         let messageID: string | null = null;
+
         try {
             const data = JSON.parse(message.toString());
-            console.log(`[WebSocket] Received message from client (connection ID: ${ws.id}):`, data);
             messageID = data.messageID;
 
-            // Validate the base request schema
-            const baseRequestValidation = BaseRequest.safeParse(data);
-            if (!baseRequestValidation.success) {
-                console.error('[WebSocket] Invalid base request schema:', baseRequestValidation.error);
-                returnMessage = {
-                    success: false,
-                    error: ERROR_MESSAGES.INVALID_SCHEMA,
-                };
-                sendResponseToClient(ws, returnMessage, messageID);
-                return;
-            }
-
-            // Handle reconnect requests
-            if (data.type === MESSAGE_TYPES.RECONNECT) {
-                const reconnectValidation = ReconnectRequest.safeParse(data);
-                if (!reconnectValidation.success) {
-                    console.error('[WebSocket] Invalid reconnect request schema:', reconnectValidation.error);
-                    returnMessage = {
-                        success: false,
-                        error: ERROR_MESSAGES.INVALID_SCHEMA,
-                    };
+            // Validate base request schema
+            if (!BaseRequest.safeParse(data).success) {
+                returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+            } else {
+                // Check if the message type is valid
+                if (!Object.values(MESSAGE_TYPES).includes(data.type)) {
+                    returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
                 } else {
-                    console.log(`[WebSocket] Processing reconnect request with message ID: ${messageID}`);
-                    returnMessage = await handleReconnect(ws, reconnectValidation.data, req);
-                }
-            }
-            // Check for session ID in authenticated requests
-            else if (data.sessionID && data.type !== MESSAGE_TYPES.REGISTER_PLAYER) {
-                const authRequestValidation = AuthenticatedRequest.safeParse(data);
-                if (!authRequestValidation.success) {
-                    console.error('[WebSocket] Invalid authenticated request schema:', authRequestValidation.error);
-                    returnMessage = {
-                        success: false,
-                        error: ERROR_MESSAGES.INVALID_SCHEMA,
-                    };
-                } else {
-                    // Validate the session
-                    console.log(`[WebSocket] Validating session with ID: ${data.sessionID.substring(0, 8)}...`);
-                    const sessionData = await Session.validateSession(data.sessionID, req);
-
-                    if (sessionData && sessionData.getConnectionID() === ws.id) {
-                        await Session.refreshSession(data.sessionID);
-
-                        if (data.type === MESSAGE_TYPES.CREATE_LOBBY) {
-                            const createLobbyValidation = LobbyCreateRequest.safeParse(data);
-                            if (!createLobbyValidation.success) {
-                                console.error('[WebSocket] Invalid create lobby request schema:', createLobbyValidation.error);
-                                returnMessage = {
-                                    success: false,
-                                    error: ERROR_MESSAGES.INVALID_SCHEMA,
-                                };
-                            } else {
-                                returnMessage = await handleCreateLobby(ws, createLobbyValidation.data, sessionData.getPlayerID());
-                            }
-                        } else if (data.type === MESSAGE_TYPES.SEARCH_LOBBY) {
-                            const searchLobbyValidation = LobbySearchRequest.safeParse(data);
-                            if (!searchLobbyValidation.success) {
-                                console.error('[WebSocket] Invalid search lobby request schema:', searchLobbyValidation.error);
-                                returnMessage = {
-                                    success: false,
-                                    error: ERROR_MESSAGES.INVALID_SCHEMA,
-                                };
-                            } else {
-                                returnMessage = await handleSearchLobbies(ws, searchLobbyValidation.data, sessionData.getPlayerID());
-                            }
-                        } else if (data.type === MESSAGE_TYPES.JOIN_LOBBY) {
-                            returnMessage = await handleJoinLobby(ws, data, sessionData.getPlayerID());
+                    const handler = messageHandlers[data.type as MESSAGE_TYPES];
+                    
+                    if (!handler) {
+                        returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+                    } else if (data.type !== MESSAGE_TYPES.REGISTER_PLAYER && data.type !== MESSAGE_TYPES.RECONNECT) {
+                        // Handle authenticated requests
+                        const sessionData = data.sessionID ? await Session.validateSession(data.sessionID, req) : null;
+                        
+                        if (!sessionData || sessionData.getConnectionID() !== ws.id) {
+                            returnMessage = createErrorResponse(ERROR_MESSAGES.TOKEN_INVALID);
                         } else {
-                            returnMessage = {
-                                messageID: data.messageID,
-                                message: 'Message received',
-                                data,
-                            };
+                            await Session.refreshSession(data.sessionID);
+                            returnMessage = await handler(data, sessionData);
                         }
                     } else {
-                        returnMessage = {
-                            success: false,
-                            error: ERROR_MESSAGES.TOKEN_INVALID,
-                        };
-                    }
-                }
-            } else {
-                if (data.type === MESSAGE_TYPES.REGISTER_PLAYER) {
-                    const registerValidation = RegisterRequest.safeParse(data);
-                    if (!registerValidation.success) {
-                        console.error('[WebSocket] Invalid register player request schema:', registerValidation.error);
-                        returnMessage = {
-                            success: false,
-                            error: ERROR_MESSAGES.INVALID_SCHEMA,
-                        };
-                    } else {
-                        returnMessage = await handleRegisterPlayer(ws, registerValidation.data, req);
-                    }
-                } else {
-                    if (Object.values(MESSAGE_TYPES).includes(data.type)) {
-                        returnMessage = {
-                            success: false,
-                            error: ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
-                        };
-                    } else {
-                        returnMessage = {
-                            success: false,
-                            error: ERROR_MESSAGES.INVALID_SCHEMA,
-                        };
+                        // Handle non-authenticated requests
+                        returnMessage = await handler(data);
                     }
                 }
             }
         } catch (error) {
             console.error('[WebSocket] Error processing message:', error);
-            returnMessage = {
-                success: false,
-                error: ERROR_MESSAGES.INTERNAL_ERROR,
-            };
+            returnMessage = createErrorResponse(ERROR_MESSAGES.INTERNAL_ERROR);
         }
 
-        if (messageID) {
-            returnMessage['messageID'] = messageID;
-        }
-
+        if (messageID) returnMessage.messageID = messageID;
         sendResponseToClient(ws, returnMessage, messageID);
     });
+}
+
+function createErrorResponse(error: string): ReturnMessage {
+    return { success: false, error };
 }
 
 /**
