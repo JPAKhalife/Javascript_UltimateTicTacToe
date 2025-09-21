@@ -9,6 +9,7 @@ import Redis from 'ioredis';
 import { nanoid } from 'nanoid';
 import { AUTH_CONSTANTS, REDIS_KEYS, ENV_CONFIG } from '../Contants';
 import crypto from 'crypto';
+import { DatabaseManager } from './DatabaseManager';
 
 /**
  * @interface SessionData
@@ -203,11 +204,11 @@ export default class Session {
      * @returns {Promise<string>} A promise that resolves to the new session token
      */
     static async createSession(
-        redisClient: Redis,
         playerID: string,
         connectionID: string,
         req: any
     ): Promise<string> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         // Generate base ID
         const baseId = this.generateSessionID();
         const now = Date.now();
@@ -245,10 +246,10 @@ export default class Session {
      * @returns {Promise<SessionManager | null>} A promise that resolves to the session manager or null if invalid
      */
     static async validateSession(
-        redisClient: Redis,
         token: string,
         req: any
     ): Promise<Session | null> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         // Parse and verify the token
         const tokenData = this.parseAndVerifyToken(token);
         if (!tokenData) {
@@ -315,9 +316,9 @@ export default class Session {
      * @returns {Promise<string | null>} A promise that resolves to the session ID or null if not found
      */
     static async getSessionByConnectionID(
-        redisClient: Redis,
         connectionID: string
     ): Promise<string | null> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         //! This is a simplified implementation. Not fit for production
         const sessionPrefix = 'session:';
         const keys = await redisClient.keys(`${sessionPrefix}*`);
@@ -338,7 +339,8 @@ export default class Session {
      * @param redisClient - gives access to the database
      * @param key 
      */
-    static async getSessionByKey(redisClient: Redis, key: string): Promise<Session | null> {
+    static async getSessionByKey(key: string): Promise<Session | null> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         
         try {
             //Get the session info from the hashmap
@@ -362,8 +364,8 @@ export default class Session {
      * @param redisClient - gives access to the database
      * @param sessionID - the session ID
      */
-    static async getSessionBySessionID(redisClient: Redis, sessionID: string): Promise<Session | null> {
-        return Session.getSessionByKey(redisClient, REDIS_KEYS.SESSION(sessionID));
+    static async getSessionBySessionID(sessionID: string): Promise<Session | null> {
+        return Session.getSessionByKey(REDIS_KEYS.SESSION(sessionID));
     }
 
     /**
@@ -374,9 +376,9 @@ export default class Session {
      * @returns {Promise<boolean>} A promise that resolves to true if successful
      */
     static async invalidateSession(
-        redisClient: Redis,
         token: string
     ): Promise<boolean> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         // Parse the token to get the baseId
         const tokenData = this.parseAndVerifyToken(token);
         if (!tokenData) {
@@ -408,10 +410,10 @@ export default class Session {
      * @returns {Promise<boolean>} A promise that resolves to true if successful
      */
     static async setSessionExpiry(
-        redisClient: Redis,
         token: string,
         expirySeconds: number = AUTH_CONSTANTS.SESSION_EXPIRE_TIME
     ): Promise<boolean> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         // Parse the token to get the baseId
         const tokenData = this.parseAndVerifyToken(token);
         if (!tokenData) {
@@ -438,9 +440,9 @@ export default class Session {
      * @returns {Promise<boolean>} A promise that resolves to true if successful
      */
     static async refreshSession(
-        redisClient: Redis,
         token: string
     ): Promise<boolean> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         // Parse the token to get the baseId
         const tokenData = this.parseAndVerifyToken(token);
         if (!tokenData) {
@@ -473,10 +475,10 @@ export default class Session {
      * @returns {Promise<boolean>} A promise that resolves to true if successful
      */
     static async updateSessionConnectionID(
-        redisClient: Redis,
         token: string,
         newConnectionID: string
     ): Promise<boolean> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         // Parse the token to get the baseId
         const tokenData = this.parseAndVerifyToken(token);
         if (!tokenData) {
@@ -512,9 +514,9 @@ export default class Session {
      * @returns {Promise<boolean>} A promise that resolves to true if the connection is active
      */
     static async isConnectionActive(
-        redisClient: Redis,
         connectionID: string
     ): Promise<boolean> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         console.log(`[SessionManager] Checking if connection ID ${connectionID} is active`);
         
         // Check if the connection exists in Redis
@@ -539,9 +541,9 @@ export default class Session {
      * @returns {Promise<string | null>} A promise that resolves to the connectionID or null if not found
      */
     static async getSessionConnectionID(
-        redisClient: Redis,
         token: string
     ): Promise<string | null> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         // Parse the token to get the baseId
         const tokenData = this.parseAndVerifyToken(token);
         if (!tokenData) {
@@ -563,9 +565,9 @@ export default class Session {
      * @returns {Promise<string | null>} A promise that resolves to the playerID or null if not found
      */
     static async getSessionPlayerID(
-        redisClient: Redis,
         token: string
     ): Promise<string | null> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         // Parse the token to get the baseId
         const tokenData = this.parseAndVerifyToken(token);
         if (!tokenData) {

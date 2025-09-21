@@ -8,6 +8,7 @@
 
 import Redis from "ioredis";
 import { GAME_CONSTANTS, REDIS_KEYS } from "../Contants";
+import { DatabaseManager } from "./DatabaseManager";
 const { v4: uuidv4 } = require('uuid');
 
 
@@ -67,7 +68,8 @@ export default class Player {
      * @returns A Player object if found
      * @throws Error database operation fails
      */
-    static async getPlayer(redisClient: Redis, identifier: string, byUsername: boolean = false): Promise<Player | null> {
+    static async getPlayer(identifier: string, byUsername: boolean = false): Promise<Player | null> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         try {
             if (byUsername) {
                 //Check the existence of the usernames hash
@@ -102,7 +104,8 @@ export default class Player {
      * @returns true if the player was successfully removed
      * @throws Error if player not found, is in a lobby, or database operation fails
      */
-    static async removePlayer(redisClient: Redis, playerID: string): Promise<boolean> {
+    static async removePlayer(playerID: string): Promise<boolean> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         // Maximum number of retries for optimistic locking
         const MAX_RETRIES = 3;
         let retries = 0;
@@ -155,7 +158,8 @@ export default class Player {
      * @return A Player object representing the added player
      * @throws Error if lobby doesn't exist, is full, player already in lobby, or database operation fails
      */
-    static async addPlayer(redisClient: Redis, lobbyID: string, playerID: string): Promise<Player> {
+    static async addPlayer(lobbyID: string, playerID: string): Promise<Player> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         // Maximum number of retries for optimistic locking
         const MAX_RETRIES = 3;
         let retries = 0;
@@ -237,7 +241,7 @@ export default class Player {
                 }
 
                 // Return a new Player instance
-                let returnPlayer = await Player.getPlayer(redisClient, playerID);
+                let returnPlayer = await Player.getPlayer(playerID);
                 if (!returnPlayer) {
                     throw new Error(`Failed to retrieve player ${playerID} after adding to lobby ${lobbyID}`);
                 }
@@ -264,12 +268,13 @@ export default class Player {
      * @param username The name of the player to add to the lobby
      * @param lobbyID The ID of the lobby the player is currently in. null or zero means not joined.
      */
-    static async createPlayer(redisClient: Redis, username: string, lobbyID?: string): Promise<Player | null> {
+    static async createPlayer(username: string, lobbyID?: string): Promise<Player | null> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         const MAX_RETRIES = 3;
         let retries = 0;
         try {
             //First check if the player already exists.
-            if (await Player.getPlayer(redisClient,username,true)) {
+            if (await Player.getPlayer(username, true)) {
                 console.log("player exists")
                 return null;
             }
@@ -310,7 +315,7 @@ export default class Player {
                     throw new Error(`Concurrent modification detected for lobby ${lobbyID}, retry limit reached`);
                 }
                 console.log("Return new player");
-                return this.getPlayer(redisClient, newPlayerID, false);
+                return this.getPlayer(newPlayerID, false);
             } catch (error) {
                 throw Error("There was an error creating the player.");
             }

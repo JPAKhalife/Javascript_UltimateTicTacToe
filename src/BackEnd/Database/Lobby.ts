@@ -9,11 +9,13 @@
 import Redis from "ioredis";
 import Player from "./Player";
 import { REDIS_KEYS } from "../Contants";
+import { v4 as uuidv4 } from "uuid";
+import { DatabaseManager } from "./DatabaseManager";
 
 /*
 example of a lobby hash:
 "lobby:<lobbyID> {
-    "lobbyID:"
+    "lobbyName:"
     "playerNum": 2,
     "playersJoined": 1,
     "levelSize": 2,
@@ -32,6 +34,7 @@ All lobby IDs should be appended to a list called LobbyList for retrieveal
 
 
 export type LobbyData = {
+    lobbyName: string;
     playerNum: number;
     levelSize: number;
     gridSize: number;
@@ -111,20 +114,22 @@ export default class Lobby {
      * @method createLobby
      * @description This method is meant to create a lobby for a game and add the creator as the first player.
      * First creates the lobby, then uses Player.addPlayer to add the creator to the lobby.
-     * @param redisClient The Redis client to use for database operations
-     * @param lobbyID The ID of the lobby to be created
      * @param lobbyData The data to be stored in the lobby
      * @param playerData The data of the player creating the lobby
      * @returns A Lobby object representing the created lobby
      * @throws Error if lobby creation fails or player addition fails
      */
-    static async createLobby(redisClient: Redis, lobbyID: string, lobbyData: LobbyData, playerID: string): Promise<Lobby> {
+    static async createLobby(lobbyData: LobbyData, playerID: string): Promise<Lobby> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         try {
+            //Generate a unique lobby ID
+            let lobbyID = uuidv4();
+
             // Check if lobby already exists
-            const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
+            const lobbyKey = REDIS_KEYS.LOBBY(lobbyData.lobbyName);
             const lobbyExists = await redisClient.exists(lobbyKey);
             if (lobbyExists) {
-                throw new Error(`Lobby ${lobbyID} already exists`);
+                throw new Error(`Lobby ${lobbyData.lobbyName} already exists`);
             }
 
             // Create game state array based on gridSize
@@ -134,6 +139,8 @@ export default class Lobby {
 
             // Create lobby hash fields
             const lobbyHash = {
+                lobbyID: lobbyID,   
+                lobbyName: lobbyData.lobbyName,
                 playerNum: lobbyData.playerNum.toString(),
                 playersJoined: 1, // Start with 0 players, will be updated by Player.addPlayer
                 levelSize: lobbyData.levelSize.toString(),
@@ -151,25 +158,25 @@ export default class Lobby {
             multi.hset(lobbyKey, lobbyHash);
 
             // Store game state as a separate list
-            const gameStateKey = REDIS_KEYS.GAME_STATES(lobbyID); 
+            const gameStateKey = REDIS_KEYS.GAME_STATES(lobbyData.lobbyName); 
             if (gameState.length > 0) {
                 multi.del(gameStateKey); // Ensure the list is empty
                 multi.rpush(gameStateKey, ...gameState.map(val => val.toString()));
             }
 
             // Create empty players list
-            const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
+            const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyData.lobbyName);
             multi.del(playersKey);
 
             // Add to lobby list
-            multi.rpush('LobbyList', lobbyID); // Note: No REDIS_KEYS constant for LobbyList
+            multi.rpush('LobbyList', lobbyData.lobbyName); // Note: No REDIS_KEYS constant for LobbyList
 
             // Execute the transaction
             await multi.exec();
 
             // Now add the player to the lobby using Player.addPlayer
             try {
-                await Player.addPlayer(redisClient, lobbyID, playerID);
+                await Player.addPlayer(lobbyID, playerID);
             } catch (error) {
                 // If player addition fails, clean up by removing the lobby
                 const cleanupMulti = redisClient.multi();
@@ -217,7 +224,8 @@ export default class Lobby {
      * @returns true if the lobby was successfully removed
      * @throws Error if lobby doesn't exist, has players, or operation fails
      */
-    public async removeLobby(redisClient: Redis, lobbyID: string): Promise<boolean> {
+    public async removeLobby(lobbyID: string): Promise<boolean> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         try {
             const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
             const gameStateKey = `gamestate:${lobbyID}`; // Note: No REDIS_KEYS constant for gamestate
@@ -261,7 +269,8 @@ export default class Lobby {
      * @returns true if the lobby exists, false otherwise
      * @throws Error if the operation fails
      */
-    static async doesLobbyExist(redisClient: Redis, lobbyID: string): Promise<boolean> {
+    static async doesLobbyExist(lobbyID: string): Promise<boolean> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         try {
             const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
             return (await redisClient.exists(lobbyKey)) > 0;
@@ -282,7 +291,8 @@ export default class Lobby {
      * @returns true if the player was successfully removed
      * @throws Error if lobby doesn't exist, player not in lobby, or operation fails
      */
-    static async removePlayerFromLobby(redisClient: Redis, lobbyID: string, playerID: string): Promise<boolean> {
+    static async removePlayerFromLobby(lobbyID: string, playerID: string): Promise<boolean> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         try {
             const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
             const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
@@ -355,11 +365,11 @@ export default class Lobby {
                     // Now update the player to remove the lobby reference
                     try {
                         // Get the player first to check if they're still in this lobby
-                        const player = await Player.getPlayer(redisClient, playerID);
+                        const player = await Player.getPlayer(playerID);
 
                         // Only remove the player if they're still in this lobby
                         if (player && player.getLobbyID() === lobbyID) {
-                            await Player.removePlayer(redisClient, playerID);
+                            await Player.removePlayer(playerID);
                         }
                     } catch (error) {
                         // If player doesn't exist or is not in this lobby, just continue
@@ -395,7 +405,8 @@ export default class Lobby {
      * @returns An array of Player objects representing the players in the lobby
      * @throws Error if lobby doesn't exist or operation fails
      */
-    static async getPlayersInLobby(redisClient: Redis, lobbyID: string): Promise<Player[]> {
+    static async getPlayersInLobby(lobbyID: string): Promise<Player[]> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         try {
             const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
             const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
@@ -413,7 +424,7 @@ export default class Lobby {
             const players: Player[] = [];
             for (const playerID of playerIDs) {
                 try {
-                    const player = await Player.getPlayer(redisClient, playerID);
+                    const player = await Player.getPlayer(playerID);
                     if (player) {
                         players.push(player);
                     }
@@ -438,14 +449,15 @@ export default class Lobby {
      * @description Converts the Lobby object to a format suitable for JSON serialization and web requests
      * @returns An object representing the lobby that can be directly stringified to JSON
      */
-    public async lobbySummaryJson(redisClient: Redis): Promise<Record<string, any>> {
+    public async lobbySummaryJson(): Promise<Record<string, any>> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         return {
             lobbyID: this.lobbyID,
             playerNum: this.playerNum,
             playersJoined: this.playersJoined,
             levelSize: this.levelSize,
             gridSize: this.gridSize,
-            creator: (await Player.getPlayer(redisClient, this.creator))?.getUsername() || "Unknown",
+            creator: (await Player.getPlayer(this.creator))?.getUsername() || "Unknown",
             lobbyState: this.lobbyState,
             allowSpectators: this.allowSpectators
         };
@@ -458,7 +470,8 @@ export default class Lobby {
      * @param lobbyID - the ID of the lobby to fetch
      * @returns A lobby object or null if not found
      */
-    static async getLobby(redisClient: Redis, lobbyID: string): Promise<Lobby | null> {
+    static async getLobby(lobbyID: string): Promise<Lobby | null> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         try {
             const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
             const gameStateKey = `gamestate:${lobbyID}`; // Note: No REDIS_KEYS constant for gamestate
@@ -501,12 +514,12 @@ export default class Lobby {
      * @returns A list of sorted lobby objects
      */
     static async getSortedLobbies(
-        redisClient: Redis,
         sortBy: 'playerNum' | 'levelSize' | 'gridSize' | 'playersJoined' | 'creator' | 'lobbyState',
         sortOrder: 'asc' | 'desc' = 'asc',
         maxResults: number = 20,
         searchListLength: number = 100
     ): Promise<Lobby[]> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         try {
             // Get the list of all lobbies with a limit to prevent timeout
             const lobbyIDs = await redisClient.lrange('LobbyList', 0, searchListLength); // Note: No REDIS_KEYS constant for LobbyList
@@ -519,7 +532,7 @@ export default class Lobby {
             const lobbies: Lobby[] = [];
             const lobbyPromises = lobbyIDs.map(async (lobbyID) => {
                 try {
-                    const lobby = await Lobby.getLobby(redisClient, lobbyID);
+                    const lobby = await Lobby.getLobby(lobbyID);
                     if (lobby) {
                         lobbies.push(lobby);
                     }
@@ -600,7 +613,6 @@ export default class Lobby {
      * @returns A list of filtered lobby objects
      */
     static async getFilteredLobbies(
-        redisClient: Redis,
         filters: {
             playerNum?: number,
             levelSize?: number,
@@ -613,6 +625,7 @@ export default class Lobby {
         maxResults: number = 20,
         searchListLength: number = 100
     ): Promise<Lobby[]> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
         try {
             // Get the list of all lobbies with a limit to prevent timeout
             const lobbyIDs = await redisClient.lrange('LobbyList', 0, searchListLength);
@@ -625,7 +638,7 @@ export default class Lobby {
             const lobbies: Lobby[] = [];
             const lobbyPromises = lobbyIDs.map(async (lobbyID) => {
                 try {
-                    const lobby = await Lobby.getLobby(redisClient, lobbyID);
+                    const lobby = await Lobby.getLobby(lobbyID);
                     if (lobby) {
                         lobbies.push(lobby);
                     }

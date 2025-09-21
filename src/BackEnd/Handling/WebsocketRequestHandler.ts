@@ -10,6 +10,7 @@
 import Redis from 'ioredis';
 import Lobby, { LobbyData } from '../Database/Lobby';
 import Player from '../Database/Player';
+import { DatabaseManager } from '../Database/DatabaseManager';
 import {
     newConnection,
     playerRegistered,
@@ -44,19 +45,20 @@ type ReturnMessage = Record<string, any>
  * @param req HTTP request object
  * @param redis Redis client for regular operations (non-subscriber)
  */
-export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
+export async function handleWebsocketRequest(ws: any, req: any) {
+    const redis = DatabaseManager.getInstance().getRegularClient();
     console.log(`[WebSocket] Connection established from client, IP: ${req.connection.remoteAddress}`);
 
     // Assign a unique ID to the websocket connection
     if (!ws.id) {
         ws.id = uuidv4();
-        newConnection(redis, ws, ws.id);
+        newConnection(ws, ws.id);
         console.log(`[WebSocket] Assigning connection ID: ${ws.id}`);
     }
     // Handle cleanup when the connection is closed
     ws.on('close', () => {
         console.log(`[WebSocket] Connection ${ws.id} closed`);
-        removeConnection(redis, ws.id);
+        removeConnection(ws.id);
     });
 
     // Handle incoming messages from the client
@@ -91,7 +93,7 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                     };
                 } else {
                     console.log(`[WebSocket] Processing reconnect request with message ID: ${messageID}`);
-                    returnMessage = await handleReconnect(ws, redis, reconnectValidation.data, req);
+                    returnMessage = await handleReconnect(ws, reconnectValidation.data, req);
                 }
             }
             // Check for session ID in authenticated requests
@@ -106,10 +108,10 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                 } else {
                     // Validate the session
                     console.log(`[WebSocket] Validating session with ID: ${data.sessionID.substring(0, 8)}...`);
-                    const sessionData = await Session.validateSession(redis, data.sessionID, req);
+                    const sessionData = await Session.validateSession(data.sessionID, req);
 
                     if (sessionData && sessionData.getConnectionID() === ws.id) {
-                        await Session.refreshSession(redis, data.sessionID);
+                        await Session.refreshSession(data.sessionID);
 
                         if (data.type === MESSAGE_TYPES.CREATE_LOBBY) {
                             const createLobbyValidation = LobbyCreateRequest.safeParse(data);
@@ -120,7 +122,7 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                                     error: ERROR_MESSAGES.INVALID_SCHEMA,
                                 };
                             } else {
-                                returnMessage = await handleCreateLobby(ws, redis, createLobbyValidation.data, sessionData.getPlayerID());
+                                returnMessage = await handleCreateLobby(ws, createLobbyValidation.data, sessionData.getPlayerID());
                             }
                         } else if (data.type === MESSAGE_TYPES.SEARCH_LOBBY) {
                             const searchLobbyValidation = LobbySearchRequest.safeParse(data);
@@ -131,10 +133,10 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                                     error: ERROR_MESSAGES.INVALID_SCHEMA,
                                 };
                             } else {
-                                returnMessage = await handleSearchLobbies(ws, redis, searchLobbyValidation.data, sessionData.getPlayerID());
+                                returnMessage = await handleSearchLobbies(ws, searchLobbyValidation.data, sessionData.getPlayerID());
                             }
                         } else if (data.type === MESSAGE_TYPES.JOIN_LOBBY) {
-                            returnMessage = await handleJoinLobby(ws, redis, data, sessionData.getPlayerID());
+                            returnMessage = await handleJoinLobby(ws, data, sessionData.getPlayerID());
                         } else {
                             returnMessage = {
                                 messageID: data.messageID,
@@ -159,7 +161,7 @@ export async function handleWebsocketRequest(ws: any, req: any, redis: Redis) {
                             error: ERROR_MESSAGES.INVALID_SCHEMA,
                         };
                     } else {
-                        returnMessage = await handleRegisterPlayer(ws, redis, registerValidation.data, req);
+                        returnMessage = await handleRegisterPlayer(ws, registerValidation.data, req);
                     }
                 } else {
                     if (Object.values(MESSAGE_TYPES).includes(data.type)) {
@@ -234,12 +236,11 @@ function sendResponseToClient(ws: any, returnMessage: ReturnMessage, messageID: 
  * @param playerID Player ID from the validated session
  * @returns Promise resolving to response object
  */
-async function handleSearchLobbies(ws: any, redis: Redis, data: LobbySearchRequest, playerID: string): Promise<object> {
+async function handleSearchLobbies(ws: any, data: LobbySearchRequest, playerID: string): Promise<object> {
     try {
         const params = data.parameters || {};
         // Call getLobbies with the parameters
         const lobbySearchResults = await Lobby.getFilteredLobbies(
-            redis,
             {
                 playerNum: params.playerNum,
                 levelSize: params.levelSize,
@@ -260,7 +261,7 @@ async function handleSearchLobbies(ws: any, redis: Redis, data: LobbySearchReque
         }
 
         // Convert each lobby to its JSON representation and await all promises
-        const lobbies = await Promise.all(lobbySearchResults.map(lobby => lobby.lobbySummaryJson(redis)));
+        const lobbies = await Promise.all(lobbySearchResults.map(lobby => lobby.lobbySummaryJson()));
 
         // Log the size of the lobbies array
         console.log('Lobbies array size:', JSON.stringify(lobbies).length, 'bytes');
@@ -290,7 +291,7 @@ async function handleSearchLobbies(ws: any, redis: Redis, data: LobbySearchReque
  * @param playerID Player ID from the validated session
  * @returns Promise resolving to response object
  */
-async function handleCreateLobby(ws: any, redis: Redis, data: LobbyCreateRequest, playerID: string): Promise<object> {
+async function handleCreateLobby(ws: any, data: LobbyCreateRequest, playerID: string): Promise<object> {
     try {
         const params = data.parameters || {};
         const lobbyData = params.lobbyData || {};
@@ -306,14 +307,14 @@ async function handleCreateLobby(ws: any, redis: Redis, data: LobbyCreateRequest
         console.log(`Creating lobby ${params.lobbyID} with data:`, lobbyDataObj, playerID);
 
         // Call RedisManager to create the lobby
-        let newLobby = await Lobby.createLobby(redis, params.lobbyID, lobbyDataObj, playerID);
+        let newLobby = await Lobby.createLobby(lobbyDataObj, playerID);
         console.log(`Lobby ${params.lobbyID} created successfully`);
 
         // Send response back to client
         return {
             success: true,
             message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
-            lobby: await newLobby.lobbySummaryJson(redis)
+            lobby: await newLobby.lobbySummaryJson()
         };
     } catch (error) {
         console.error('Error creating lobby:', error);
@@ -333,7 +334,8 @@ async function handleCreateLobby(ws: any, redis: Redis, data: LobbyCreateRequest
  * @param req HTTP request object
  * @returns Promise resolving to response object
  */
-async function handleRegisterPlayer(ws: any, redis: Redis, data: RegisterRequest, req: any): Promise<object> {
+async function handleRegisterPlayer(ws: any, data: RegisterRequest, req: any): Promise<object> {
+    const redis = DatabaseManager.getInstance().getRegularClient();
     const params = data.parameters || {};
     const username = params.username;
 
@@ -347,7 +349,7 @@ async function handleRegisterPlayer(ws: any, redis: Redis, data: RegisterRequest
     console.log(`[Register] Checking if player ${username} exists`);
 
     // Check if the user is already registered.
-    if ((await getPlayerID(redis, ws.id))) {
+    if ((await getPlayerID(ws.id))) {
         return {
             success: false,
             message: ERROR_MESSAGES.CONCURRENT_LOGIN,
@@ -355,15 +357,15 @@ async function handleRegisterPlayer(ws: any, redis: Redis, data: RegisterRequest
     }
 
     try {
-        let newPlayer = await Player.createPlayer(redis, username);
+        let newPlayer = await Player.createPlayer(username);
         if (newPlayer != null && newPlayer != undefined) {
             const playerID = newPlayer.getPlayerID();
 
             // Register the player with the connection
-            playerRegistered(redis, ws.id, playerID);
+            playerRegistered(ws.id, playerID);
 
             // Create a session for the player
-            const sessionID = await Session.createSession(redis, playerID, ws.id, req);
+            const sessionID = await Session.createSession(playerID, ws.id, req);
 
             return {
                 success: true,
@@ -392,7 +394,8 @@ async function handleRegisterPlayer(ws: any, redis: Redis, data: RegisterRequest
  * @param req HTTP request object
  * @returns Promise resolving to response object
  */
-async function handleReconnect(ws: any, redis: Redis, data: ReconnectRequest, req: any): Promise<object> {
+async function handleReconnect(ws: any, data: ReconnectRequest, req: any): Promise<object> {
+    const redis = DatabaseManager.getInstance().getRegularClient();
     try {
         console.log(`[Reconnect] Starting reconnection process for connection ID: ${ws.id}`);
         console.log(`[Reconnect] Session ID provided: ${data.sessionID.substring(0, 8)}...`);
@@ -400,7 +403,7 @@ async function handleReconnect(ws: any, redis: Redis, data: ReconnectRequest, re
         // Validate the session
         console.log(`[Reconnect] Validating session token`);
         const startValidation = Date.now();
-        const sessionData = await Session.validateSession(redis, data.sessionID, req);
+        const sessionData = await Session.validateSession(data.sessionID, req);
         const validationTime = Date.now() - startValidation;
         console.log(`[Reconnect] Session validation took ${validationTime}ms`);
 
@@ -421,7 +424,7 @@ async function handleReconnect(ws: any, redis: Redis, data: ReconnectRequest, re
         // Check if the current connection is still active
         console.log(`[Reconnect] Checking if current connection is still active`);
         const startConnectionCheck = Date.now();
-        const isActive = await Session.isConnectionActive(redis, currentConnectionID);
+        const isActive = await Session.isConnectionActive(currentConnectionID);
         const connectionCheckTime = Date.now() - startConnectionCheck;
         console.log(`[Reconnect] Connection check took ${connectionCheckTime}ms, result: ${isActive ? 'active' : 'inactive'}`);
 
@@ -435,12 +438,12 @@ async function handleReconnect(ws: any, redis: Redis, data: ReconnectRequest, re
 
         // Ensure the WebSocket object is properly stored in the activeWebsockets map
         console.log(`[Reconnect] Re-registering WebSocket object in activeWebsockets map`);
-        newConnection(redis, ws, ws.id);
+        newConnection(ws, ws.id);
 
         // Update the session with the new connection ID
         console.log(`[Reconnect] Updating session with new connection ID: ${ws.id}`);
         const startUpdate = Date.now();
-        const updated = await Session.updateSessionConnectionID(redis, data.sessionID, ws.id);
+        const updated = await Session.updateSessionConnectionID(data.sessionID, ws.id);
         const updateTime = Date.now() - startUpdate;
         console.log(`[Reconnect] Session update took ${updateTime}ms, result: ${updated ? 'success' : 'failed'}`);
 
@@ -455,7 +458,7 @@ async function handleReconnect(ws: any, redis: Redis, data: ReconnectRequest, re
         // Register the player with the connection
         console.log(`[Reconnect] Registering player ID ${sessionData.getPlayerID()} with connection ID ${ws.id}`);
         const startRegistration = Date.now();
-        playerRegistered(redis, ws.id, sessionData.getPlayerID());
+        playerRegistered(ws.id, sessionData.getPlayerID());
         const registrationTime = Date.now() - startRegistration;
         console.log(`[Reconnect] Player registration took ${registrationTime}ms`);
 
@@ -506,7 +509,21 @@ async function handleReconnect(ws: any, redis: Redis, data: ReconnectRequest, re
  * @param redis Redis client for regular operations
  * @param data Join lobby request data
  */
-async function handleJoinLobby(ws: any, redis: Redis, data: LobbyJoinRequest, playerID: string): Promise<object> {
+async function handleJoinLobby(ws: any, data: LobbyJoinRequest, playerID: string): Promise<object> {
+    const redis = DatabaseManager.getInstance().getRegularClient();
+    // The join lobby command essentially signals to the server that it is time to start sending update packets and to add the 
+    // Player as a subscriber to the game.
+
+    /**
+     * The following outcomes are possible:
+     * 1. Failure. This can happen if:
+     * - The lobby does not exist.
+     * - The lobby is full.
+     * - The player is already in a lobby.
+     * 2. Success. The player is added to the lobby and starts receiving game updates.
+     * 
+     */
+    
     try {
         const params = data.parameters || {};
         const lobbyID = params.lobbyID;
@@ -521,7 +538,7 @@ async function handleJoinLobby(ws: any, redis: Redis, data: LobbyJoinRequest, pl
         console.log(`Player ${playerID} attempting to join lobby ${lobbyID}`);
 
         // Fetch the lobby
-        const lobby = await Lobby.getLobby(redis, lobbyID);
+        const lobby = await Lobby.getLobby(lobbyID);
         if (!lobby) {
             return {
                 success: false,
@@ -530,7 +547,7 @@ async function handleJoinLobby(ws: any, redis: Redis, data: LobbyJoinRequest, pl
         }
 
         // Attempt to add the player to the lobby
-        const joinResult = await Player.addPlayer(redis, lobbyID, playerID);
+        const joinResult = await Player.addPlayer(lobbyID, playerID);
         if (!joinResult) {
             return {
                 success: false,
@@ -540,11 +557,18 @@ async function handleJoinLobby(ws: any, redis: Redis, data: LobbyJoinRequest, pl
 
         console.log(`Player ${playerID} joined lobby ${lobbyID} successfully`);
 
-        // Return success response with updated lobby info
+        //Now, after joining the lobby, we need to kickoff a process that checks whether the game is ready to start.
+        
+
+
+
+
+        // All we need to return the player is whether or not the joining was a success, so they can move on to the loading screen.
+        // They will receive another message when the game actually starts.
         return {
             success: true,
             message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
-            lobby: await lobby.lobbySummaryJson(redis)
+            lobby: await lobby.lobbySummaryJson()
         };
     } catch (error) {
         console.error('Error joining lobby:', error);

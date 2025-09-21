@@ -64,7 +64,6 @@ export type LobbySearchRequest = z.infer<typeof LobbySearchRequest>;
 //This request is used by clients to request the creation of a lobby.
 export const LobbyCreateRequest = AuthenticatedRequest.extend({
     parameters: z.object({
-        lobbyID: z.string().uuid({ version: "v4" }),
         lobbyData: z.object({
             playerNum: z.number().int().lte(GAME_CONSTANTS.MAX_PLAYER_CAP).gte(0),
             levelSize: z.number().int().lte(GAME_CONSTANTS.MAX_LEVELSIZE_CAP).gte(0),
