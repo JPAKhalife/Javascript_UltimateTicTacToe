@@ -57,6 +57,7 @@ export default class Lobby {
     private players: string[];
     private version?: number;
     private allowSpectators: boolean;
+    private lobbyName: string;
 
     // This constructor shall only be called internally. static methods must be called in order to create a lobby object
     private constructor(lobbyID: string, lobbyData: LobbyData, creatorID: string) {
@@ -72,6 +73,7 @@ export default class Lobby {
         this.players = [];
         this.version = lobbyData.version;
         this.allowSpectators = lobbyData.allowSpectators;
+        this.lobbyName = lobbyData.lobbyName;
     }
 
     /**
@@ -92,6 +94,7 @@ export default class Lobby {
         const lobby = new Lobby(
             lobbyID,
             {
+                lobbyName: lobbyHash.lobbyName,
                 playerNum: parseInt(lobbyHash.playerNum),
                 levelSize: parseInt(lobbyHash.levelSize),
                 gridSize: parseInt(lobbyHash.gridSize),
@@ -126,7 +129,7 @@ export default class Lobby {
             let lobbyID = uuidv4();
 
             // Check if lobby already exists
-            const lobbyKey = REDIS_KEYS.LOBBY(lobbyData.lobbyName);
+            const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
             const lobbyExists = await redisClient.exists(lobbyKey);
             if (lobbyExists) {
                 throw new Error(`Lobby ${lobbyData.lobbyName} already exists`);
@@ -158,18 +161,18 @@ export default class Lobby {
             multi.hset(lobbyKey, lobbyHash);
 
             // Store game state as a separate list
-            const gameStateKey = REDIS_KEYS.GAME_STATES(lobbyData.lobbyName); 
+            const gameStateKey = REDIS_KEYS.GAME_STATES(lobbyID); 
             if (gameState.length > 0) {
                 multi.del(gameStateKey); // Ensure the list is empty
                 multi.rpush(gameStateKey, ...gameState.map(val => val.toString()));
             }
 
             // Create empty players list
-            const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyData.lobbyName);
+            const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
             multi.del(playersKey);
 
             // Add to lobby list
-            multi.rpush('LobbyList', lobbyData.lobbyName); // Note: No REDIS_KEYS constant for LobbyList
+            multi.rpush('LobbyList', lobbyID); // Note: No REDIS_KEYS constant for LobbyList
 
             // Execute the transaction
             await multi.exec();
@@ -200,7 +203,7 @@ export default class Lobby {
             ]);
 
             if (!lobbyHashData || Object.keys(lobbyHashData).length === 0) {
-                throw new Error(`Failed to retrieve updated lobby data for ${lobbyID}`);
+                throw new Error(`Failed to retrieve updated lobby data for ${lobbyData.lobbyName}`);
             }
 
             // Convert game state strings to numbers
@@ -211,7 +214,7 @@ export default class Lobby {
             if (error instanceof Error) {
                 throw error;
             }
-            throw new Error(`Error creating lobby ${lobbyID}: ${error}`);
+            throw new Error(`Error creating lobby ${lobbyData.lobbyName}: ${error}`);
         }
     }
 
@@ -453,6 +456,7 @@ export default class Lobby {
         const redisClient = DatabaseManager.getInstance().getRegularClient();
         return {
             lobbyID: this.lobbyID,
+            lobbyName: this.lobbyName,
             playerNum: this.playerNum,
             playersJoined: this.playersJoined,
             levelSize: this.levelSize,

@@ -11,7 +11,6 @@ import Redis from "ioredis";
 import { disconnect } from "../Database/Connections";
 import Session from "../Database/Session";
 import Player from "../Database/Player";
-import { DatabaseManager } from "../Database/DatabaseManager";
 
 /**
  * @function handleSessionExpiry
@@ -30,7 +29,7 @@ export async function handleSessionExpiry(expiredKey: string) {
  * @function handleConnectionExpiry
  * @description This function handles cleanup related to when a connecion expires
  */
-export async function handleConnectionExpiry(expiredKey: string) {
+export async  function handleConnectionExpiry(expiredKey: string) {
     console.log("Disconnecting");
     disconnect(expiredKey);
 }

@@ -329,6 +329,7 @@ export default class MultiplayerScreen implements Menu {
             webManagerLobbies.map(lobby => {
                 this.lobbyList.push(new LobbyDotInfo(
                     lobby.lobbyID,
+                    lobby.lobbyName,
                     lobby.lobbyState,
                     lobby.playerNum,
                     lobby.gridSize,
@@ -380,7 +381,7 @@ export default class MultiplayerScreen implements Menu {
         
         // Display detailed lobby information
         this.sketch.textSize(TEXT_SIZES.SUBHEADER * canvasSize);
-        this.sketch.text("Name: " + selectedLobbyInfo.lobbyID, leftPanelX, topMargin + lineHeight * 2);
+        this.sketch.text("Name: " + selectedLobbyInfo.lobbyName, leftPanelX, topMargin + lineHeight * 2);
         
         this.sketch.textSize(TEXT_SIZES.NORMAL * canvasSize);
         this.sketch.text("Status: " + selectedLobbyInfo.state, leftPanelX, topMargin + lineHeight * 3.5);

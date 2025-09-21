@@ -298,17 +298,18 @@ async function handleCreateLobby(ws: any, data: LobbyCreateRequest, playerID: st
 
         // Cast lobbyData to a LobbyData object
         const lobbyDataObj: LobbyData = {
+            lobbyName: lobbyData.lobbyName,
             playerNum: lobbyData.playerNum,
             levelSize: lobbyData.levelSize,
             gridSize: lobbyData.gridSize,
             allowSpectators: lobbyData.allowSpectators,
         }
 
-        console.log(`Creating lobby ${params.lobbyID} with data:`, lobbyDataObj, playerID);
+        console.log(`Creating lobby ${params.lobbyData.lobbyName} with data:`, lobbyDataObj, playerID);
 
         // Call RedisManager to create the lobby
         let newLobby = await Lobby.createLobby(lobbyDataObj, playerID);
-        console.log(`Lobby ${params.lobbyID} created successfully`);
+        console.log(`Lobby ${params.lobbyData.lobbyName} created successfully`);
 
         // Send response back to client
         return {

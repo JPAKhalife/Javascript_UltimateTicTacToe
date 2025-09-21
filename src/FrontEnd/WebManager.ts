@@ -14,6 +14,7 @@ const { v4: uuidv4 } = require('uuid');
  */
 export interface LobbyInfo {
     lobbyID: string;
+    lobbyName: string;
     playerNum: number;
     levelSize: number;
     gridSize: number;
@@ -336,7 +337,7 @@ export default class WebManager {
      * @returns Promise that resolves with the result of the lobby creation
      */
     public async createLobby(
-        lobbyID: string,
+        lobbyName: string,
         playerNum: number,
         levelSize: number,
         gridSize: number,
@@ -349,14 +350,13 @@ export default class WebManager {
                 type: 'create_lobby',
                 sessionID: this.getSessionId(),
                 parameters: {
-                    lobbyID,
                     lobbyData: {
+                        lobbyName: lobbyName,
                         playerNum,
                         levelSize,
                         gridSize,
                         allowSpectators
-                    },
-                    playerID: playerID
+                    }
                 }
             };
 
@@ -424,7 +424,7 @@ export default class WebManager {
      * @param joinedPlayers: The number of players who have joined the lobby (spectators included)
      * @returns Promise<LobbyInfo[]> a promise that resolves to an array of lobbies and their info
      */
-    public async getLobbyList(parameters: {lobbyID?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number, lobbyState?: string, creator?: string}): Promise<LobbyInfo[]> {
+    public async getLobbyList(parameters: {lobbyID?: string, lobbyName?: string, playerNum?: number, levelSize?: number, gridSize?: number, joinedPlayers?: number, maxListLength?: number, lobbyState?: string, creator?: string}): Promise<LobbyInfo[]> {
         try {
             let playerID = localStorage.getItem('playerID');
             // Create the message payload
@@ -433,6 +433,7 @@ export default class WebManager {
                 sessionID: this.getSessionId(),
                 parameters: {
                     lobbyID: parameters.lobbyID,
+                    lobbyName: parameters.lobbyName,
                     playerNum: parameters.playerNum,
                     levelSize: parameters.levelSize,
                     gridSize: parameters.gridSize,
@@ -450,6 +451,7 @@ export default class WebManager {
             if (response && response.success && Array.isArray(response.lobbies)) {
                 return response.lobbies.map(lobby => ({
                     lobbyID: lobby.lobbyID,
+                    lobbyName: lobby.lobbyName,
                     playerNum: lobby.playerNum,
                     levelSize: lobby.levelSize,
                     gridSize: lobby.gridSize,

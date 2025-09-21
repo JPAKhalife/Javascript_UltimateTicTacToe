@@ -65,12 +65,12 @@ export type LobbySearchRequest = z.infer<typeof LobbySearchRequest>;
 export const LobbyCreateRequest = AuthenticatedRequest.extend({
     parameters: z.object({
         lobbyData: z.object({
+            lobbyName: z.string().min(VALIDATION.MIN_USERNAME_LENGTH).max(VALIDATION.MAX_USERNAME_LENGTH),
             playerNum: z.number().int().lte(GAME_CONSTANTS.MAX_PLAYER_CAP).gte(0),
             levelSize: z.number().int().lte(GAME_CONSTANTS.MAX_LEVELSIZE_CAP).gte(0),
             gridSize: z.number().int().lte(GAME_CONSTANTS.MAX_GRIDSIZE_CAP).gte(0),
             allowSpectators: z.boolean()
         }),
-        playerID: z.string().uuid({ version: "v4" }).optional() // Kept for backward compatibility
     })
 });
 export type LobbyCreateRequest = z.infer<typeof LobbyCreateRequest>;

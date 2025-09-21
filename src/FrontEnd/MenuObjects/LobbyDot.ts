@@ -24,6 +24,7 @@ const SELECTION_TRANSITION_TIME = FRAMERATE * 3; // 3 seconds for selection tran
  */
 export class LobbyInfo {
     public lobbyID: string;
+    public lobbyName: string;
     public state: string;
     public playerNum: number;
     public joinedPlayers: number;
@@ -33,6 +34,7 @@ export class LobbyInfo {
 
     constructor(
         lobbyID: string,
+        lobbyName: string,
         state: string,
         playerNum: number,
         gridsize: number,
@@ -40,6 +42,7 @@ export class LobbyInfo {
         joinedPlayers: number,
         allowSpectators: boolean) {
         this.lobbyID = lobbyID;
+        this.lobbyName = lobbyName;
         this.state = state;
         this.playerNum = playerNum;
         this.gridsize = gridsize;
