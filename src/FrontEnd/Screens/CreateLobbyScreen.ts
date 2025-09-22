@@ -135,12 +135,26 @@ export default class CreateLobbyScreen implements Menu {
             if (this.selectedButton.getText() === 'Return') {
                 GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
             } else if (this.selectedButton.getText() == 'Create') {
-                const action = () => {};
-                const condition = () => {
-                    return true;   
-                }
+                const lobbyName = this.lobbyNameField.getText();
+                const playerID = localStorage.getItem("playerID") || "defaultPlayerID";
+                
+                const createLobbyPromise = this.webManager.createLobby(
+                    lobbyName,
+                    this.playerNumSlider.getValue(),
+                    this.levelSizeSlider.getValue(),
+                    this.slotNumSlider.getValue(),
+                    playerID,
+                    this.spectatorToggle.isConfirmed()
+                ).then(success => {
+                    if (success) {
+                        localStorage.setItem('currentLobby', lobbyName);
+                        localStorage.setItem('playerID', playerID);
+                        return true;
+                    }
+                    throw new Error("Failed to create lobby");
+                });
 
-                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.MULTIPLAYER_SCREEN, "Creating Lobby", action, condition);
+                GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.MULTIPLAYER_SCREEN, "Creating Lobby", createLobbyPromise);
             }
             this.transitionComplete = true;
         }
@@ -243,53 +257,12 @@ export default class CreateLobbyScreen implements Menu {
             this.lobbyNameField.setError("The lobby name cannot be empty.");
             this.showLoadingIcon = false;
             this.keylistener.activate();
-            return
-        }
-
-        let playerID = localStorage.getItem("playerID") || "defaultPlayerID";
-
-        // Create the lobby
-        try { 
-        this.webManager.createLobby(
-            lobbyName,
-            this.playerNumSlider.getValue(),
-            this.levelSizeSlider.getValue(),
-            this.slotNumSlider.getValue(),
-            playerID,
-            this.spectatorToggle.isConfirmed()
-        ).then(success => {
-            console.log(`Lobby creation ${success ? 'successful' : 'failed'}: ${lobbyName}`);
-            if (success) {
-                // Store the lobby information for later use
-                localStorage.setItem('currentLobby', lobbyName);
-                localStorage.setItem('playerID', playerID);
-                this.selectedButton.setConfirmed(true);
-                this.showLoadingIcon = false;
-                this.transition_out_active = true;
-            } else {
-                console.error(`Lobby creation failed: ${lobbyName}`);
-                this.lobbyNameField.shake();
-                this.lobbyNameField.setError("Lobby creation failed: API error");
-                this.showLoadingIcon = false;
-                this.keylistener.activate();
-                return;
-            }
-        }).catch(error => {
-            console.error('Error creating lobby:', error);
-            this.lobbyNameField.shake();
-            this.lobbyNameField.setError(error);
-            this.showLoadingIcon = false;
-            this.keylistener.activate();
-            return;
-        });
-        } catch(error) {
-            console.error('Error creating lobby:', error as string);
-            this.lobbyNameField.shake();
-            this.lobbyNameField.setError(error as string);
-            this.showLoadingIcon = false;
-            this.keylistener.activate();
             return;
         }
+
+        // Start the transition out, which will handle creating the lobby
+        this.selectedButton.setConfirmed(true);
+        this.transition_out_active = true;
     }
     
 }

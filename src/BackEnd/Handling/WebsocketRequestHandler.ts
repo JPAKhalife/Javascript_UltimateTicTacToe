@@ -278,6 +278,13 @@ async function handleCreateLobby(ws: any, data: LobbyCreateRequest, playerID: st
         };
     } catch (error) {
         console.error('Error creating lobby:', error);
+        // Check if this is the lobby name exists error
+        if (error instanceof Error && error.message === ERROR_MESSAGES.LOBBY_NAME_EXISTS) {
+            return {
+                success: false,
+                error: ERROR_MESSAGES.LOBBY_NAME_EXISTS
+            };
+        }
         return {
             success: false,
             error: ERROR_MESSAGES.INTERNAL_ERROR

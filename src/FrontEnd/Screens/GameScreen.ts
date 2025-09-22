@@ -23,14 +23,14 @@ export default class GameScreen implements Menu {
     private board: TicTacBoard;
     private gameType: GameType;
 
-    constructor(sketch: p5, gameType = GameType.LOCAL, gridSize = 3, gridLevels = 2) {
+    constructor(sketch: p5, gameType = GameType.LOCAL, gridSize = 3, gridLevels = 2, lobbyId?: string) {
         this.keylistener = new KeyListener(sketch);
         this.sketch = sketch;
         this.gameType = gameType;
-
+        console.log("[GameScreen] Initializing game with mode: ", gameType === GameType.LOCAL ? "LOCAL" : "ONLINE");
         // Create a game given the parameters passed to the function
-        this.game = new GameManager(gameType, gridSize, gridLevels);
-        this.board = new TicTacBoard(this.sketch, this.game, 0.5,0.5,1);
+        this.game = new GameManager(gameType, gridSize, gridLevels, lobbyId);
+        this.board = new TicTacBoard(this.sketch, this.game, 0.5, 0.5, 1);
     }
 
     public draw(): void {
@@ -80,7 +80,7 @@ export default class GameScreen implements Menu {
 
         // Draw mode
         this.sketch.textSize(canvasSize * 0.04);
-        this.sketch.text("Local Mode", canvasSize / 2, canvasSize / 20 * 2);
+        this.sketch.text((this.gameType === GameType.LOCAL ? "Local" : "Online") + " Mode", canvasSize / 2, canvasSize / 20 * 2);
 
         // Draw current player info
         this.sketch.textSize(canvasSize * 0.03);

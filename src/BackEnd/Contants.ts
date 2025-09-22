@@ -65,6 +65,7 @@ export const REDIS_KEYS = {
     LOBBY_SPECTATORS: (lobbyID: string) => `lobbyspectators:${lobbyID}`,
     USERNAMES: 'usernames',
     GAME_STATES: (lobbyID: string) => `gamestate:${lobbyID}`,
+    LOBBY_NAMES: 'lobby_names', // Set of all active lobby names
 } as const;
 
 // ============================================================================
@@ -99,6 +100,7 @@ export const ERROR_MESSAGES = {
     LOBBY_NOT_FOUND: 'Lobby not found.',
     LOBBY_FULL: 'Lobby is full. Cannot join.',
     LOBBY_CLOSED: 'Lobby is closed. Cannot join.',
+    LOBBY_NAME_EXISTS: 'A lobby with this name already exists.',
     NOT_IN_LOBBY: 'You are not part of this lobby.',
     ALREADY_IN_LOBBY: 'You are already in a lobby.',
     LOBBY_CREATION_FAILED: 'Failed to create lobby. Please try again.',

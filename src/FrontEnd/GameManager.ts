@@ -40,6 +40,8 @@ export default class GameManager {
         this.isWon = false;
         this.playerNumber = DEFAULT_PLAYER_NUMBER;
 
+        console.log("[GameManager] Initializing game with mode: ", gameType === GameType.LOCAL ? "LOCAL" : "ONLINE");
+
         // Set up online game if applicable
         if (gameType === GameType.ONLINE && lobbyId) {
             this.lobbyId = lobbyId;

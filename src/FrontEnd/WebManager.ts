@@ -29,7 +29,8 @@ export interface LobbyInfo {
  */
 export interface GameUpdate {
     type: 'game_update';
-    gameState: number[];    // The current game state array
+    gameState: string;       // The current state of the game
+    board: number[];    // The current game state array
     turn: number;          // Current turn
     lastMove?: {          // Optional info about the last move
         player: string;
@@ -39,6 +40,7 @@ export interface GameUpdate {
         }
     };
 }
+
 
 export default class WebManager {
     private static instance: WebManager | null = null;
@@ -146,26 +148,6 @@ export default class WebManager {
         return action + "_" + now.toISOString() + "_" + this.messageIDCounter++;
     }
     
-
-    /**
-     * @method splitMessageID
-     * @description This method is used to split a message ID into its components
-     * @param messageID 
-     * @returns the array of messageID components (action, timestamp, messageNum)
-     */
-    private splitMessageID(messageID: string): { action: string; timestamp: Date; messageNum: number } | null {
-        const parts = messageID.split('_');
-        if (parts.length < 3) {
-            return null;
-        }
-        const action = parts[0];
-        const timestamp = new Date(parts[1]);
-        const messageNum = parseInt(parts[2], 10);
-        if (isNaN(messageNum)) {
-            return null;
-        }
-        return { action, timestamp, messageNum }
-}
 
     /**
      * @method getInstance
@@ -597,9 +579,9 @@ export default class WebManager {
      * @method joinLobby
      * @description This method is used to join a lobby on the server
      * @param lobbyID the ID of the lobby to join
-     * @returns Promise<boolean> true if the join was successful, false otherwise
+     * @returns Promise<LobbyInfo | null> the lobby info if join was successful, null otherwise
      */
-    public async joinLobby(lobbyID: string): Promise<boolean> {
+    public async joinLobby(lobbyID: string): Promise<LobbyInfo | null> {
         try {
             const message = {
                 type: 'join_lobby',
@@ -609,15 +591,28 @@ export default class WebManager {
                 }
             };
 
-            const response = await this.sendRequest<{ success: boolean }>(message, 'join_lobby');
-            if (response && response.success) {
+            const response = await this.sendRequest<{ success: boolean, lobby: any }>(message, 'join_lobby');
+            if (response && response.success && response.lobby) {
                 //If the response is a success, This means we can begin accepting game updates
                 this.registerTypeCallback('game_update', (update) => this.handleGameUpdate(update as GameUpdate));
+
+                // Return the lobby info as a LobbyInfo object
+                return {
+                    lobbyID: response.lobby.lobbyID,
+                    lobbyName: response.lobby.lobbyName,
+                    playerNum: response.lobby.playerNum,
+                    levelSize: response.lobby.levelSize,
+                    gridSize: response.lobby.gridSize,
+                    playersJoined: response.lobby.playersJoined,
+                    creator: response.lobby.creator,
+                    lobbyState: response.lobby.lobbyState,
+                    allowSpectators: response.lobby.allowSpectators
+                };
             }
-            return response && response.success === true;
+            return null;
         } catch (error) {
             console.error('Error joining lobby:', error);
-            return false;
+            return null;
         }
     }
 
@@ -665,6 +660,7 @@ export default class WebManager {
     private handleGameUpdate(update: GameUpdate): void {
         console.log('[Game Update] Received game update:', update);
         // Notify all registered listeners
+        console.log("[Game Update] Notifying", this.gameListeners.length, "listeners");
         this.gameListeners.forEach(listener => {
             try {
                 listener(update);
@@ -672,4 +668,5 @@ export default class WebManager {
                 console.error('[Game Update] Error in listener:', error);
             }
         });
+    }
 }

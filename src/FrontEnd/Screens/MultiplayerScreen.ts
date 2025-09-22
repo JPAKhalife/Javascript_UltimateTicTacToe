@@ -16,8 +16,9 @@ import GuiManager from "../GuiManager";
 import LobbyDot, { LobbyInfo } from "../MenuObjects/LobbyDot";
 import { FRAMERATE } from "../Constants";
 import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
-import WebManager from '../WebManager'; 
+import WebManager, { GameUpdate } from '../WebManager'; 
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
+import { GameType } from "../GameManager";
 
 const LOBBY_REFRESH_TIME = 7 * FRAMERATE; // 3 seconds
 const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
@@ -462,18 +463,44 @@ export default class MultiplayerScreen implements Menu {
      * @method joinLobby
      * @description join the lobby
      */
-    private joinLobby(selectedLobbyDot: LobbyDot): void {
-        // Success case: Trigger the selection transition with a callback for when it completes
-        selectedLobbyDot.startSelectionTransition(() => {
-            
-            
-            const proceedCondition = () => {
-                
-            }
+    private async joinLobby(selectedLobbyDot: LobbyDot): Promise<void> {
+        const lobbyID = selectedLobbyDot.getLobbyInfo().lobbyID;
 
+        const webManager = WebManager.getInstance();
+        let lobbyInfo = await webManager.joinLobby(lobbyID);
+        if (lobbyInfo) {
+            selectedLobbyDot.startSelectionTransition(async () => {
+                // Create a promise factory that creates a new promise each time it's called
+                const gameStartPromise = (): Promise<boolean> => {
+                    return new Promise<boolean>((resolve) => {
+                        const listener = (update: GameUpdate) => {
+                            if (update.gameState === "running") {
+                                webManager.removeGameListener(listener);
+                                resolve(true);
+                            }
+                        };
 
-            GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.GAME_SCREEN);
-        });
+                        webManager.addGameListener(listener);
+                    });
+                };
 
+                // Pass lobby info and promise factory to GameScreen through LoadingScreen
+                GuiManager.changeScreen(
+                    Screens.LOADING_SCREEN,
+                    this.sketch,
+                    Screens.GAME_SCREEN,
+                    "Waiting for game to start...",
+                    gameStartPromise(), // Execute the promise factory to get a new promise
+                    GameType.ONLINE,
+                    lobbyInfo.gridSize,
+                    lobbyInfo.levelSize,
+                    lobbyInfo.lobbyID,
+                );
+            });
+        } else {
+            // If joining failed, re-enable input and hide loading icon
+            this.keylistener.activate();
+            this.showLoadingIcon = false;
+        }
     }
 }

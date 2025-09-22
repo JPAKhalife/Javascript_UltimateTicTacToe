@@ -39,7 +39,7 @@ export default class LoadingScreen implements Menu {
     private titleText: string;
     private args: any[];
 
-    constructor(sketch: p5, nextScreen?: Screens, titleText?: string, loadingAction?: () => void, proceedCondition?: () => boolean, ...args: any[]) {
+    constructor(sketch: p5, nextScreen?: Screens, titleText?: string, waitCondition?: Promise<any> | (() => void), proceedCondition?: () => boolean, ...args: any[]) {
         this.sketch = sketch;
         this.args = args;
         this.keylistener = new KeyListener(this.sketch);
@@ -66,22 +66,34 @@ export default class LoadingScreen implements Menu {
         this.keylistener.deactivate();
         this.startTransitionIn();
 
-        if (loadingAction) {
-            loadingAction();
-        }
+        // Initialize proceed as true if no wait condition
+        this.proceed = !waitCondition && !proceedCondition;
 
-        this.proceed = true;
-        // If proceedCondition is provided, use it to determine when to proceed
-        if (proceedCondition) {
-            this.proceed = false;
-            const checkProceed = () => {
-                if (proceedCondition()) {
+        // Handle Promise-based wait condition
+        if (waitCondition instanceof Promise) {
+            waitCondition
+                .then(() => {
                     this.proceed = true;
-                } else {
-                    setTimeout(checkProceed, 100); // Check again after 100ms
-                }
-            };
-            checkProceed();
+                })
+                .catch((error) => {
+                    console.error('Loading screen wait condition failed:', error);
+                    this.proceed = true;
+                });
+        }
+        // Handle function-based wait condition with polling
+        else if (typeof waitCondition === 'function') {
+            waitCondition();
+            if (proceedCondition) {
+                this.proceed = false;
+                const checkProceed = () => {
+                    if (proceedCondition()) {
+                        this.proceed = true;
+                    } else {
+                        setTimeout(checkProceed, 100);
+                    }
+                };
+                checkProceed();
+            }
         }
     }
 

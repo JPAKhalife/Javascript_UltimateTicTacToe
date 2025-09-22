@@ -8,7 +8,7 @@
 
 import Redis from "ioredis";
 import Player from "./Player";
-import { REDIS_KEYS } from "../Contants";
+import { REDIS_KEYS, ERROR_MESSAGES } from "../Contants";
 import { v4 as uuidv4 } from "uuid";
 import { DatabaseManager } from "./DatabaseManager";
 
@@ -128,6 +128,12 @@ export default class Lobby {
             //Generate a unique lobby ID
             let lobbyID = uuidv4();
 
+            // Check if lobby name already exists in the lobby_names set
+            const lobbyNameExists = await redisClient.sismember(REDIS_KEYS.LOBBY_NAMES, lobbyData.lobbyName.toLowerCase());
+            if (lobbyNameExists) {
+                throw new Error(ERROR_MESSAGES.LOBBY_NAME_EXISTS);
+            }
+
             // Check if lobby already exists
             const lobbyKey = REDIS_KEYS.LOBBY(lobbyID);
             const lobbyExists = await redisClient.exists(lobbyKey);
@@ -171,11 +177,15 @@ export default class Lobby {
             const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
             multi.del(playersKey);
 
-            // Add to lobby list
+            // Add to lobby list and lobby names set
             multi.rpush('LobbyList', lobbyID); // Note: No REDIS_KEYS constant for LobbyList
+            multi.sadd(REDIS_KEYS.LOBBY_NAMES, lobbyData.lobbyName.toLowerCase());
 
             // Execute the transaction
-            await multi.exec();
+            const execResult = await multi.exec();
+            if (!execResult) {
+                throw new Error('Failed to create lobby - transaction failed');
+            }
 
             // Now add the player to the lobby using Player.addPlayer
             try {
@@ -234,9 +244,9 @@ export default class Lobby {
             const gameStateKey = `gamestate:${lobbyID}`; // Note: No REDIS_KEYS constant for gamestate
             const playersKey = REDIS_KEYS.LOBBY_PLAYERS(lobbyID);
 
-            // Check if lobby exists
-            const lobbyExists = await redisClient.exists(lobbyKey);
-            if (!lobbyExists) {
+            // Check if lobby exists and get its name
+            const lobbyData = await redisClient.hgetall(lobbyKey);
+            if (!lobbyData || Object.keys(lobbyData).length === 0) {
                 throw new Error(`Lobby ${lobbyID} does not exist`);
             }
 
@@ -252,8 +262,12 @@ export default class Lobby {
             multi.del(gameStateKey);
             multi.del(playersKey);
             multi.lrem('LobbyList', 0, lobbyID); // Note: No REDIS_KEYS constant for LobbyList
+            multi.srem(REDIS_KEYS.LOBBY_NAMES, lobbyData.lobbyName.toLowerCase()); // Remove from lobby names set
 
-            await multi.exec();
+            const execResult = await multi.exec();
+            if (!execResult) {
+                throw new Error('Failed to remove lobby - transaction failed');
+            }
 
             return true;
         } catch (error) {
