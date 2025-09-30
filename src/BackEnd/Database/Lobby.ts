@@ -805,4 +805,222 @@ export default class Lobby {
     public getLobbyName(): string {
         return this.lobbyName;
     }
+
+    /**
+     * @method setPlayerNum
+     * @description Setter for playerNum that updates Redis
+     */
+    public async setPlayerNum(newPlayerNum: number): Promise<void> {
+        await this.updateLobbyField('playerNum', newPlayerNum.toString());
+        this.playerNum = newPlayerNum;
+    }
+
+    /**
+     * @method setPlayersJoined
+     * @description Setter for playersJoined that updates Redis
+     */
+    public async setPlayersJoined(newPlayersJoined: number): Promise<void> {
+        await this.updateLobbyField('playersJoined', newPlayersJoined.toString());
+        this.playersJoined = newPlayersJoined;
+    }
+
+    /**
+     * @method setLevelSize
+     * @description Setter for levelSize that updates Redis
+     */
+    public async setLevelSize(newLevelSize: number): Promise<void> {
+        await this.updateLobbyField('levelSize', newLevelSize.toString());
+        this.levelSize = newLevelSize;
+    }
+
+    /**
+     * @method setGridSize
+     * @description Setter for gridSize that updates Redis
+     */
+    public async setGridSize(newGridSize: number): Promise<void> {
+        await this.updateLobbyField('gridSize', newGridSize.toString());
+        this.gridSize = newGridSize;
+    }
+
+    /**
+     * @method setLobbyState
+     * @description Setter for lobbyState that updates Redis
+     */
+    public async setLobbyState(newLobbyState: string): Promise<void> {
+        await this.updateLobbyField('lobbyState', newLobbyState);
+        this.lobbyState = newLobbyState;
+    }
+
+    /**
+     * @method setAllowSpectators
+     * @description Setter for allowSpectators that updates Redis
+     */
+    public async setAllowSpectators(newAllowSpectators: boolean): Promise<void> {
+        await this.updateLobbyField('allowSpectators', newAllowSpectators.toString());
+        this.allowSpectators = newAllowSpectators;
+    }
+
+    /**
+     * @method setLobbyName
+     * @description Setter for lobbyName that updates Redis and lobby names set
+     */
+    public async setLobbyName(newLobbyName: string): Promise<void> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
+        const MAX_RETRIES = 3;
+        let retries = 0;
+
+        while (retries < MAX_RETRIES) {
+            try {
+                const lobbyKey = REDIS_KEYS.LOBBY(this.lobbyID);
+
+                // Check if new lobby name already exists
+                const lobbyNameExists = await redisClient.sismember(REDIS_KEYS.LOBBY_NAMES, newLobbyName.toLowerCase());
+                if (lobbyNameExists && newLobbyName.toLowerCase() !== this.lobbyName.toLowerCase()) {
+                    throw new Error(ERROR_MESSAGES.LOBBY_NAME_EXISTS);
+                }
+
+                // Watch the lobby for changes
+                await redisClient.watch(lobbyKey);
+
+                // Get current version
+                const currentVersion = await redisClient.hget(lobbyKey, 'version');
+                if (!currentVersion) {
+                    await redisClient.unwatch();
+                    throw new Error(`Lobby ${this.lobbyID} no longer exists`);
+                }
+
+                if (this.version !== undefined && parseInt(currentVersion) !== this.version) {
+                    await redisClient.unwatch();
+                    throw new Error('Concurrent modification detected');
+                }
+
+                const newVersion = parseInt(currentVersion) + 1;
+
+                // Start transaction
+                const multi = redisClient.multi();
+
+                // Update lobby name in hash
+                multi.hset(lobbyKey, {
+                    lobbyName: newLobbyName,
+                    version: newVersion.toString()
+                });
+
+                // Update lobby names set
+                multi.srem(REDIS_KEYS.LOBBY_NAMES, this.lobbyName.toLowerCase());
+                multi.sadd(REDIS_KEYS.LOBBY_NAMES, newLobbyName.toLowerCase());
+
+                const results = await multi.exec();
+                if (results === null) {
+                    if (retries < MAX_RETRIES - 1) {
+                        retries++;
+                        continue;
+                    }
+                    throw new Error('Concurrent modification detected, retry limit reached');
+                }
+
+                // Update local state
+                this.lobbyName = newLobbyName;
+                this.version = newVersion;
+                return;
+            } catch (error) {
+                if (error instanceof Error && error.message.includes('Concurrent modification')) {
+                    retries++;
+                    continue;
+                }
+                throw error;
+            }
+        }
+    }
+
+    /**
+     * @method setGameState
+     * @description Setter for gameState that updates Redis
+     */
+    public async setGameState(newGameState: number[]): Promise<void> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
+        try {
+            const gameStateKey = REDIS_KEYS.GAME_STATES(this.lobbyID);
+
+            // Clear existing game state and set new one
+            const multi = redisClient.multi();
+            multi.del(gameStateKey);
+            if (newGameState.length > 0) {
+                multi.rpush(gameStateKey, ...newGameState.map(val => val.toString()));
+            }
+
+            const results = await multi.exec();
+            if (!results) {
+                throw new Error('Failed to update game state');
+            }
+
+            // Update local state
+            this.gameState = [...newGameState];
+        } catch (error) {
+            if (error instanceof Error) {
+                throw error;
+            }
+            throw new Error(`Error updating game state for lobby ${this.lobbyID}: ${error}`);
+        }
+    }
+
+    /**
+     * @method updateLobbyField
+     * @description Helper method to update a single field in the lobby hash with optimistic locking
+     * @param field The field name to update
+     * @param value The new value for the field
+     */
+    private async updateLobbyField(field: string, value: string): Promise<void> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
+        const MAX_RETRIES = 3;
+        let retries = 0;
+
+        while (retries < MAX_RETRIES) {
+            try {
+                const lobbyKey = REDIS_KEYS.LOBBY(this.lobbyID);
+
+                // Watch the lobby for changes
+                await redisClient.watch(lobbyKey);
+
+                // Get current version
+                const currentVersion = await redisClient.hget(lobbyKey, 'version');
+                if (!currentVersion) {
+                    await redisClient.unwatch();
+                    throw new Error(`Lobby ${this.lobbyID} no longer exists`);
+                }
+
+                if (this.version !== undefined && parseInt(currentVersion) !== this.version) {
+                    await redisClient.unwatch();
+                    throw new Error('Concurrent modification detected');
+                }
+
+                const newVersion = parseInt(currentVersion) + 1;
+
+                // Start transaction
+                const multi = redisClient.multi();
+                multi.hset(lobbyKey, {
+                    [field]: value,
+                    version: newVersion.toString()
+                });
+
+                const results = await multi.exec();
+                if (results === null) {
+                    if (retries < MAX_RETRIES - 1) {
+                        retries++;
+                        continue;
+                    }
+                    throw new Error('Concurrent modification detected, retry limit reached');
+                }
+
+                // Update local version
+                this.version = newVersion;
+                return;
+            } catch (error) {
+                if (error instanceof Error && error.message.includes('Concurrent modification')) {
+                    retries++;
+                    continue;
+                }
+                throw error;
+            }
+        }
+    }
 }
