@@ -118,7 +118,7 @@ export default class Lobby {
      * @description This method is meant to create a lobby for a game and add the creator as the first player.
      * First creates the lobby, then uses Player.addPlayer to add the creator to the lobby.
      * @param lobbyData The data to be stored in the lobby
-     * @param playerData The data of the player creating the lobby
+     * @param playerID The data of the player creating the lobby
      * @returns A Lobby object representing the created lobby
      * @throws Error if lobby creation fails or player addition fails
      */
@@ -148,7 +148,7 @@ export default class Lobby {
 
             // Create lobby hash fields
             const lobbyHash = {
-                lobbyID: lobbyID,   
+                lobbyID: lobbyID,
                 lobbyName: lobbyData.lobbyName,
                 playerNum: lobbyData.playerNum.toString(),
                 playersJoined: 1, // Start with 0 players, will be updated by Player.addPlayer
@@ -167,7 +167,7 @@ export default class Lobby {
             multi.hset(lobbyKey, lobbyHash);
 
             // Store game state as a separate list
-            const gameStateKey = REDIS_KEYS.GAME_STATES(lobbyID); 
+            const gameStateKey = REDIS_KEYS.GAME_STATES(lobbyID);
             if (gameState.length > 0) {
                 multi.del(gameStateKey); // Ensure the list is empty
                 multi.rpush(gameStateKey, ...gameState.map(val => val.toString()));
@@ -707,5 +707,102 @@ export default class Lobby {
                 throw new Error(`There was an error calling getFilteredLobbies: ${error}`);
             }
         }
+    }
+
+    /**
+        * @method getGameState
+        * @description Gets the current game state array for the lobby
+        * @returns The game state array
+     */
+    public getGameState(): number[] {
+        return this.gameState;
+    }
+
+    /**
+     * @method getPlayerNum
+     * @description Getter for playerNum
+     */
+    public getPlayerNum(): number {
+        return this.playerNum;
+    }
+
+    /**
+     * @method getPlayersJoined
+     * @description Getter for playersJoined
+     */
+    public getPlayersJoined(): number {
+        return this.playersJoined;
+    }
+
+    /**
+     * @method getLevelSize
+     * @description Getter for levelSize
+     */
+    public getLevelSize(): number {
+        return this.levelSize;
+    }
+
+    /**
+     * @method getGridSize
+     * @description Getter for gridSize
+     */
+    public getGridSize(): number {
+        return this.gridSize;
+    }
+
+    /**
+     * @method getLobbyID
+     * @description Getter for lobbyID
+     */
+    public getLobbyID(): string {
+        return this.lobbyID;
+    }
+
+    /**
+     * @method getCreator
+     * @description Getter for creator
+     */
+    public getCreator(): string {
+        return this.creator;
+    }
+
+    /**
+     * @method getLobbyState
+     * @description Getter for lobbyState
+     */
+    public getLobbyState(): string {
+        return this.lobbyState;
+    }
+
+    /**
+     * @method getPlayers
+     * @description Getter for players
+     */
+    public getPlayers(): string[] {
+        return this.players;
+    }
+
+    /**
+     * @method getVersion
+     * @description Getter for version
+     */
+    public getVersion(): number | undefined {
+        return this.version;
+    }
+
+    /**
+     * @method getAllowSpectators
+     * @description Getter for allowSpectators
+     */
+    public getAllowSpectators(): boolean {
+        return this.allowSpectators;
+    }
+
+    /**
+     * @method getLobbyName
+     * @description Getter for lobbyName
+     */
+    public getLobbyName(): string {
+        return this.lobbyName;
     }
 }
