@@ -11,7 +11,7 @@ import * as z from "zod";
 import { GAME_CONSTANTS, VALIDATION } from "../Contants";
 
 //These are the message types that the player can send.
-export enum MESSAGE_TYPES {
+export enum FROM_CLIENT_MESSAGE_TYPES {
     REGISTER_PLAYER = "register_player",
     SEARCH_LOBBY = "search_lobby",
     CREATE_LOBBY = "create_lobby",
@@ -19,7 +19,6 @@ export enum MESSAGE_TYPES {
     JOIN_LOBBY = "join_lobby",
     LEAVE_LOBBY = "leave_lobby",
     MAKE_MOVE = "make_move",
-    GAME_UPDATE = "game_update",
 }   
 
 //This is the base request that contains information all requests should have
@@ -102,17 +101,6 @@ export const MakeMoveRequest = AuthenticatedRequest.extend({
 });
 export type MakeMoveRequest = z.infer<typeof MakeMoveRequest>;
 
-//This is the game update message sent from server to client
-export const GameUpdateMessage = z.object({
-    type: z.literal('game_update'),
-    gameState: z.array(z.number()),
-    turn: z.number().int().gte(1),
-    lastMove: z.object({
-        player: z.string(),
-        position: z.object({
-            col: z.number().int().gte(0),
-            row: z.number().int().gte(0)
-        })
-    }).optional()
-});
-export type GameUpdateMessage = z.infer<typeof GameUpdateMessage>;
+
+
+

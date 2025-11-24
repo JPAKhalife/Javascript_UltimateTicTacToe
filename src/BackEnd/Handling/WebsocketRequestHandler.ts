@@ -22,13 +22,13 @@ import { URL } from 'url';
 import {
     LobbyCreateRequest,
     LobbySearchRequest,
-    MESSAGE_TYPES,
+    FROM_CLIENT_MESSAGE_TYPES,
     RegisterRequest,
     ReconnectRequest,
     BaseRequest,
     AuthenticatedRequest,
     LobbyJoinRequest,
-} from '../Contracts/MessageSchema';
+} from '../Contracts/MessageToServerSchema';
 import Session from '../Database/Session';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../Contants';
 const { v4: uuidv4 } = require('uuid');
@@ -41,7 +41,7 @@ type MessageHandler = (data: any, sessionData?: any) => Promise<object | ReturnM
 
 // Type definition for message handlers map
 type MessageHandlers = {
-    [K in MESSAGE_TYPES]: MessageHandler;
+    [K in FROM_CLIENT_MESSAGE_TYPES]: MessageHandler;
 };
 
 //This map is for connectionID to ws object.
@@ -71,32 +71,29 @@ export async function handleWebsocketRequest(ws: any, req: any) {
 
     // Message handler map
     const messageHandlers: MessageHandlers = {
-        [MESSAGE_TYPES.RECONNECT]: async (data: any) => {
+        [FROM_CLIENT_MESSAGE_TYPES.RECONNECT]: async (data: any) => {
             const validation = ReconnectRequest.safeParse(data);
             return validation.success ? handleReconnect(ws, validation.data, req) : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
         },
-        [MESSAGE_TYPES.REGISTER_PLAYER]: async (data: any) => {
+        [FROM_CLIENT_MESSAGE_TYPES.REGISTER_PLAYER]: async (data: any) => {
             const validation = RegisterRequest.safeParse(data);
             return validation.success ? handleRegisterPlayer(ws, validation.data, req) : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
         },
-        [MESSAGE_TYPES.CREATE_LOBBY]: async (data: any, sessionData: any) => {
+        [FROM_CLIENT_MESSAGE_TYPES.CREATE_LOBBY]: async (data: any, sessionData: any) => {
             const validation = LobbyCreateRequest.safeParse(data);
             return validation.success ? handleCreateLobby(ws, validation.data, sessionData.getPlayerID()) : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
         },
-        [MESSAGE_TYPES.SEARCH_LOBBY]: async (data: any, sessionData: any) => {
+        [FROM_CLIENT_MESSAGE_TYPES.SEARCH_LOBBY]: async (data: any, sessionData: any) => {
             const validation = LobbySearchRequest.safeParse(data);
             return validation.success ? handleSearchLobbies(ws, validation.data, sessionData.getPlayerID()) : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
         },
-        [MESSAGE_TYPES.JOIN_LOBBY]: async (data: any, sessionData: any) => {
+        [FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY]: async (data: any, sessionData: any) => {
             return handleJoinLobby(ws, data, sessionData.getPlayerID());
         },
-        [MESSAGE_TYPES.LEAVE_LOBBY]: async (data: any, sessionData: any) => {
+        [FROM_CLIENT_MESSAGE_TYPES.LEAVE_LOBBY]: async (data: any, sessionData: any) => {
             return createErrorResponse(ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
         },
-        [MESSAGE_TYPES.MAKE_MOVE]: async (data: any, sessionData: any) => {
-            return createErrorResponse(ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
-        },
-        [MESSAGE_TYPES.GAME_UPDATE]: async (data: any, sessionData: any) => {
+        [FROM_CLIENT_MESSAGE_TYPES.MAKE_MOVE]: async (data: any, sessionData: any) => {
             return createErrorResponse(ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
         }
     };
@@ -115,14 +112,14 @@ export async function handleWebsocketRequest(ws: any, req: any) {
                 returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
             } else {
                 // Check if the message type is valid
-                if (!Object.values(MESSAGE_TYPES).includes(data.type)) {
+                if (!Object.values(FROM_CLIENT_MESSAGE_TYPES).includes(data.type)) {
                     returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
                 } else {
-                    const handler = messageHandlers[data.type as MESSAGE_TYPES];
+                    const handler = messageHandlers[data.type as FROM_CLIENT_MESSAGE_TYPES];
 
                     if (!handler) {
                         returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
-                    } else if (data.type !== MESSAGE_TYPES.REGISTER_PLAYER && data.type !== MESSAGE_TYPES.RECONNECT) {
+                    } else if (data.type !== FROM_CLIENT_MESSAGE_TYPES.REGISTER_PLAYER && data.type !== FROM_CLIENT_MESSAGE_TYPES.RECONNECT) {
                         // Handle authenticated requests
                         const sessionData = data.sessionID ? await Session.validateSession(data.sessionID, req) : null;
 
