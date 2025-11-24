@@ -8,8 +8,8 @@
  */
 
 import Redis from 'ioredis';
-import Lobby, { LobbyData } from '../Database/Lobby';
-import Player from '../Database/Player';
+import { Lobby, CreateLobbyData } from '../Database/Lobby';
+import { Player } from '../Database/Player';
 import { DatabaseManager } from '../Database/DatabaseManager';
 import {
     newConnection,
@@ -119,13 +119,13 @@ export async function handleWebsocketRequest(ws: any, req: any) {
                     returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
                 } else {
                     const handler = messageHandlers[data.type as MESSAGE_TYPES];
-                    
+
                     if (!handler) {
                         returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
                     } else if (data.type !== MESSAGE_TYPES.REGISTER_PLAYER && data.type !== MESSAGE_TYPES.RECONNECT) {
                         // Handle authenticated requests
                         const sessionData = data.sessionID ? await Session.validateSession(data.sessionID, req) : null;
-                        
+
                         if (!sessionData || sessionData.getConnectionID() !== ws.id) {
                             returnMessage = createErrorResponse(ERROR_MESSAGES.TOKEN_INVALID);
                         } else {
@@ -198,20 +198,25 @@ function sendResponseToClient(ws: any, returnMessage: ReturnMessage, messageID: 
 async function handleSearchLobbies(ws: any, data: LobbySearchRequest, playerID: string): Promise<object> {
     try {
         const params = data.parameters || {};
-        // Call getLobbies with the parameters
-        const lobbySearchResults = await Lobby.getFilteredLobbies(
-            {
-                playerNum: params.playerNum,
-                levelSize: params.levelSize,
-                gridSize: params.gridSize,
-                playersJoined: params.joinedPlayers,
-                creator: params.creator,
-                lobbyState: params.lobbyState,
-                allowSpectators: params.allowSpectators,
-            },
-            params.maxListLength,
-            params.searchListLength
-        );
+        // Get all lobbies and filter them
+        // Get all active lobbies
+        const lobbyList = await DatabaseManager.getInstance().getRegularClient().lrange('LobbyList', 0, -1);
+        const allLobbies = await Promise.all(
+            lobbyList.map(async id => {
+                const lobby = await Lobby.getById(id);
+                return lobby;
+            })
+        ).then(lobbies => lobbies.filter(lobby => lobby !== null));
+        const lobbySearchResults = allLobbies.filter(lobby => {
+            if (params.playerNum && lobby.get("playerNum") !== params.playerNum) return false;
+            if (params.levelSize && lobby.get("levelSize") !== params.levelSize) return false;
+            if (params.gridSize && lobby.get("gridSize") !== params.gridSize) return false;
+            if (params.joinedPlayers && lobby.get("playersJoined") !== params.joinedPlayers) return false;
+            if (params.creator && lobby.get("creator") !== params.creator) return false;
+            if (params.lobbyState && lobby.get("lobbyState") !== params.lobbyState) return false;
+            if (params.allowSpectators !== undefined && lobby.get("allowSpectators") !== params.allowSpectators) return false;
+            return true;
+        }).slice(0, params.maxListLength || params.searchListLength || 10);
         console.log(`Found ${lobbySearchResults.length} matching lobbies`);
 
         // Log the first lobby for debugging if any exist
@@ -220,7 +225,7 @@ async function handleSearchLobbies(ws: any, data: LobbySearchRequest, playerID: 
         }
 
         // Convert each lobby to its JSON representation and await all promises
-        const lobbies = await Promise.all(lobbySearchResults.map(lobby => lobby.lobbySummaryJson()));
+        const lobbies = await Promise.all(lobbySearchResults.map(lobby => lobby.toJSON()));
 
         // Log the size of the lobbies array
         console.log('Lobbies array size:', JSON.stringify(lobbies).length, 'bytes');
@@ -255,26 +260,21 @@ async function handleCreateLobby(ws: any, data: LobbyCreateRequest, playerID: st
         const params = data.parameters || {};
         const lobbyData = params.lobbyData || {};
 
-        // Cast lobbyData to a LobbyData object
-        const lobbyDataObj: LobbyData = {
+        // Create a new lobby with the provided data
+        const newLobby = await Lobby.create({
             lobbyName: lobbyData.lobbyName,
             playerNum: lobbyData.playerNum,
             levelSize: lobbyData.levelSize,
             gridSize: lobbyData.gridSize,
-            allowSpectators: lobbyData.allowSpectators,
-        }
-
-        console.log(`Creating lobby ${params.lobbyData.lobbyName} with data:`, lobbyDataObj, playerID);
-
-        // Call RedisManager to create the lobby
-        let newLobby = await Lobby.createLobby(lobbyDataObj, playerID);
+            allowSpectators: lobbyData.allowSpectators
+        }, playerID);
         console.log(`Lobby ${params.lobbyData.lobbyName} created successfully`);
 
         // Send response back to client
         return {
             success: true,
             message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
-            lobby: await newLobby.lobbySummaryJson()
+            lobby: await newLobby.toJSON()
         };
     } catch (error) {
         console.error('Error creating lobby:', error);
@@ -324,9 +324,9 @@ async function handleRegisterPlayer(ws: any, data: RegisterRequest, req: any): P
     }
 
     try {
-        let newPlayer = await Player.createPlayer(username);
+        let newPlayer = await Player.create(username);
         if (newPlayer != null && newPlayer != undefined) {
-            const playerID = newPlayer.getPlayerID();
+            const playerID = newPlayer.get("playerID");
 
             // Register the player with the connection
             playerRegistered(ws.id, playerID);
@@ -490,7 +490,7 @@ async function handleJoinLobby(ws: any, data: LobbyJoinRequest, playerID: string
      * 2. Success. The player is added to the lobby and starts receiving game updates.
      * 
      */
-    
+
     try {
         const params = data.parameters || {};
         const lobbyID = params.lobbyID;
@@ -505,7 +505,7 @@ async function handleJoinLobby(ws: any, data: LobbyJoinRequest, playerID: string
         console.log(`Player ${playerID} attempting to join lobby ${lobbyID}`);
 
         // Fetch the lobby
-        const lobby = await Lobby.getLobby(lobbyID);
+        const lobby = await Lobby.getById(lobbyID);
         if (!lobby) {
             return {
                 success: false,
@@ -513,9 +513,19 @@ async function handleJoinLobby(ws: any, data: LobbyJoinRequest, playerID: string
             };
         }
 
-        // Attempt to add the player to the lobby
-        const joinResult = await Player.addPlayer(lobbyID, playerID);
-        if (!joinResult) {
+        // Get player instance
+        const player = await Player.getById(playerID);
+        if (!player) {
+            return {
+                success: false,
+                error: ERROR_MESSAGES.PLAYER_NOT_FOUND
+            };
+        }
+
+        // Add player to lobby
+        try {
+            await player.joinLobby(lobbyID);
+        } catch (error) {
             return {
                 success: false,
                 error: ERROR_MESSAGES.LOBBY_JOIN_FAILED
@@ -525,7 +535,7 @@ async function handleJoinLobby(ws: any, data: LobbyJoinRequest, playerID: string
         console.log(`Player ${playerID} joined lobby ${lobbyID} successfully`);
 
         //Now, after joining the lobby, we need to kickoff a process that checks whether the game is ready to start.
-        
+
 
 
 
@@ -535,7 +545,7 @@ async function handleJoinLobby(ws: any, data: LobbyJoinRequest, playerID: string
         return {
             success: true,
             message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
-            lobby: await lobby.lobbySummaryJson()
+            lobby: await lobby.toJSON()
         };
     } catch (error) {
         console.error('Error joining lobby:', error);

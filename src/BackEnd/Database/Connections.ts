@@ -11,7 +11,7 @@
 const activeWebsockets = new Map<string, any>(); // Map of connection IDs to WebSocket objects
 
 import Redis from "ioredis";
-import Player from "./Player";
+import { Player } from "./Player";
 import { AUTH_CONSTANTS, REDIS_KEYS } from "../Contants";
 import { DatabaseManager } from "./DatabaseManager";
 

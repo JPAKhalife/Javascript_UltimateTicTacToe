@@ -105,6 +105,7 @@ export const ERROR_MESSAGES = {
     ALREADY_IN_LOBBY: 'You are already in a lobby.',
     LOBBY_CREATION_FAILED: 'Failed to create lobby. Please try again.',
     LOBBY_JOIN_FAILED: 'Failed to join lobby. Please try again.',
+    PLAYER_NOT_FOUND: 'Player not found.',
 } as const;
 
 // ============================================================================

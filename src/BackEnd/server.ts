@@ -50,7 +50,7 @@ app.use((req: any, res: any, next: any) => {
 // Initialize the DatabaseManager with Redis connections
 const dbManager = DatabaseManager.getInstance();
 dbManager.initialize(host, port);
-
+console.log("Initialized successfully")
 //Automatically statically serves the frontEnd directory for the user
 app.use(express.static(process.cwd() + '/FrontEnd'));
 console.log('Local directory is: ' + process.cwd());

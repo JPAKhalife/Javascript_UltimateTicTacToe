@@ -10,7 +10,7 @@
 import Redis from "ioredis";
 import { disconnect } from "../Database/Connections";
 import Session from "../Database/Session";
-import Player from "../Database/Player";
+import { Player } from "../Database/Player";
 
 /**
  * @function handleSessionExpiry
@@ -21,7 +21,7 @@ export async function handleSessionExpiry(expiredKey: string) {
     //This will be useful for removing the player
     const session = await Session.getSessionByKey(expiredKey);
     if (!session) {throw Error("Session not found. This should not happen and indicates an error in the back-end.")} 
-    Player.removePlayer(session.getPlayerID());
+    Player.remove(session.getPlayerID());
     //TODO: This needs to be updated for when lobbies also need to be disconnected from the lobby.
 }
 
