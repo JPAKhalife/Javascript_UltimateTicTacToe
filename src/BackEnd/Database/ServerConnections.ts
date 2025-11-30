@@ -1,3 +1,6 @@
+//! This file is currently unused. It could potentially be useful in the event that inter-server communication
+//! That doesn't use Redis for more low-latency communication is needed in the future. (UDP or TCP sockets between servers for example)
+
 /**
  * @file ServerConnections.ts
  * @description Manages server registry using Redis hash with expiry-based cleanup
