@@ -7,8 +7,7 @@
  * @updated 2025-08-20
  */
 
-import Redis from "ioredis";
-import { Lobby, CreateLobbyData } from "../Database/Lobby";
+import { Lobby, CreateLobbyData } from "../Database/Lobby/Lobby";
 import { Player } from "../Database/Player";
 import { DatabaseManager } from "../Database/DatabaseManager";
 import {

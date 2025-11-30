@@ -9,18 +9,14 @@
 
 import { WebSocket } from "ws";
 import { FROM_SERVER_MESSAGE_TYPES } from "../Contracts/MessageToClientSchema";
+import { getWebsocketObject } from "../Database/ClientConnections";
 
-// This file will implement a singleton class, due to the websocket object needing to be persisted.
-
-export class WebsocketHandler {
-  private static instance: WebsocketHandler;
-
-  private constructor() {}
-
-  public static getInstance(): WebsocketHandler {
-    if (!WebsocketHandler.instance) {
-      WebsocketHandler.instance = new WebsocketHandler();
-    }
-    return WebsocketHandler.instance;
-  }
+/**
+ * @function sendMessageToClient
+ * @description Sends a message to a connected client via WebSocket
+ * @param 
+ */
+export function sendMessageToClient(connectionID: string, message: any) {
+  const ws = getWebsocketObject(connectionID);
+  ws.send(JSON.stringify(message));
 }

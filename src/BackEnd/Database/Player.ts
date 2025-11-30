@@ -17,6 +17,7 @@ interface PlayerData {
   playerID: string;
   username: string;
   lobbyID?: string;
+  sessionID?: string;
 }
 
 /**
@@ -138,7 +139,7 @@ export class Player extends RedisObject<PlayerData> {
     if (this.get("lobbyID")) {
       throw new Error("Player is already in a lobby");
     }
-
+    
     await this.set("lobbyID", lobbyID);
   }
 

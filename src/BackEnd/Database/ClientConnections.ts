@@ -82,6 +82,8 @@ export function playerRegistered(connectionID: string, playerID: string) {
 
   // Set the player ID in Redis
   let redisClient = DatabaseManager.getInstance().getRegularClient();
+
+  // Set connectionID -> playerID mapping
   redisClient
     .set(REDIS_KEYS.CONNECTION(connectionID), playerID)
     .then(() => {
@@ -91,6 +93,18 @@ export function playerRegistered(connectionID: string, playerID: string) {
     })
     .catch((error) => {
       console.error(`[Connections] Error setting player ID in Redis:`, error);
+    });
+
+  // Set playerID -> connectionID mapping
+  redisClient
+    .set(REDIS_KEYS.PLAYER_CONNECTION(playerID), connectionID)
+    .then(() => {
+      console.log(
+        `[Connections] Successfully set connection ID ${connectionID} for player ${playerID} in Redis`,
+      );
+    })
+    .catch((error) => {
+      console.error(`[Connections] Error setting connection ID in Redis:`, error);
     });
 }
 
@@ -105,6 +119,19 @@ export async function getPlayerID(
 ): Promise<string | null> {
   let redisClient = DatabaseManager.getInstance().getRegularClient();
   return await redisClient.get(REDIS_KEYS.CONNECTION(connectionID));
+}
+
+/**
+ * @method getConnectionID
+ * @description Gets the connectionID from the database for a given player
+ * @param playerID Player ID to look up
+ * @returns Connection ID associated with the player, or null if not found
+ */
+export async function getConnectionID(
+  playerID: string,
+): Promise<string | null> {
+  let redisClient = DatabaseManager.getInstance().getRegularClient();
+  return await redisClient.get(REDIS_KEYS.PLAYER_CONNECTION(playerID));
 }
 
 /**
@@ -124,6 +151,7 @@ export async function removeConnection(connectionID: string): Promise<void> {
   //     Player.removePlayer(redisClient, playerID);
   // }
   redisClient.del(REDIS_KEYS.CONNECTION(connectionID));
+  redisClient.del(REDIS_KEYS.PLAYER_CONNECTION(playerID || ""));
   activeWebsockets.delete(connectionID);
 }
 
