@@ -1,24 +1,26 @@
 /**
  * @file Session.ts
- * @description Utilities for session token generation and validation
+ * @description Session class that extends RedisObject for Redis-backed session management
  * @author John Khalife
  * @created 2025-08-20
+ * @updated 2025-11-29
  */
 
-import Redis from 'ioredis';
+import { RedisObject } from "./RedisObject";
 import { nanoid } from 'nanoid';
 import { AUTH_CONSTANTS, REDIS_KEYS, ENV_CONFIG } from '../Contants';
 import crypto from 'crypto';
 import { DatabaseManager } from './DatabaseManager';
+import { ServerConnections } from './ServerConnections';
 
 /**
- * @interface SessionData
- * @description Interface for session data stored in Redis
+ * Interface defining the structure of session data stored in Redis
  */
 export interface SessionData {
     sessionID: string;
     playerID: string;
     connectionID: string;
+    serverID: string;
     createdAt: string;
     lastActive: string;
     ip: string;
@@ -26,41 +28,20 @@ export interface SessionData {
 }
 
 /**
- * @class Session
- * @description Class for managing user sessions
+ * Session class extending RedisObject for Redis-backed session management
  */
-export default class Session {
-    private sessionID: string;
-    private playerID: string;
-    private connectionID: string;
-    private createdAt: string;
-    private lastActive: string;
-    private ip: string;
-    private agent: string;
-
+export default class Session extends RedisObject<SessionData> {
     /**
-     * @constructor
-     * @description Creates a new Session instance
-     * @param {string} sessionID The session ID
-     * @param {string} playerID The player ID associated with this session
-     * @param {string} connectionID The connection ID associated with this session
-     * @param {number} createdAt The timestamp when the session was created
-     * @param {number} lastActive The timestamp when the session was last active
-     * @param {string} ip The IP address associated with this session
-     * @param {string} agent The user agent hash associated with this session
+     * Create a new session
+     * @param playerID The ID of the player associated with this session
+     * @param connectionID The ID of the connection associated with this session
+     * @param req The request object containing client information
      */
-    constructor(
-        sessionID: string,
+    static async create(
         playerID: string,
         connectionID: string,
-        createdAt: string,
-        lastActive: string,
-        ip: string = '',
-        agent: string = ''
-    ) {
-        if (!sessionID || sessionID.trim() === "") {
-            throw new Error("sessionID cannot be empty");
-        }
+        req: any
+    ): Promise<{ session: Session; token: string }> {
         if (!playerID || playerID.trim() === "") {
             throw new Error("playerID cannot be empty");
         }
@@ -68,33 +49,199 @@ export default class Session {
             throw new Error("connectionID cannot be empty");
         }
 
-        this.sessionID = sessionID;
-        this.playerID = playerID;
-        this.connectionID = connectionID;
-        this.createdAt = createdAt;
-        this.lastActive = lastActive;
-        this.ip = ip;
-        this.agent = agent;
-    }
+        // Generate session ID
+        const sessionID = Session.generateSessionID();
+        const now = new Date().toISOString();
+        
+        // Get client info
+        const { ip, agent } = Session.getClientInfo(req);
+        
+        // Get current server ID
+        const serverConnections = ServerConnections.getInstance();
+        const serverID = serverConnections.getServerID();
 
-    static initializeWithSessionData(sessionData: SessionData): Session {
-        return new Session(sessionData.sessionID, sessionData.playerID, sessionData.connectionID, sessionData.createdAt, sessionData.lastActive, sessionData.ip, sessionData.agent);
+        const sessionData: SessionData = {
+            sessionID,
+            playerID,
+            connectionID,
+            serverID,
+            createdAt: now,
+            lastActive: now,
+            ip,
+            agent
+        };
+
+        const session = new Session(sessionID, sessionData, DatabaseManager.getInstance().getRegularClient());
+
+        try {
+            // Save the session data and add to player's sessions list atomically
+            await session.withTransaction(multi => {
+                multi.hset(session.getRedisKey(), {
+                    ...sessionData,
+                    version: "0"
+                });
+                multi.sadd(REDIS_KEYS.PLAYER_SESSIONS(playerID), sessionID);
+            });
+
+            // Create HMAC token
+            const token = Session.generateHmacToken(sessionID, Date.now(), agent, ip);
+
+            return { session, token };
+        } catch (error) {
+            throw new Error(`Failed to create session: ${error}`);
+        }
     }
 
     /**
-     * @method generateSessionID
-     * @description Generates a new session ID using nanoid
-     * @returns {string} A new session ID
+     * Get a session by its ID
+     * @param sessionID The ID of the session to retrieve
+     */
+    static async getById(sessionID: string): Promise<Session | null> {
+        try {
+            const dummyData: SessionData = {
+                sessionID,
+                playerID: "",
+                connectionID: "",
+                serverID: "",
+                createdAt: "",
+                lastActive: "",
+                ip: "",
+                agent: ""
+            };
+            
+            const session = new Session(sessionID, dummyData, DatabaseManager.getInstance().getRegularClient());
+            await session.load();
+            return session;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Validate a session token and return the session
+     * @param token The session token to validate
+     * @param req The request object containing client information
+     */
+    static async validateSession(
+        token: string,
+        req: any
+    ): Promise<Session | null> {
+        // Parse and verify the token
+        const tokenData = Session.parseAndVerifyToken(token);
+        if (!tokenData) {
+            return null; // Invalid token
+        }
+
+        const { baseId, timestamp, agent, ip } = tokenData;
+
+        console.log("Validate session: ", baseId, timestamp, agent, ip);
+
+        try {
+            // Get session by ID
+            const session = await Session.getById(baseId);
+            if (!session) {
+                return null;
+            }
+
+            // Update last active timestamp
+            await session.set('lastActive', new Date().toISOString());
+
+            return session;
+        } catch (error) {
+            console.error("Error validating session:", error);
+            return null;
+        }
+    }
+
+    /**
+     * Get session by connection ID
+     * @param connectionID The connection ID to look up
+     */
+    static async getByConnectionID(connectionID: string): Promise<Session | null> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
+        
+        try {
+            // This is a simplified implementation. In production, consider using a secondary index
+            const sessionKeys = await redisClient.keys(`${REDIS_KEYS.SESSION("*")}`);
+            
+            for (const key of sessionKeys) {
+                const connID = await redisClient.hget(key, 'connectionID');
+                if (connID === connectionID) {
+                    const sessionID = key.substring(REDIS_KEYS.SESSION("").length);
+                    return await Session.getById(sessionID);
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            console.error("Error getting session by connection ID:", error);
+            return null;
+        }
+    }
+
+    /**
+     * Update the connection ID for this session
+     * @param newConnectionID The new connection ID
+     */
+    async updateConnectionID(newConnectionID: string): Promise<void> {
+        await this.set('connectionID', newConnectionID);
+        await this.set('lastActive', new Date().toISOString());
+    }
+
+    /**
+     * Update the server ID for this session (for cross-server scenarios)
+     * @param newServerID The new server ID
+     */
+    async updateServerID(newServerID: string): Promise<void> {
+        await this.set('serverID', newServerID);
+        await this.set('lastActive', new Date().toISOString());
+    }
+
+    /**
+     * Invalidate this session
+     */
+    async invalidate(): Promise<void> {
+        const playerID = this.get('playerID');
+        
+        await this.withTransaction(multi => {
+            // Delete session
+            multi.del(this.getRedisKey());
+            
+            // Remove from player's sessions list
+            if (playerID) {
+                multi.srem(REDIS_KEYS.PLAYER_SESSIONS(playerID), this.id);
+            }
+        });
+    }
+
+    /**
+     * Check if connection is active
+     * @param connectionID The connection ID to check
+     */
+    static async isConnectionActive(connectionID: string): Promise<boolean> {
+        const redisClient = DatabaseManager.getInstance().getRegularClient();
+        console.log(`[Session] Checking if connection ID ${connectionID} is active`);
+        
+        const redisKey = REDIS_KEYS.CONNECTION(connectionID);
+        const exists = await redisClient.exists(redisKey);
+        
+        const isActive = exists === 1;
+        console.log(`[Session] Connection ${connectionID} is ${isActive ? 'active' : 'inactive'}`);
+        
+        return isActive;
+    }
+
+    // Static utility methods
+
+    /**
+     * Generate a new session ID using nanoid
      */
     static generateSessionID(): string {
         return nanoid(AUTH_CONSTANTS.SESSION_ID_LENGTH);
     }
 
     /**
-     * @method getClientInfo
-     * @description Extracts and processes client information from request
-     * @param {any} req The request object
-     * @returns {object} The processed client information
+     * Extract and process client information from request
      */
     private static getClientInfo(req: any): { ip: string, agent: string } {
         // Get IP address
@@ -108,19 +255,13 @@ export default class Session {
             .createHash('sha256')
             .update(userAgent)
             .digest('base64url')
-            .substring(0, 16); // Keep it reasonably short
+            .substring(0, 16);
 
         return { ip, agent };
     }
 
     /**
-     * @method generateHmacToken
-     * @description Generates an HMAC token with the specified components
-     * @param {string} baseId The base identifier
-     * @param {number} timestamp The token creation timestamp
-     * @param {string} agent The user agent hash
-     * @param {string} ip The client IP address
-     * @returns {string} The HMAC signature
+     * Generate an HMAC token with the specified components
      */
     private static generateHmacToken(baseId: string, timestamp: number, agent: string, ip: string): string {
         // Encode all parts of the token to prevent delimiter issues and add obfuscation
@@ -142,16 +283,12 @@ export default class Session {
     }
 
     /**
-     * @method parseAndVerifyToken
-     * @description Parses and verifies an HMAC token
-     * @param {string} token The token to verify
-     * @returns {object|null} The parsed token data or null if invalid
+     * Parse and verify an HMAC token
      */
     private static parseAndVerifyToken(token: string): { baseId: string, timestamp: number, agent: string, ip: string } | null {
         try {
             // Split the token
             const parts = token.split('.');
-            console.log("Token parts: ", parts);
             if (parts.length !== 5) { // encodedBaseId, encodedTimestamp, encodedAgent, encodedIp, signature
                 return null;
             }
@@ -184,7 +321,7 @@ export default class Session {
             // Verify signature
             if (receivedSignature !== expectedSignature) {
                 console.error("Signature mismatch");
-                return null; // Signature mismatch
+                return null;
             }
 
             return { baseId, timestamp, agent, ip };
@@ -194,472 +331,177 @@ export default class Session {
         }
     }
 
+    // Instance getter methods
+
     /**
-     * @method createSession
-     * @description Creates a new session and stores it in Redis
-     * @param {Redis} redisClient Redis client for database operations
-     * @param {string} playerID The ID of the player associated with this session
-     * @param {string} connectionID The ID of the connection associated with this session
-     * @param {any} req The request object containing client information
-     * @returns {Promise<string>} A promise that resolves to the new session token
+     * Get the session ID
+     */
+    public getSessionID(): string {
+        return this.get('sessionID');
+    }
+
+    /**
+     * Get the player ID associated with this session
+     */
+    public getPlayerID(): string {
+        return this.get('playerID');
+    }
+
+    /**
+     * Get the connection ID associated with this session
+     */
+    public getConnectionID(): string {
+        return this.get('connectionID');
+    }
+
+    /**
+     * Get the server ID associated with this session
+     */
+    public getServerID(): string {
+        return this.get('serverID');
+    }
+
+    /**
+     * Get the creation timestamp
+     */
+    public getCreatedAt(): string {
+        return this.get('createdAt');
+    }
+
+    /**
+     * Get the last active timestamp
+     */
+    public getLastActive(): string {
+        return this.get('lastActive');
+    }
+
+    /**
+     * Get the IP address associated with this session
+     */
+    public getIP(): string {
+        return this.get('ip');
+    }
+
+    /**
+     * Get the user agent hash associated with this session
+     */
+    public getAgent(): string {
+        return this.get('agent');
+    }
+
+    /**
+     * Get the Redis key for this session
+     */
+    protected getRedisKey(): string {
+        return REDIS_KEYS.SESSION(this.id);
+    }
+
+    /**
+     * Convert this session to a SessionData object
+     */
+    public toSessionData(): SessionData {
+        return {
+            sessionID: this.get('sessionID'),
+            playerID: this.get('playerID'),
+            connectionID: this.get('connectionID'),
+            serverID: this.get('serverID'),
+            createdAt: this.get('createdAt'),
+            lastActive: this.get('lastActive'),
+            ip: this.get('ip'),
+            agent: this.get('agent')
+        };
+    }
+
+    /**
+     * Convert session data to a JSON-friendly format
+     */
+    public toJSON(): Record<string, any> {
+        return {
+            sessionID: this.id,
+            playerID: this.get('playerID'),
+            connectionID: this.get('connectionID'),
+            serverID: this.get('serverID'),
+            createdAt: this.get('createdAt'),
+            lastActive: this.get('lastActive'),
+            ip: this.get('ip'),
+            agent: this.get('agent'),
+            version: this.getVersion()
+        };
+    }
+
+    // Legacy static methods for backward compatibility
+
+    /**
+     * @deprecated Use Session.create() instead
      */
     static async createSession(
         playerID: string,
         connectionID: string,
         req: any
     ): Promise<string> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        // Generate base ID
-        const baseId = this.generateSessionID();
-        const now = Date.now();
-
-        // Get client info
-        const { ip, agent } = this.getClientInfo(req);
-
-        // Create HMAC token
-        const token = this.generateHmacToken(baseId, now, agent, ip);
-
-        // Store session data in Redis (using baseId as the key)
-        await redisClient.hset(
-            REDIS_KEYS.SESSION(baseId),
-            'sessionID', baseId,
-            'playerID', playerID,
-            'connectionID', connectionID,
-            'createdAt', now.toString(),
-            'lastActive', now.toString(),
-            'ip', ip,
-            'agent', agent
-        );
-
-        // Add session to player's sessions list
-        await redisClient.sadd(REDIS_KEYS.PLAYER_SESSIONS(playerID), baseId);
-
+        const { token } = await Session.create(playerID, connectionID, req);
         return token;
     }
 
     /**
-     * @method validateSession
-     * @description Validates a session ID and returns the associated session data
-     * @param {Redis} redisClient Redis client for database operations
-     * @param {string} token The session token to validate
-     * @param {any} req The request object containing client information
-     * @returns {Promise<SessionManager | null>} A promise that resolves to the session manager or null if invalid
-     */
-    static async validateSession(
-        token: string,
-        req: any
-    ): Promise<Session | null> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        // Parse and verify the token
-        const tokenData = this.parseAndVerifyToken(token);
-        if (!tokenData) {
-            return null; // Invalid token
-        }
-
-        const { baseId, timestamp, agent, ip } = tokenData;
-
-        console.log("Validate session: ", baseId, timestamp, agent, ip);
-        // Check if token is expired
-        const now = Date.now();
-        // const tokenAge = now - timestamp;
-        // if (tokenAge > AUTH_CONSTANTS.TOKEN_EXPIRY) {
-        //     return null; // Token expired
-        // }
-
-        // // Optional: Verify client info hasn't changed significantly
-        // const currentClientInfo = this.getClientInfo(req);
-        // if (currentClientInfo.agent !== agent) {
-        //     return null; // User agent changed
-        // }
-
-        // IP validation could be optional or configurable
-        // Commented out by default as legitimate users might change IP addresses
-        // if (currentClientInfo.ip !== ip) {
-        //   return null; // IP changed
-        // }
-
-        // Check if session exists in Redis
-        const sessionKey = REDIS_KEYS.SESSION(baseId);
-        const exists = await redisClient.exists(sessionKey);
-        if (!exists) {
-            return null;
-        }
-        console.log("Session key does exist")
-
-        // Get session data
-        const sessionData = await redisClient.hgetall(sessionKey);
-        if (!sessionData || !sessionData.playerID || !sessionData.connectionID) {
-            return null;
-        }
-
-        console.log("session data does exists: ", sessionData);
-
-        // Update last active timestamp
-        await redisClient.hset(sessionKey, 'lastActive', now.toString());
-
-        return new Session(
-            baseId,
-            sessionData.playerID,
-            sessionData.connectionID,
-            sessionData.createdAt,
-            now.toString(),
-            sessionData.ip,
-            sessionData.agent
-        );
-    }
-
-    /**
-     * @method getSessionByConnectionID
-     * @description Gets a session by connection ID
-     * @param {Redis} redisClient Redis client for database operations
-     * @param {string} connectionID The connection ID to look up
-     * @returns {Promise<string | null>} A promise that resolves to the session ID or null if not found
-     */
-    static async getSessionByConnectionID(
-        connectionID: string
-    ): Promise<string | null> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        //! This is a simplified implementation. Not fit for production
-        const sessionPrefix = 'session:';
-        const keys = await redisClient.keys(`${sessionPrefix}*`);
-
-        for (const key of keys) {
-            const connID = await redisClient.hget(key, 'connectionID');
-            if (connID === connectionID) {
-                return key.substring(sessionPrefix.length); // Extract session ID from key
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * @method getSessionByKey
-     * @description Gets a session object from redis given the key used in redis
-     * @param redisClient - gives access to the database
-     * @param key 
-     */
-    static async getSessionByKey(key: string): Promise<Session | null> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        
-        try {
-            //Get the session info from the hashmap
-
-            let sessionData: Record<string,string> = await redisClient.hgetall(key);
-            if (sessionData) {
-                return new Session(sessionData["sessionID"], sessionData["playerID"], sessionData["connectionID"], sessionData["createdAt"], sessionData["lastActive"], sessionData["ip"], sessionData["agent"]);
-            }
-
-
-        } catch (error) {
-            throw Error("Unable to retrieve session from database");
-        }
-        return null;
-        
-    }
-
-    /**
-     * @method getSessionBySessionID
-     * @description Gets a session object from redis given the sessionID
-     * @param redisClient - gives access to the database
-     * @param sessionID - the session ID
-     */
-    static async getSessionBySessionID(sessionID: string): Promise<Session | null> {
-        return Session.getSessionByKey(REDIS_KEYS.SESSION(sessionID));
-    }
-
-    /**
-     * @method invalidateSession
-     * @description Invalidates a session
-     * @param {Redis} redisClient Redis client for database operations
-     * @param {string} token The session token to invalidate
-     * @returns {Promise<boolean>} A promise that resolves to true if successful
-     */
-    static async invalidateSession(
-        token: string
-    ): Promise<boolean> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        // Parse the token to get the baseId
-        const tokenData = this.parseAndVerifyToken(token);
-        if (!tokenData) {
-            return false; // Invalid token
-        }
-
-        const { baseId } = tokenData;
-
-        // Get player ID before deleting session
-        const playerID = await redisClient.hget(REDIS_KEYS.SESSION(baseId), 'playerID');
-
-        // Delete session
-        await redisClient.del(REDIS_KEYS.SESSION(baseId));
-
-        // Remove from player's sessions list if player ID exists
-        if (playerID) {
-            await redisClient.srem(REDIS_KEYS.PLAYER_SESSIONS(playerID), baseId);
-        }
-
-        return true;
-    }
-
-    /**
-     * @method setSessionExpiry
-     * @description Sets an expiry time on a session
-     * @param {Redis} redisClient Redis client for database operations
-     * @param {string} token The session token to set expiry on
-     * @param {number} expirySeconds The number of seconds until expiry
-     * @returns {Promise<boolean>} A promise that resolves to true if successful
-     */
-    static async setSessionExpiry(
-        token: string,
-        expirySeconds: number = AUTH_CONSTANTS.SESSION_EXPIRE_TIME
-    ): Promise<boolean> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        // Parse the token to get the baseId
-        const tokenData = this.parseAndVerifyToken(token);
-        if (!tokenData) {
-            return false; // Invalid token
-        }
-
-        const { baseId } = tokenData;
-        const key = REDIS_KEYS.SESSION(baseId);
-        const exists = await redisClient.exists(key);
-
-        if (!exists) {
-            return false;
-        }
-
-        await redisClient.expire(key, expirySeconds);
-        return true;
-    }
-
-    /**
-     * @method refreshSession
-     * @description Refreshes a session by removing its expiry
-     * @param {Redis} redisClient Redis client for database operations
-     * @param {string} token The session token to refresh
-     * @returns {Promise<boolean>} A promise that resolves to true if successful
-     */
-    static async refreshSession(
-        token: string
-    ): Promise<boolean> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        // Parse the token to get the baseId
-        const tokenData = this.parseAndVerifyToken(token);
-        if (!tokenData) {
-            return false; // Invalid token
-        }
-
-        const { baseId } = tokenData;
-        const key = REDIS_KEYS.SESSION(baseId);
-        const exists = await redisClient.exists(key);
-
-        if (!exists) {
-            return false;
-        }
-
-        // Update last active timestamp
-        const now = Date.now();
-        await redisClient.hset(key, 'lastActive', now.toString());
-
-        // Remove expiry
-        await redisClient.persist(key);
-        return true;
-    }
-
-    /**
-     * @method updateSessionConnectionID
-     * @description Updates the connectionID associated with a session
-     * @param {Redis} redisClient Redis client for database operations
-     * @param {string} token The session token to update
-     * @param {string} newConnectionID The new connection ID to associate with the session
-     * @returns {Promise<boolean>} A promise that resolves to true if successful
+     * @deprecated Use session.updateConnectionID() instead
      */
     static async updateSessionConnectionID(
         token: string,
         newConnectionID: string
     ): Promise<boolean> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        // Parse the token to get the baseId
-        const tokenData = this.parseAndVerifyToken(token);
-        if (!tokenData) {
-            return false; // Invalid token
-        }
+        try {
+            const tokenData = Session.parseAndVerifyToken(token);
+            if (!tokenData) {
+                return false;
+            }
 
-        const { baseId } = tokenData;
-        const key = REDIS_KEYS.SESSION(baseId);
-        const exists = await redisClient.exists(key);
+            const session = await Session.getById(tokenData.baseId);
+            if (!session) {
+                return false;
+            }
 
-        if (!exists) {
+            await session.updateConnectionID(newConnectionID);
+            return true;
+        } catch (error) {
+            console.error("Error updating session connection ID:", error);
             return false;
         }
-
-        // Update connectionID and last active timestamp
-        const now = Date.now();
-        await redisClient.hset(
-            key,
-            'connectionID', newConnectionID,
-            'lastActive', now.toString()
-        );
-
-        // Remove expiry
-        await redisClient.persist(key);
-        return true;
     }
 
     /**
-     * @method isConnectionActive
-     * @description Checks if a connection is active
-     * @param {Redis} redisClient Redis client for database operations
-     * @param {string} connectionID The connection ID to check
-     * @returns {Promise<boolean>} A promise that resolves to true if the connection is active
+     * @deprecated Use session.invalidate() instead
      */
-    static async isConnectionActive(
-        connectionID: string
-    ): Promise<boolean> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        console.log(`[SessionManager] Checking if connection ID ${connectionID} is active`);
-        
-        // Check if the connection exists in Redis
-        const redisKey = REDIS_KEYS.CONNECTION(connectionID);
-        console.log(`[SessionManager] Looking up Redis key: ${redisKey}`);
-        
-        const startTime = Date.now();
-        const exists = await redisClient.exists(redisKey);
-        const checkTime = Date.now() - startTime;
-        
-        const isActive = exists === 1;
-        console.log(`[SessionManager] Connection check took ${checkTime}ms, result: ${isActive ? 'active' : 'inactive'}`);
-        
-        return isActive;
-    }
+    static async invalidateSession(token: string): Promise<boolean> {
+        try {
+            const tokenData = Session.parseAndVerifyToken(token);
+            if (!tokenData) {
+                return false;
+            }
 
-    /**
-     * @method getSessionConnectionID
-     * @description Gets the connectionID associated with a session
-     * @param {Redis} redisClient Redis client for database operations
-     * @param {string} token The session token
-     * @returns {Promise<string | null>} A promise that resolves to the connectionID or null if not found
-     */
-    static async getSessionConnectionID(
-        token: string
-    ): Promise<string | null> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        // Parse the token to get the baseId
-        const tokenData = this.parseAndVerifyToken(token);
-        if (!tokenData) {
-            return null; // Invalid token
+            const session = await Session.getById(tokenData.baseId);
+            if (!session) {
+                return false;
+            }
+
+            await session.invalidate();
+            return true;
+        } catch (error) {
+            console.error("Error invalidating session:", error);
+            return false;
         }
-
-        const { baseId } = tokenData;
-        const key = REDIS_KEYS.SESSION(baseId);
-        
-        // Get the connectionID from the session
-        return await redisClient.hget(key, 'connectionID');
     }
 
     /**
-     * @method getSessionPlayerID
-     * @description Gets the playerID associated with a session
-     * @param {Redis} redisClient Redis client for database operations
-     * @param {string} token The session token
-     * @returns {Promise<string | null>} A promise that resolves to the playerID or null if not found
+     * @deprecated Use Session.validateSession() instead
      */
-    static async getSessionPlayerID(
-        token: string
-    ): Promise<string | null> {
-        const redisClient = DatabaseManager.getInstance().getRegularClient();
-        // Parse the token to get the baseId
-        const tokenData = this.parseAndVerifyToken(token);
-        if (!tokenData) {
-            return null; // Invalid token
+    static async refreshSession(token: string): Promise<boolean> {
+        try {
+            const session = await Session.validateSession(token, {});
+            return session !== null;
+        } catch (error) {
+            console.error("Error refreshing session:", error);
+            return false;
         }
-
-        const { baseId } = tokenData;
-        const key = REDIS_KEYS.SESSION(baseId);
-        
-        // Get the playerID from the session
-        return await redisClient.hget(key, 'playerID');
-    }
-
-    // Instance getter methods
-
-    /**
-     * @method getSessionID
-     * @description Returns the sessionID
-     * @returns {string} The session ID
-     */
-    public getSessionID(): string {
-        return this.sessionID;
-    }
-
-    /**
-     * @method getPlayerID
-     * @description Returns the playerID associated with this session
-     * @returns {string} The player ID
-     */
-    public getPlayerID(): string {
-        return this.playerID;
-    }
-
-    /**
-     * @method getConnectionID
-     * @description Returns the connectionID associated with this session
-     * @returns {string} The connection ID
-     */
-    public getConnectionID(): string {
-        return this.connectionID;
-    }
-
-    /**
-     * @method getCreatedAt
-     * @description Returns the timestamp when this session was created
-     * @returns {number} The creation timestamp
-     */
-    public getCreatedAt(): string {
-        return this.createdAt;
-    }
-
-    /**
-     * @method getLastActive
-     * @description Returns the timestamp when this session was last active
-     * @returns {number} The last active timestamp
-     */
-    public getLastActive(): string {
-        return this.lastActive;
-    }
-
-    /**
-     * @method getIP
-     * @description Returns the IP address associated with this session
-     * @returns {string} The IP address
-     */
-    public getIP(): string {
-        return this.ip;
-    }
-
-    /**
-     * @method getAgent
-     * @description Returns the user agent hash associated with this session
-     * @returns {string} The user agent hash
-     */
-    public getAgent(): string {
-        return this.agent;
-    }
-
-    /**
-     * @method toSessionData
-     * @description Converts this SessionManager instance to a SessionData object
-     * @returns {SessionData} The SessionData object
-     */
-    public toSessionData(): SessionData {
-        return {
-            sessionID: this.sessionID,
-            playerID: this.playerID,
-            connectionID: this.connectionID,
-            createdAt: this.createdAt,
-            lastActive: this.lastActive,
-            ip: this.ip,
-            agent: this.agent
-        };
     }
 }

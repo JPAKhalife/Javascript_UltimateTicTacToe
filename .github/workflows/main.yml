@@ -3,7 +3,6 @@ name: Build and Start Application
 on:
   - pull_request
 
-
 jobs:
   build-and-start:
     runs-on: ubuntu-latest

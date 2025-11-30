@@ -15,6 +15,9 @@ RUN npm audit fix
 # Copy the rest of the application code to the working directory recursively
 COPY ./dist/ /app/
 
+# Copy the environment file from the backend source
+COPY ./src/BackEnd/.env /app/.env
+
 # Expose the port on which the server will run
 EXPOSE 3000
 
