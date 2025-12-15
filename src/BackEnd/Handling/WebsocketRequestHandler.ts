@@ -30,6 +30,7 @@ import {
 } from "../Contracts/MessageToServerSchema";
 import Session from "../Database/Session";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../Contants";
+import { FROM_SERVER_MESSAGE_TYPES } from "../Contracts/MessageToClientSchema";
 const { v4: uuidv4 } = require("uuid");
 
 type ReturnMessage = Record<string, any>;
@@ -78,13 +79,13 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       const validation = ReconnectRequest.safeParse(data);
       return validation.success
         ? handleReconnect(ws, validation.data, req)
-        : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+        : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.REGISTER_PLAYER]: async (data: any) => {
       const validation = RegisterRequest.safeParse(data);
       return validation.success
         ? handleRegisterPlayer(ws, validation.data, req)
-        : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+        : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.CREATE_LOBBY]: async (
       data: any,
@@ -93,7 +94,7 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       const validation = LobbyCreateRequest.safeParse(data);
       return validation.success
         ? handleCreateLobby(ws, validation.data, sessionData.getPlayerID())
-        : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+        : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.SEARCH_LOBBY]: async (
       data: any,
@@ -102,7 +103,7 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       const validation = LobbySearchRequest.safeParse(data);
       return validation.success
         ? handleSearchLobbies(ws, validation.data, sessionData.getPlayerID())
-        : createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+        : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY]: async (
       data: any,
@@ -114,14 +115,17 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       data: any,
       sessionData: any,
     ) => {
-      return createErrorResponse(ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
+      return createErrorResponse(data.type, ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
     },
     [FROM_CLIENT_MESSAGE_TYPES.MAKE_MOVE]: async (
       data: any,
       sessionData: any,
     ) => {
-      return createErrorResponse(ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
+      return createErrorResponse(data.type, ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
     },
+    [FROM_CLIENT_MESSAGE_TYPES.NONE]: async (data: any, sessionData: any) => {
+      return createErrorResponse(data.type, ERROR_MESSAGES.INTERNAL_ERROR)
+    }
   };
 
   // Handle incoming messages from the client
@@ -135,17 +139,17 @@ export async function handleWebsocketRequest(ws: any, req: any) {
 
       // Validate base request schema
       if (!BaseRequest.safeParse(data).success) {
-        returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+        returnMessage = createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
       } else {
         // Check if the message type is valid
         if (!Object.values(FROM_CLIENT_MESSAGE_TYPES).includes(data.type)) {
-          returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+          returnMessage = createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
         } else {
           const handler =
             messageHandlers[data.type as FROM_CLIENT_MESSAGE_TYPES];
 
           if (!handler) {
-            returnMessage = createErrorResponse(ERROR_MESSAGES.INVALID_SCHEMA);
+            returnMessage = createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
           } else if (
             data.type !== FROM_CLIENT_MESSAGE_TYPES.REGISTER_PLAYER &&
             data.type !== FROM_CLIENT_MESSAGE_TYPES.RECONNECT
@@ -156,7 +160,7 @@ export async function handleWebsocketRequest(ws: any, req: any) {
               : null;
 
             if (!sessionData || sessionData.getConnectionID() !== ws.id) {
-              returnMessage = createErrorResponse(ERROR_MESSAGES.TOKEN_INVALID);
+              returnMessage = createErrorResponse(data.type, ERROR_MESSAGES.TOKEN_INVALID);
             } else {
               await Session.refreshSession(data.sessionID);
               returnMessage = await handler(data, sessionData);
@@ -169,7 +173,7 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       }
     } catch (error) {
       console.error("[WebSocket] Error processing message:", error);
-      returnMessage = createErrorResponse(ERROR_MESSAGES.INTERNAL_ERROR);
+      returnMessage = createErrorResponse(FROM_CLIENT_MESSAGE_TYPES.NONE,ERROR_MESSAGES.INTERNAL_ERROR);
     }
 
     if (messageID) returnMessage.messageID = messageID;
@@ -177,7 +181,8 @@ export async function handleWebsocketRequest(ws: any, req: any) {
   });
 }
 
-function createErrorResponse(error: string): ReturnMessage {
+function createErrorResponse(dataType: FROM_CLIENT_MESSAGE_TYPES, error: string): ReturnMessage {
+  console.info("[WebSocketRequestHandler: Sending error message of type + " + dataType + ": " + error);
   return { success: false, error };
 }
 

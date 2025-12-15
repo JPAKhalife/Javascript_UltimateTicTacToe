@@ -65,13 +65,13 @@ export function newConnection(ws: any, connectionID: string) {
  * @param playerID Player ID to associate
  */
 export function playerRegistered(connectionID: string, playerID: string) {
-  console.log(
+  console.info(
     `[Connections] Registering player ID ${playerID} with connection ID ${connectionID}`,
   );
 
   // Check if the connection exists in the activeWebsockets map
   if (activeWebsockets.has(connectionID)) {
-    console.log(
+    console.info(
       `[Connections] Connection ID ${connectionID} found in activeWebsockets map`,
     );
   } else {
@@ -87,7 +87,7 @@ export function playerRegistered(connectionID: string, playerID: string) {
   redisClient
     .set(REDIS_KEYS.CONNECTION(connectionID), playerID)
     .then(() => {
-      console.log(
+      console.info(
         `[Connections] Successfully set player ID ${playerID} for connection ${connectionID} in Redis`,
       );
     })
@@ -99,7 +99,7 @@ export function playerRegistered(connectionID: string, playerID: string) {
   redisClient
     .set(REDIS_KEYS.PLAYER_CONNECTION(playerID), connectionID)
     .then(() => {
-      console.log(
+      console.info(
         `[Connections] Successfully set connection ID ${connectionID} for player ${playerID} in Redis`,
       );
     })

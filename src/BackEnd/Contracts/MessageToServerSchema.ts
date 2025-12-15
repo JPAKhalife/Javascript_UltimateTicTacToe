@@ -19,6 +19,7 @@ export enum FROM_CLIENT_MESSAGE_TYPES {
   JOIN_LOBBY = "join_lobby",
   LEAVE_LOBBY = "leave_lobby",
   MAKE_MOVE = "make_move",
+  NONE = "None"
 }
 
 //This is the base request that contains information all requests should have
