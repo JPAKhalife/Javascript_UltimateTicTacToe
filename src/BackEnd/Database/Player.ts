@@ -5,7 +5,8 @@
  * @created 2025-11-16
  */
 
-import { RedisObject, ConcurrentModificationError } from "./RedisObject";
+import { RedisHash } from "./RedisHash";
+import { ConcurrentModificationError } from "./RedisObject";
 import { REDIS_KEYS } from "../Contants";
 import { DatabaseManager } from "./DatabaseManager";
 import { v4 as uuidv4 } from "uuid";
@@ -21,9 +22,9 @@ interface PlayerData {
 }
 
 /**
- * Player class extending RedisObject for Redis-backed player management
+ * Player class extending RedisHash for Redis-backed player management
  */
-export class Player extends RedisObject<PlayerData> {
+export class Player extends RedisHash<PlayerData> {
   /**
    * Create a new player
    * @param username The player's username

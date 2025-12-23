@@ -5,7 +5,8 @@
  * @created 2025-11-16
  */
 
-import { RedisObject, ConcurrentModificationError } from "../RedisObject";
+import { RedisHash } from "../RedisHash";
+import { ConcurrentModificationError } from "../RedisObject";
 import { REDIS_KEYS, ERROR_MESSAGES, GAME_CONSTANTS } from "../../Contants";
 import { DatabaseManager } from "../DatabaseManager";
 import { v4 as uuidv4 } from "uuid";
@@ -40,9 +41,9 @@ export interface CreateLobbyData {
 }
 
 /**
- * Lobby class extending RedisObject for Redis-backed lobby management
+ * Lobby class extending RedisHash for Redis-backed lobby management
  */
-export class Lobby extends RedisObject<LobbyData> {
+export class Lobby extends RedisHash<LobbyData> {
   private gameState: number[] = [];
   private players: string[] = [];
 

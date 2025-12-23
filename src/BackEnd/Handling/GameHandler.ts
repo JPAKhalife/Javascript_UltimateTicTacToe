@@ -10,19 +10,18 @@
 import Redis from "ioredis";
 import { GAME_STATES } from "../Contants";
 import { DatabaseManager } from "../Database/DatabaseManager";
-import { Lobby } from "../Database/Lobby";
+import { Lobby } from "../Database/Lobby/Lobby";
 
 /**
  * @function handleGameReadyCheck
  * @description This function checks whether or not the game is ready to started (transition from waiting to running)
- * @param lobbyID - The ID of the lobby to check
+ * @param lobby - The ID of the lobby to check
  */
-export async function handleGameReadyCheck(lobbyID: string) {
+export async function handleGameReadyCheck(lobby: Lobby) {
   let redisClient = DatabaseManager.getInstance().getRegularClient();
   //First handle cases where this method is pointless.
 
   //Get the lobby Object
-  const lobby = await Lobby.getById(lobbyID);
   if (!lobby) {
     throw Error(
       "Lobby not found. This should not happen and indicates an error in the back-end.",
@@ -32,7 +31,7 @@ export async function handleGameReadyCheck(lobbyID: string) {
   //Check if the game is already running
   if (lobby.get("lobbyState") === GAME_STATES.RUNNING) {
     console.info(
-      `[GameHandler] Lobby ${lobbyID} game is already running. No action taken.`,
+      `[GameHandler] Lobby ${lobby.get("lobbyID")} game is already running. No action taken.`,
     );
     return;
   }
@@ -45,7 +44,7 @@ export async function handleGameReadyCheck(lobbyID: string) {
 
   // If all checks are passed, start the game
   console.info(
-    `[GameHandler] All players have joined in lobby ${lobbyID}. Starting game...`,
+    `[GameHandler] All players have joined in lobby ${lobby.get("lobbyID")}. Starting game...`,
   );
   await handleGameStart(lobby);
 }
@@ -60,6 +59,8 @@ export async function handleGameStart(lobby: Lobby) {
   lobby.set("lobbyState", GAME_STATES.RUNNING);
 
   // Initialize the gameState with the proper structure
+  //* Should already be initialized when the lobby is created.
+  //? Would this save performance to set it now? (yes)
 
   // Notify all clients that the game has begun
 

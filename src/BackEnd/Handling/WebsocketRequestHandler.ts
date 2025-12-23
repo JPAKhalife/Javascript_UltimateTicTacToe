@@ -32,6 +32,7 @@ import Session from "../Database/Session";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../Contants";
 import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
+import { handleGameReadyCheck } from "./GameHandler";
 const { v4: uuidv4 } = require("uuid");
 
 type ReturnMessage = Record<string, any>;
@@ -623,6 +624,7 @@ async function handleJoinLobby(
     console.info(`[joinLobby] Player ${playerID} joined lobby ${lobbyID}`);
 
     //Now, after joining the lobby, we need to kickoff a process that checks whether the game is ready to start.
+    handleGameReadyCheck(lobby);
 
     // All we need to return the player is whether or not the joining was a success, so they can move on to the loading screen.
     // They will receive another message when the game actually starts.

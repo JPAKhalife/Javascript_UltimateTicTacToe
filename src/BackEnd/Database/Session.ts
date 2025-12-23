@@ -6,7 +6,7 @@
  * @updated 2025-11-29
  */
 
-import { RedisObject } from "./RedisObject";
+import { RedisHash } from "./RedisHash";
 import { nanoid } from 'nanoid';
 import { AUTH_CONSTANTS, REDIS_KEYS, ENV_CONFIG } from '../Contants';
 import crypto from 'crypto';
@@ -26,9 +26,9 @@ export interface SessionData {
 }
 
 /**
- * Session class extending RedisObject for Redis-backed session management
+ * Session class extending RedisHash for Redis-backed session management
  */
-export default class Session extends RedisObject<SessionData> {
+export default class Session extends RedisHash<SessionData> {
     /**
      * Create a new session
      * @param playerID The ID of the player associated with this session
