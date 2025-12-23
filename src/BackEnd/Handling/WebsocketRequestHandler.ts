@@ -31,6 +31,7 @@ import {
 import Session from "../Database/Session";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../Contants";
 import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
+import { ResponseBuilder } from "../Utils/ResponseBuilder";
 const { v4: uuidv4 } = require("uuid");
 
 type ReturnMessage = Record<string, any>;
@@ -56,7 +57,7 @@ type MessageHandlers = {
  * @param redis Redis client for regular operations (non-subscriber)
  */
 export async function handleWebsocketRequest(ws: any, req: any) {
-  console.log(
+  console.info(
     `[WebSocket] Connection established from client, IP: ${req.connection.remoteAddress}`,
   );
 
@@ -64,12 +65,12 @@ export async function handleWebsocketRequest(ws: any, req: any) {
   if (!ws.id) {
     ws.id = uuidv4();
     newConnection(ws, ws.id);
-    console.log(`[WebSocket] Assigning connection ID: ${ws.id}`);
+    console.info(`[WebSocket] Assigning connection ID: ${ws.id}`);
   }
 
   // Handle cleanup when the connection is closed
   ws.on("close", () => {
-    console.log(`[WebSocket] Connection ${ws.id} closed`);
+    console.info(`[WebSocket] Connection ${ws.id} closed`);
     removeConnection(ws.id);
   });
 
@@ -183,9 +184,9 @@ export async function handleWebsocketRequest(ws: any, req: any) {
   });
 }
 
-function createErrorResponse(dataType: FROM_CLIENT_MESSAGE_TYPES, error: string): ReturnMessage {
+function createErrorResponse(dataType: FROM_CLIENT_MESSAGE_TYPES, error: string, messageID?: string): ReturnMessage {
   console.info("[WebSocketRequestHandler]: Sending error message of type + " + dataType + ": " + error);
-  return { success: false, error };
+  return ResponseBuilder.error(error, messageID, dataType);
 }
 
 /**
@@ -201,23 +202,23 @@ function sendResponseToClient(
   messageID: string | null,
 ) {
   // Log the response being sent back to the client
-  console.log(
+  console.info(
     `[WebSocket] Preparing to send response for message ID ${messageID}:`,
     returnMessage,
   );
 
   // Stringify the response
   const responseString = JSON.stringify(returnMessage);
-  console.log(`[WebSocket] Response size: ${responseString.length} bytes`);
+  console.info(`[WebSocket] Response size: ${responseString.length} bytes`);
 
   try {
     // Check WebSocket state
-    console.log(`[WebSocket] Direct WebSocket readyState: ${ws.readyState}`);
+    console.info(`[WebSocket] Direct WebSocket readyState: ${ws.readyState}`);
 
     if (ws.readyState === 1) {
       // 1 = OPEN
       ws.send(responseString);
-      console.log(
+      console.info(
         `[WebSocket] Response sent successfully using direct WebSocket`,
       );
       return;
@@ -286,28 +287,24 @@ async function handleSearchLobbies(
         return true;
       })
       .slice(0, params.maxListLength || params.searchListLength || 10);
-    console.log(`Found ${lobbySearchResults.length} matching lobbies`);
+    console.info(`Found ${lobbySearchResults.length} matching lobbies`);
 
     // Log the first lobby for debugging if any exist
     if (lobbySearchResults.length > 0) {
-      console.log(
+      console.info(
         "First lobby sample:",
         JSON.stringify(lobbySearchResults[0]).substring(0, 200) + "...",
       );
     }
 
-    // Convert each lobby to its JSON representation and await all promises
-    const lobbies = await Promise.all(
-      lobbySearchResults.map((lobby) => lobby.toJSON()),
+    // Convert each lobby to LobbyInfo using ResponseBuilder
+    const lobbies = lobbySearchResults.map((lobby) =>
+      ResponseBuilder.lobbyToInfo(lobby)
     );
 
     // Log the size of the lobbies array
-    console.log("Lobbies array size:", JSON.stringify(lobbies).length, "bytes");
-    return {
-      success: true,
-      lobbies: lobbies,
-      count: lobbies.length,
-    };
+    console.info("Lobbies array size:", JSON.stringify(lobbies).length, "bytes");
+    return ResponseBuilder.searchLobbies(lobbies);
   } catch (error) {
     // Provide more detailed error information
     console.error(
@@ -315,10 +312,7 @@ async function handleSearchLobbies(
       error instanceof Error ? error.stack : error,
     );
 
-    return {
-      success: false,
-      error: ERROR_MESSAGES.INTERNAL_ERROR,
-    };
+    return ResponseBuilder.error(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 }
 
@@ -351,14 +345,10 @@ async function handleCreateLobby(
       },
       playerID,
     );
-    console.log(`Lobby ${params.lobbyData.lobbyName} created successfully`);
+    console.info(`Lobby ${params.lobbyData.lobbyName} created successfully`);
 
-    // Send response back to client
-    return {
-      success: true,
-      message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
-      lobby: await newLobby.toJSON(),
-    };
+    // Send response back to client using ResponseBuilder
+    return ResponseBuilder.createLobby(newLobby.get("lobbyID"));
   } catch (error) {
     console.error("Error creating lobby:", error);
     // Check if this is the lobby name exists error
@@ -366,15 +356,9 @@ async function handleCreateLobby(
       error instanceof Error &&
       error.message === ERROR_MESSAGES.LOBBY_NAME_EXISTS
     ) {
-      return {
-        success: false,
-        error: ERROR_MESSAGES.LOBBY_NAME_EXISTS,
-      };
+      return ResponseBuilder.error(ERROR_MESSAGES.LOBBY_NAME_EXISTS);
     }
-    return {
-      success: false,
-      error: ERROR_MESSAGES.INTERNAL_ERROR,
-    };
+    return ResponseBuilder.error(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 }
 
@@ -431,11 +415,10 @@ async function handleRegisterPlayer(
       // Create a session for the player
       const { token } = await Session.create(playerID, ws.id, req);
       console.debug("[WebsocketRequestHandler] Successfully registered player", username);
-      return {
-        success: true,
-        message: SUCCESS_MESSAGES.REGISTRATION_SUCCESS,
-        sessionID: token,
-      };
+      return ResponseBuilder.registerPlayer(
+        token,
+        SUCCESS_MESSAGES.REGISTRATION_SUCCESS
+      );
     }
   } catch (error) {
     console.debug("[WebsocketRequestHandler] There was an error registering the player: ", error);
@@ -466,49 +449,49 @@ async function handleReconnect(
 ): Promise<object> {
   const redis = DatabaseManager.getInstance().getRegularClient();
   try {
-    console.log(
+    console.info(
       `[Reconnect] Starting reconnection process for connection ID: ${ws.id}`,
     );
-    console.log(
+    console.info(
       `[Reconnect] Session ID provided: ${data.sessionID}...`,
     );
 
     // Validate the session
-    console.log(`[Reconnect] Validating session token`);
+    console.info(`[Reconnect] Validating session token`);
     const startValidation = Date.now();
     const sessionData = await Session.validateSession(data.sessionID);
     const validationTime = Date.now() - startValidation;
-    console.log(`[Reconnect] Session validation took ${validationTime}ms`);
+    console.info(`[Reconnect] Session validation took ${validationTime}ms`);
 
     if (!sessionData) {
-      console.log(`[Reconnect] Session validation failed - invalid token`);
+      console.info(`[Reconnect] Session validation failed - invalid token`);
       return {
         success: false,
         error: ERROR_MESSAGES.TOKEN_INVALID,
       };
     }
 
-    console.log(
+    console.info(
       `[Reconnect] Session validation successful for player ID: ${sessionData.get("playerID")}`,
     );
 
     // Get the current connection ID associated with the session
     const currentConnectionID = sessionData.get("connectionID");
-    console.log(
+    console.info(
       `[Reconnect] Current connection ID from session: ${currentConnectionID}`,
     );
 
     // Check if the current connection is still active
-    console.log(`[Reconnect] Checking if current connection is still active`);
+    console.info(`[Reconnect] Checking if current connection is still active`);
     const startConnectionCheck = Date.now();
     const isActive = await Session.isConnectionActive(currentConnectionID);
     const connectionCheckTime = Date.now() - startConnectionCheck;
-    console.log(
+    console.info(
       `[Reconnect] Connection check took ${connectionCheckTime}ms, result: ${isActive ? "active" : "inactive"}`,
     );
 
     if (isActive) {
-      console.log(
+      console.info(
         `[Reconnect] Current connection is still active - concurrent login not allowed`,
       );
       return {
@@ -518,13 +501,13 @@ async function handleReconnect(
     }
 
     // Ensure the WebSocket object is properly stored in the activeWebsockets map
-    console.log(
+    console.info(
       `[Reconnect] Re-registering WebSocket object in activeWebsockets map`,
     );
     newConnection(ws, ws.id);
 
     // Update the session with the new connection ID
-    console.log(
+    console.info(
       `[Reconnect] Updating session with new connection ID: ${ws.id}`,
     );
     const startUpdate = Date.now();
@@ -558,17 +541,17 @@ async function handleReconnect(
     };
 
     // Try to send the response directly
-    console.log(`[Reconnect] Attempting to send response directly`);
+    console.info(`[Reconnect] Attempting to send response directly`);
     try {
       const responseString = JSON.stringify(directResponse);
       ws.send(responseString);
-      console.log(`[Reconnect] Direct response sent successfully`);
+      console.info(`[Reconnect] Direct response sent successfully`);
     } catch (sendError) {
       console.error(`[Reconnect] Error sending direct response:`, sendError);
     }
 
     // Return success for the normal response flow as well
-    console.log(
+    console.info(
       `[Reconnect] Reconnection successful for player ID: ${sessionData.get("playerID")}`,
     );
     return {
@@ -622,25 +605,19 @@ async function handleJoinLobby(
       };
     }
 
-    console.log(`Player ${playerID} attempting to join lobby ${lobbyID}`);
+    console.info(`Player ${playerID} attempting to join lobby ${lobbyID}`);
 
     // Fetch the lobby
     const lobby = await Lobby.getById(lobbyID);
     if (!lobby) {
-      return {
-        success: false,
-        error: ERROR_MESSAGES.LOBBY_NOT_FOUND,
-      };
+      return ResponseBuilder.error(ERROR_MESSAGES.LOBBY_NOT_FOUND);
     }
     // Add player to lobby
     try {
       await lobby.addPlayer(playerID);
     } catch (error) {
       console.warn("[joinLobby] ", error)
-      return {
-        success: false,
-        error: ERROR_MESSAGES.LOBBY_JOIN_FAILED,
-      };
+      return ResponseBuilder.error(ERROR_MESSAGES.LOBBY_JOIN_FAILED);
     }
 
     console.info(`[joinLobby] Player ${playerID} joined lobby ${lobbyID}`);
@@ -649,16 +626,10 @@ async function handleJoinLobby(
 
     // All we need to return the player is whether or not the joining was a success, so they can move on to the loading screen.
     // They will receive another message when the game actually starts.
-    return {
-      success: true,
-      message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
-      lobby: await lobby.toJSON(),
-    };
+    const lobbyInfo = ResponseBuilder.lobbyToInfo(lobby);
+    return ResponseBuilder.joinLobby(lobbyInfo, SUCCESS_MESSAGES.OPERATION_SUCCESS);
   } catch (error) {
     console.error("Error joining lobby:", error);
-    return {
-      success: false,
-      error: ERROR_MESSAGES.INTERNAL_ERROR,
-    };
+    return ResponseBuilder.error(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 }

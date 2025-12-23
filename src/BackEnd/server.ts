@@ -49,10 +49,10 @@ app.use((req: any, res: any, next: any) => {
 // Initialize the DatabaseManager with Redis connections
 const dbManager = DatabaseManager.getInstance();
 dbManager.initialize(host, port);
-console.log("Initialized successfully");
+console.info("Initialized successfully");
 //Automatically statically serves the frontEnd directory for the user
 app.use(express.static(process.cwd() + "/FrontEnd"));
-console.log("Local directory is: " + process.cwd());
+console.info("Local directory is: " + process.cwd());
 
 app.get("/favicon.ico", (req: any, res: any) => res.status(204));
 //*HTTP REQUESTS
@@ -69,11 +69,11 @@ expressWsApp.app.ws("/", (ws: any, req: any) =>
 
 // Listen on port 3000
 app.listen(3000, () => {
-  console.log("Server started on port 3000");
+  console.info("Server started on port 3000");
 });
 
 // Middleware to log the URL of any request
 app.use((req, res, next) => {
-  console.log(`Request URL: ${req.url}`);
+  console.info(`Request URL: ${req.url}`);
   next();
 });

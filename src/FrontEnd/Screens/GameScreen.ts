@@ -30,7 +30,7 @@ export default class GameScreen implements Menu {
     this.keylistener = new KeyListener(sketch);
     this.sketch = sketch;
     this.gameType = gameType;
-    console.log(
+    console.info(
       "[GameScreen] Initializing game with mode: ",
       gameType === GameType.LOCAL ? "LOCAL" : "ONLINE",
     );

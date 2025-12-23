@@ -100,7 +100,7 @@ export default class Session extends RedisObject<SessionData> {
                 ip: "",
                 agent: ""
             };
-            
+
             const session = new Session(sessionID, dummyData, DatabaseManager.getInstance().getRegularClient());
             await session.load();
             return session;
@@ -150,11 +150,11 @@ export default class Session extends RedisObject<SessionData> {
      */
     static async getByConnectionID(connectionID: string): Promise<Session | null> {
         const redisClient = DatabaseManager.getInstance().getRegularClient();
-        
+
         try {
             // This is a simplified implementation. In production, consider using a secondary index
             const sessionKeys = await redisClient.keys(`${REDIS_KEYS.SESSION("*")}`);
-            
+
             for (const key of sessionKeys) {
                 const connID = await redisClient.hget(key, 'connectionID');
                 if (connID === connectionID) {
@@ -162,7 +162,7 @@ export default class Session extends RedisObject<SessionData> {
                     return await Session.getById(sessionID);
                 }
             }
-            
+
             return null;
         } catch (error) {
             console.error("Error getting session by connection ID:", error);
@@ -185,11 +185,11 @@ export default class Session extends RedisObject<SessionData> {
      */
     async invalidate(): Promise<void> {
         const playerID = this.get('playerID');
-        
+
         await this.withTransaction(multi => {
             // Delete session
             multi.del(this.getRedisKey());
-            
+
             // Remove from player's sessions list
             if (playerID) {
                 multi.srem(REDIS_KEYS.PLAYER_SESSIONS(playerID), this.id);
@@ -203,14 +203,14 @@ export default class Session extends RedisObject<SessionData> {
      */
     static async isConnectionActive(connectionID: string): Promise<boolean> {
         const redisClient = DatabaseManager.getInstance().getRegularClient();
-        console.log(`[Session] Checking if connection ID ${connectionID} is active`);
-        
+        console.info(`[Session] Checking if connection ID ${connectionID} is active`);
+
         const redisKey = REDIS_KEYS.CONNECTION(connectionID);
         const exists = await redisClient.exists(redisKey);
-        
+
         const isActive = exists === 1;
-        console.log(`[Session] Connection ${connectionID} is ${isActive ? 'active' : 'inactive'}`);
-        
+        console.info(`[Session] Connection ${connectionID} is ${isActive ? 'active' : 'inactive'}`);
+
         return isActive;
     }
 
@@ -259,7 +259,7 @@ export default class Session extends RedisObject<SessionData> {
         const encodedTimestamp = Buffer.from(timestamp.toString()).toString('base64url');
         const encodedAgent = Buffer.from(agent).toString('base64url');
         const encodedIp = Buffer.from(ip).toString('base64url');
-        
+
         const payload = `${encodedBaseId}.${encodedTimestamp}.${encodedAgent}.${encodedIp}`;
 
         // Create HMAC signature using the server's secret key
@@ -301,7 +301,7 @@ export default class Session extends RedisObject<SessionData> {
 
             // Recreate the payload with encoded values (important for signature verification)
             const payload = `${encodedBaseId}.${encodedTimestamp}.${encodedAgent}.${encodedIp}`;
-            
+
             // Recalculate signature
             const expectedSignature = crypto
                 .createHmac('sha256', ENV_CONFIG.DEFAULT_SECRET_KEY)

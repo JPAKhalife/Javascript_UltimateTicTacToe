@@ -17,7 +17,7 @@ import { Player } from "../Database/Player";
  * @description This function is meant to handle the cleanup related to function expiry
  */
 export async function handleSessionExpiry(expiredKey: string) {
-  console.log("Session expired, removing player Data if exists");
+  console.info("Session expired, removing player Data if exists");
   //This will be useful for removing the player
   const session = await Session.getById(expiredKey);
   if (!session) {
@@ -34,6 +34,6 @@ export async function handleSessionExpiry(expiredKey: string) {
  * @description This function handles cleanup related to when a connecion expires
  */
 export async function handleConnectionExpiry(expiredKey: string) {
-  console.log("Disconnecting");
+  console.info("Disconnecting");
   disconnect(expiredKey);
 }

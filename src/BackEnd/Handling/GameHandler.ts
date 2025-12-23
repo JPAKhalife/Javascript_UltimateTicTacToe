@@ -31,7 +31,7 @@ export async function handleGameReadyCheck(lobbyID: string) {
 
   //Check if the game is already running
   if (lobby.get("lobbyState") === GAME_STATES.RUNNING) {
-    console.log(
+    console.info(
       `[GameHandler] Lobby ${lobbyID} game is already running. No action taken.`,
     );
     return;
@@ -44,7 +44,7 @@ export async function handleGameReadyCheck(lobbyID: string) {
   //? There may be other checks that are neccessary in the future
 
   // If all checks are passed, start the game
-  console.log(
+  console.info(
     `[GameHandler] All players have joined in lobby ${lobbyID}. Starting game...`,
   );
   await handleGameStart(lobby);
@@ -82,11 +82,11 @@ export async function handlePlayerChange(lobby: Lobby) {
  * @param lobby the lobby object that the game should be evaluated for
  *
  */
-export async function handleEvaluateGame(lobby: Lobby) {}
+export async function handleEvaluateGame(lobby: Lobby) { }
 
 /**
  * @function handleGameWon
  * @description This function handles the end of the game when a player has won
  * @param lobby the lobby object that the game has been won in
  */
-export async function handleGameWon(lobby: Lobby) {}
+export async function handleGameWon(lobby: Lobby) { }

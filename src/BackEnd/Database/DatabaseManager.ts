@@ -23,7 +23,7 @@ export class DatabaseManager {
     const redisHost = process.env.REDIS_HOST || "localhost";
     const redisPort = parseInt(process.env.REDIS_PORT || "6379");
 
-    console.log(`DatabaseManager initialized with ${redisHost}:${redisPort}`);
+    console.info(`DatabaseManager initialized with ${redisHost}:${redisPort}`);
 
     this.regularClient = new Redis({
       host: redisHost,
@@ -66,7 +66,7 @@ export class DatabaseManager {
    */
   public initialize(host: string, port: number): void {
     if (this.initialized) {
-      console.log("DatabaseManager already initialized");
+      console.info("DatabaseManager already initialized");
       return;
     }
 
@@ -74,7 +74,7 @@ export class DatabaseManager {
       this.regularClient = this.createRegularConnection(host, port);
       this.subscriberClient = this.createSubscriberConnection(host, port);
       this.initialized = true;
-      console.log(`DatabaseManager initialized with ${host}:${port}`);
+      console.info(`DatabaseManager initialized with ${host}:${port}`);
     } catch (error) {
       console.error("Failed to initialize DatabaseManager:", error);
       throw error;
@@ -145,7 +145,7 @@ export class DatabaseManager {
     });
 
     redisClient.on("connect", () => {
-      console.log("Connected to Redis regular server");
+      console.info("Connected to Redis regular server");
     });
 
     return redisClient;
@@ -175,19 +175,19 @@ export class DatabaseManager {
     });
 
     redisClient.on("connect", () => {
-      console.log("Connected to Redis subscriber server");
+      console.info("Connected to Redis subscriber server");
     });
 
     redisClient.psubscribe("__keyevent@0__:expired", (err, count) => {
       if (err) {
         console.error("Failed to subscribe to key expiration events:", err);
       } else {
-        console.log(`Subscribed to ${count} key expiration event(s).`);
+        console.info(`Subscribed to ${count} key expiration event(s).`);
       }
     });
 
     redisClient.on("pmessage", (pattern, channel, expiredKey) => {
-      console.log(`Key expired: ${expiredKey}`);
+      console.info(`Key expired: ${expiredKey}`);
       if (expiredKey.includes(REDIS_KEYS.SESSION(""))) {
         handleSessionExpiry(expiredKey);
       } else if (expiredKey.includes(REDIS_KEYS.CONNECTION(""))) {
@@ -199,7 +199,7 @@ export class DatabaseManager {
       //Check if the channel name fontains lobby:
       if (channel.startsWith("lobby:")) {
         const lobbyID = channel.split(":")[1];
-          handleForwardLobbyMessage(lobbyID, JSON.parse(message));
+        handleForwardLobbyMessage(lobbyID, JSON.parse(message));
       }
     });
 

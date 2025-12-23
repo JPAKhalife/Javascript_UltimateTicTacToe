@@ -23,21 +23,21 @@ import { DatabaseManager } from "./DatabaseManager";
  */
 export function newConnection(ws: any, connectionID: string) {
   let redisClient = DatabaseManager.getInstance().getRegularClient();
-  console.log(
+  console.info(
     `[Connections] Registering new WebSocket connection with ID: ${connectionID}`,
   );
-  console.log(`[Connections] WebSocket readyState: ${ws.readyState}`);
+  console.info(`[Connections] WebSocket readyState: ${ws.readyState}`);
 
   // Store the WebSocket object in the activeWebsockets map
   activeWebsockets.set(connectionID, ws);
-  console.log(
+  console.info(
     `[Connections] activeWebsockets map size after adding: ${activeWebsockets.size}`,
   );
 
   // Verify the WebSocket was added correctly
   const storedWs = activeWebsockets.get(connectionID);
   if (storedWs === ws) {
-    console.log(
+    console.info(
       `[Connections] WebSocket object successfully stored in activeWebsockets map`,
     );
   } else {
@@ -47,7 +47,7 @@ export function newConnection(ws: any, connectionID: string) {
   }
 
   // Use Math.floor to ensure integer value for Redis expiration time
-  console.log(
+  console.info(
     `[Connections] Setting Redis key for connection: ${REDIS_KEYS.CONNECTION(connectionID)}`,
   );
   redisClient.set(
@@ -174,7 +174,7 @@ async function setExpiryOnConnectionSessions(
     if (connID === connectionID) {
       // Set expiry on this session
       await redisClient.expire(key, AUTH_CONSTANTS.SESSION_EXPIRE_TIME);
-      console.log(
+      console.info(
         `Set expiry on session ${key} associated with disconnected connection ${connectionID}`,
       );
     }
@@ -197,7 +197,7 @@ export function disconnect(key: string): void {
   if (ws) {
     try {
       ws.close();
-      console.log(
+      console.info(
         `WebSocket for connection ${connectionID} closed successfully`,
       );
     } catch (error) {
@@ -207,21 +207,21 @@ export function disconnect(key: string): void {
       );
     }
   } else {
-    console.log(`No active WebSocket found for connection ${connectionID}`);
+    console.info(`No active WebSocket found for connection ${connectionID}`);
   }
 
   removeConnection(connectionID);
 }
 
 export function getWebsocketObject(connectionID: string) {
-  console.log(
+  console.info(
     `[Connections] Getting WebSocket object for connection ID: ${connectionID}`,
   );
 
   const ws = activeWebsockets.get(connectionID);
 
   if (ws) {
-    console.log(
+    console.info(
       `[Connections] WebSocket object found for connection ID: ${connectionID}, readyState: ${ws.readyState}`,
     );
     return ws;

@@ -6,23 +6,13 @@
  * @updated 2024-06-23
  */
 
-import { time } from "console";
-const { v4: uuidv4 } = require("uuid");
+// Import shared types
+import type { LobbyInfo } from "../Shared/Contracts/MessageToClientSchema";
 
 /**
- * Interface representing lobby information
+ * Re-export LobbyInfo for backward compatibility
  */
-export interface LobbyInfo {
-  lobbyID: string;
-  lobbyName: string;
-  playerNum: number;
-  levelSize: number;
-  gridSize: number;
-  playersJoined: number;
-  creator: string;
-  lobbyState: string;
-  allowSpectators: boolean;
-}
+export type { LobbyInfo };
 
 /**
  * Interface representing a game update from the server
@@ -74,7 +64,7 @@ export default class WebManager {
    */
   public addGameListener(listener: (update: GameUpdate) => void): void {
     this.gameListeners.push(listener);
-    console.log(
+    console.info(
       "[WebManager] Added game listener, total listeners:",
       this.gameListeners.length,
     );
@@ -89,7 +79,7 @@ export default class WebManager {
     const index = this.gameListeners.indexOf(listener);
     if (index > -1) {
       this.gameListeners.splice(index, 1);
-      console.log(
+      console.info(
         "[WebManager] Removed game listener, remaining listeners:",
         this.gameListeners.length,
       );
@@ -102,7 +92,7 @@ export default class WebManager {
    */
   public clearGameListeners(): void {
     this.gameListeners = [];
-    console.log("[WebManager] Cleared all game listeners");
+    console.info("[WebManager] Cleared all game listeners");
   }
 
   /**
@@ -175,18 +165,18 @@ export default class WebManager {
    */
   public async initiateWebsocketConnection(): Promise<boolean> {
     return new Promise((resolve) => {
-      console.log("[Connection] Initiating WebSocket connection");
+      console.info("[Connection] Initiating WebSocket connection");
 
       const serverAddress =
         process.env.REMOTE_SERVER_ADDRESS || "ws://localhost:3000";
       const connectionUrl = serverAddress;
 
-      console.log(`[Connection] Connecting to: ${serverAddress}`);
+      console.info(`[Connection] Connecting to: ${serverAddress}`);
 
       this.socket = new WebSocket(connectionUrl);
 
       this.socket.onopen = async () => {
-        console.log(
+        console.info(
           "[Connection] WebSocket connection established - clientside",
         );
 
@@ -196,30 +186,30 @@ export default class WebManager {
         // Check if we have a stored session ID for reconnection
         const sessionId = this.getSessionId();
         if (sessionId) {
-          console.log(
+          console.info(
             `[Connection] Found stored session ID: ${sessionId.substring(0, 8)}...`,
           );
 
           // Attempt to reconnect with the stored session ID
-          console.log(
+          console.info(
             "[Connection] Attempting to reconnect with stored session ID",
           );
           const reconnected = await this.attemptReconnect(sessionId);
 
           if (reconnected) {
             WebManager.isAuthenticated = true;
-            console.log(
+            console.info(
               "[Connection] Successfully reconnected with existing session",
             );
           } else {
             WebManager.isAuthenticated = false;
-            console.log(
+            console.info(
               "[Connection] Failed to reconnect with existing session, clearing session ID",
             );
             this.clearSessionId();
           }
         } else {
-          console.log("[Connection] No stored session ID found.");
+          console.info("[Connection] No stored session ID found.");
         }
 
         resolve(true);
@@ -252,7 +242,7 @@ export default class WebManager {
       };
 
       this.socket.onclose = (event) => {
-        console.log("[WebSocket] Connection closed", event);
+        console.info("[WebSocket] Connection closed", event);
         this.scheduleReconnect();
       };
 
@@ -296,12 +286,12 @@ export default class WebManager {
         120000,
       );
 
-      console.log(
+      console.info(
         `[WebSocket] Scheduling reconnection attempt ${this.reconnectAttempts} in ${delay}ms`,
       );
 
       setTimeout(() => {
-        console.log(
+        console.info(
           `[WebSocket] Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
         );
         this.initiateWebsocketConnection();
@@ -320,7 +310,7 @@ export default class WebManager {
    */
   private async attemptReconnect(sessionId: string): Promise<boolean> {
     try {
-      console.log(
+      console.info(
         `[Reconnect] Starting reconnection attempt with session ID: ${sessionId.substring(0, 8)}...`,
       );
 
@@ -330,7 +320,7 @@ export default class WebManager {
         sessionID: sessionId,
       };
 
-      console.log(`[Reconnect] Sending reconnect request.`);
+      console.info(`[Reconnect] Sending reconnect request.`);
 
       // Use the standard sendRequest method with a longer timeout for reconnection
       try {
@@ -340,73 +330,24 @@ export default class WebManager {
         }>(message, "reconnect");
 
         if (response && response.success === true) {
-          console.log(`[Reconnect] Reconnection successful`);
+          console.info(`[Reconnect] Reconnection successful`);
           return true;
         } else {
-          console.log(
+          console.info(
             `[Reconnect] Reconnection failed: Server returned unsuccessful response`,
           );
           return false;
         }
       } catch (error) {
-        console.error(`[Reconnect] Reconnection failed:`, error);
+        console.warn(`[Reconnect] Reconnection failed:`, error);
         return false;
       }
     } catch (error) {
-      console.error("[Reconnect] Error attempting to reconnect:", error);
+      console.warn("[Reconnect] Error attempting to reconnect:", error);
       return false;
     }
   }
 
-  /**
-   * @method createLobby
-   * @description Sends a request to the server to create a new lobby
-   * @param lobbyID Name of the lobby to create
-   * @param playerNum Number of players allowed in the lobby
-   * @param levelSize Size of the level
-   * @param gridSize Size of the grid
-   * @param playerID Unique ID of the player creating the lobby
-   * @param allowSpectators whether or not spectators should be allowed
-   * @returns Promise that resolves the lobby id or null
-   */
-  public async createLobby(
-    lobbyName: string,
-    playerNum: number,
-    levelSize: number,
-    gridSize: number,
-    playerID: string,
-    allowSpectators: boolean,
-  ): Promise<string | null> {
-    try {
-      // Create message payload
-      const message = {
-        type: "create_lobby",
-        sessionID: this.getSessionId(),
-        parameters: {
-          lobbyData: {
-            lobbyName: lobbyName,
-            playerNum,
-            levelSize,
-            gridSize,
-            allowSpectators,
-          },
-        },
-      };
-
-      // Use the sendRequest method to create the lobby
-      const response = await this.sendRequest<{ success: boolean, lobbyID: string }>(
-        message,
-        "create_lobby",
-      );
-      console.log("[WebSocket] Response received: ", response);
-
-      // Return the success status from the response
-      return response.lobbyID;
-    } catch (error) {
-      console.error("[WebSocket] Error creating lobby:", error);
-      return null;
-    }
-  }
 
   /**
    * @method initiateConnectionIfNotEstablished
@@ -454,72 +395,6 @@ export default class WebManager {
     }
   }
 
-  /**
-   * @method getLobbyList
-   * @description Get a list of lobbies on the server
-   * @param playerNum: number of players who can play the game
-   * @param levelSize: The number of layers in the tictac
-   * @param gridSize: The number of slots in a tictac
-   * @param joinedPlayers: The number of players who have joined the lobby (spectators included)
-   * @returns Promise<LobbyInfo[]> a promise that resolves to an array of lobbies and their info
-   */
-  public async getLobbyList(parameters: {
-    lobbyID?: string;
-    lobbyName?: string;
-    playerNum?: number;
-    levelSize?: number;
-    gridSize?: number;
-    joinedPlayers?: number;
-    maxListLength?: number;
-    lobbyState?: string;
-    creator?: string;
-  }): Promise<LobbyInfo[]> {
-    try {
-      let playerID = localStorage.getItem("playerID");
-      // Create the message payload
-      const message = {
-        type: "search_lobby",
-        sessionID: this.getSessionId(),
-        parameters: {
-          lobbyID: parameters.lobbyID,
-          lobbyName: parameters.lobbyName,
-          playerNum: parameters.playerNum,
-          levelSize: parameters.levelSize,
-          gridSize: parameters.gridSize,
-          creator: parameters.creator,
-          lobbyState: parameters.lobbyState,
-          joinedPlayers: parameters.joinedPlayers,
-          maxListLength: parameters.maxListLength,
-        },
-      };
-
-      // Use the sendRequest method to get the lobby list
-      const response = await this.sendRequest<{
-        success: boolean;
-        lobbies: any[];
-      }>(message, "search_lobby");
-
-      // Parse the response into LobbyInfo objects
-      if (response && response.success && Array.isArray(response.lobbies)) {
-        return response.lobbies.map((lobby) => ({
-          lobbyID: lobby.lobbyID,
-          lobbyName: lobby.lobbyName,
-          playerNum: lobby.playerNum,
-          levelSize: lobby.levelSize,
-          gridSize: lobby.gridSize,
-          playersJoined: lobby.playersJoined,
-          creator: lobby.creator,
-          lobbyState: lobby.lobbyState,
-          allowSpectators: lobby.allowSpectators,
-        }));
-      }
-
-      return [];
-    } catch (error) {
-      console.error("Error getting lobby list:", error);
-      return [];
-    }
-  }
 
   /**
    * @method sendRequest
@@ -547,25 +422,25 @@ export default class WebManager {
       // Add the session ID to the message if available (except for registration)
       if (this.sessionId && action !== "registerPlayer") {
         message.sessionID = this.sessionId;
-        console.log(
+        console.info(
           `[${action}] Using session ID: ${this.sessionId}...`,
         );
       }
 
-      console.log(
+      console.info(
         `[${action}] Registering callback for message ID: ${messageID}`,
       );
 
       //Register callbacks for the message
       this.exactMessageCallbacks.set(messageID, (response) => {
         // Store the response for future reference
-        console.log(
+        console.info(
           `[${action}] Received response for message ID ${messageID}:`,
           response,
         );
 
         if (response.success) {
-          console.log(`[${action}] Request successful`);
+          console.info(`[${action}] Request successful`);
           // Return the entire response object since it contains all the data we need
           resolve(response as T);
         } else {
@@ -579,14 +454,14 @@ export default class WebManager {
       if (logMessage.sessionID) {
         logMessage.sessionID = `${logMessage.sessionID.substring(0, 8)}...`;
       }
-      console.log(`[${action}] Sending message:`, logMessage);
+      console.info(`[${action}] Sending message:`, logMessage);
 
       // Send the message
       this.socket?.send(JSON.stringify(message));
 
       // Determine timeout based on action type
       const timeout = action === "reconnect" ? 30000 : 10000; // 30 seconds for reconnect, 10 seconds for others
-      console.log(
+      console.info(
         `[${action}] Message sent, waiting for response (timeout: ${timeout / 1000}s)`,
       );
 
@@ -603,122 +478,8 @@ export default class WebManager {
     });
   }
 
-  /**
-   * @method checkAndRegisterPlayer
-   * @description This method makes a request for a new player to be generated. This allows the
-   * client to join game servers when it receives a session id.
-   * @param username the username that the player chose
-   * @return The sessionID and message.
-   */
-  public async checkAndRegisterPlayer(
-    username: string,
-  ): Promise<[string, string]> {
-    try {
-      const message = {
-        type: "register_player",
-        parameters: {
-          username: username
-        },
-      };
 
-      const response = await this.sendRequest<{
-        success: boolean;
-        message: string;
-        sessionID: string;
-      }>(message, "registerPlayer");
-      //Store the session ID
-      if (response.success && response.sessionID) {
-        this.setSessionId(response.sessionID);
-        WebManager.isAuthenticated = true;
-        console.log("Session ID stored:", response.sessionID);
-      }
 
-      // The session ID will be automatically stored by the sendRequest method
-      return [response.sessionID ? response.sessionID : "", response.message];
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      return ["", errorMessage];
-    }
-  }
-
-  /**
-   * @method joinLobby
-   * @description This method is used to join a lobby on the server
-   * @param lobbyID the ID of the lobby to join
-   * @returns Promise<LobbyInfo | null> the lobby info if join was successful, null otherwise
-   */
-  public async joinLobby(lobbyID: string): Promise<LobbyInfo | null> {
-    try {
-      const message = {
-        type: "join_lobby",
-        sessionID: this.getSessionId(),
-        parameters: {
-          lobbyID: lobbyID,
-        },
-      };
-
-      const response = await this.sendRequest<{ success: boolean; lobby: any }>(
-        message,
-        "join_lobby",
-      );
-      if (response && response.success && response.lobby) {
-        //If the response is a success, This means we can begin accepting game updates
-        this.registerTypeCallback("game_update", (update) =>
-          this.handleGameUpdate(update as GameUpdate),
-        );
-
-        // Return the lobby info as a LobbyInfo object
-        return {
-          lobbyID: response.lobby.lobbyID,
-          lobbyName: response.lobby.lobbyName,
-          playerNum: response.lobby.playerNum,
-          levelSize: response.lobby.levelSize,
-          gridSize: response.lobby.gridSize,
-          playersJoined: response.lobby.playersJoined,
-          creator: response.lobby.creator,
-          lobbyState: response.lobby.lobbyState,
-          allowSpectators: response.lobby.allowSpectators,
-        };
-      }
-      return null;
-    } catch (error) {
-      console.error("Error joining lobby:", error);
-      return null;
-    }
-  }
-
-  /**
-   * @method makeMove
-   * @description Send a move to the server in a game
-   * @param lobbyID The ID of the lobby where the game is happening
-   * @param position The position of the move (column and row)
-   * @returns Promise<boolean> true if the move was successful, false otherwise
-   */
-  public async makeMove(
-    lobbyID: string,
-    position: { col: number; row: number },
-  ): Promise<boolean> {
-    try {
-      const message = {
-        type: "make_move",
-        sessionID: this.getSessionId(),
-        parameters: {
-          lobbyID,
-          position,
-        },
-      };
-
-      const response = await this.sendRequest<{ success: boolean }>(
-        message,
-        "make_move",
-      );
-      return response && response.success === true;
-    } catch (error) {
-      console.error("[WebSocket] Error making move:", error);
-      return false;
-    }
-  }
 
   /**
    * @method registerTypeCallback
@@ -734,14 +495,14 @@ export default class WebManager {
   }
 
   /**
-   * @method handleGameUpdate() {
+   * @method handleGameUpdate
    * @description Handle incoming game update messages and notify listeners
-   * @param update The game update data received from the server}
+   * @param update The game update data received from the server
    */
-  private handleGameUpdate(update: GameUpdate): void {
-    console.log("[Game Update] Received game update:", update);
+  public handleGameUpdate(update: GameUpdate): void {
+    console.info("[Game Update] Received game update:", update);
     // Notify all registered listeners
-    console.log(
+    console.info(
       "[Game Update] Notifying",
       this.gameListeners.length,
       "listeners",

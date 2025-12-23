@@ -69,7 +69,7 @@ export class ServerConnections {
       // Setup graceful shutdown
       ServerConnections.instance.setupGracefulShutdown();
 
-      console.log(
+      console.info(
         `Server ${serverID} registered successfully at ${address}:${port}`,
       );
       return ServerConnections.instance;
@@ -110,7 +110,7 @@ export class ServerConnections {
         ServerConnections.ENTRY_TTL,
       );
 
-      console.log(
+      console.info(
         `Server ${this.serverID} registered in Redis at ${serverAddress}`,
       );
     } catch (error) {
@@ -131,7 +131,7 @@ export class ServerConnections {
       }
     }, ServerConnections.REFRESH_INTERVAL);
 
-    console.log(`Refresh interval started for server ${this.serverID}`);
+    console.info(`Refresh interval started for server ${this.serverID}`);
   }
 
   /**
@@ -153,7 +153,7 @@ export class ServerConnections {
         ServerConnections.ENTRY_TTL,
       );
 
-      console.log(`Server ${this.serverID} entry refreshed`);
+      console.info(`Server ${this.serverID} entry refreshed`);
     } catch (error) {
       console.error("Failed to refresh server entry:", error);
     }
@@ -164,7 +164,7 @@ export class ServerConnections {
    */
   private setupGracefulShutdown(): void {
     const cleanup = async () => {
-      console.log(`Shutting down server ${this.serverID}`);
+      console.info(`Shutting down server ${this.serverID}`);
       await this.unregisterServer();
       process.exit(0);
     };
@@ -190,7 +190,7 @@ export class ServerConnections {
       // Remove our entry from the hash
       await redisClient.hdel(ServerConnections.SERVERS_HASH_KEY, this.serverID);
 
-      console.log(`Server ${this.serverID} unregistered successfully`);
+      console.info(`Server ${this.serverID} unregistered successfully`);
     } catch (error) {
       console.error("Failed to unregister server:", error);
     }

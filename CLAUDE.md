@@ -9,6 +9,7 @@ An Ultimate TicTacToe multiplayer game with configurable grid sizes and levels. 
 ## Build Commands
 
 ### Development
+
 ```bash
 # Build backend only
 npx webpack --config webpack-back.config.js --mode development --env LOG_LEVEL=DEBUG
@@ -22,6 +23,7 @@ npx webpack serve --config webpack-front.config.js --mode development --env LOG_
 ```
 
 ### Production Build & Deploy
+
 ```bash
 # Full build and deployment (preferred method)
 ./start.sh
@@ -36,6 +38,7 @@ npx webpack serve --config webpack-front.config.js --mode development --env LOG_
 ```
 
 ### Linting
+
 ```bash
 # Run ESLint
 npx eslint .
@@ -92,6 +95,7 @@ npx eslint . --fix
    - `ENV_CONFIG` - Environment-specific configuration
 
 **Message Flow:**
+
 1. Client sends JSON message via WebSocket
 2. `WebsocketRequestHandler` validates message against Zod schema
 3. Handler retrieves session data from Redis
@@ -100,6 +104,7 @@ npx eslint . --fix
 6. State changes published to Redis for multi-server synchronization
 
 **Redis Usage:**
+
 - Session storage with TTL
 - Connection tracking
 - Lobby state management
@@ -111,6 +116,7 @@ npx eslint . --fix
 **Entry Point:** `sketch.ts` - P5.js-based game client
 
 **Architecture:**
+
 - `GuiManager.ts` - Screen management and transitions
 - `Menu.ts` - Screen enumeration and navigation
 - `WebManager.ts` - WebSocket communication with backend
@@ -121,6 +127,7 @@ npx eslint . --fix
 - `Constants.ts` - Re-exports shared constants and frontend-specific constants (FRAMERATE)
 
 **Environment Variables:**
+
 - `REMOTE_SERVER_ADDRESS` - WebSocket server URL (default: `ws://localhost:3000`)
 - `LOG_LEVEL` - Logging verbosity (DEBUG, INFO, etc.)
 
@@ -141,6 +148,7 @@ npx eslint . --fix
 ## Important Constants
 
 Located in `src/BackEnd/Contants.ts`:
+
 - `GAME_CONSTANTS` - Max players, grid sizes, level sizes
 - `VALIDATION` - String length limits, result limits
 - `REDIS_KEYS` - Redis key prefixes for different object types
@@ -157,9 +165,10 @@ Located in `src/BackEnd/Contants.ts`:
 ## Code Style
 
 ESLint configured with:
+
 - TypeScript ESLint recommended rules
 - Double quotes, 2-space indentation, semicolons required
-- No console.log restrictions (server logging is expected)
+- No console.info restrictions (server logging is expected)
 - Strict type checking with `@typescript-eslint/no-explicit-any: warn`
 - Trailing commas in multiline structures
 

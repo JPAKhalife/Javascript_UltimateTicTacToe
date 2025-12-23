@@ -16,9 +16,10 @@ import GuiManager from "../GuiManager";
 import LobbyDot, { LobbyInfo } from "../MenuObjects/LobbyDot";
 import { FRAMERATE } from "../Constants";
 import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
-import WebManager, { GameUpdate } from "../WebManager";
+import { GameUpdate } from "../WebManager";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import { GameType } from "../GameManager";
+import ServerRequestService from "../Services/ServerRequestService";
 
 const LOBBY_REFRESH_TIME = 7 * FRAMERATE; // 3 seconds
 const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
@@ -61,13 +62,13 @@ export default class MultiplayerScreen implements Menu {
   private lobbyRefreshTime: number = LOBBY_REFRESH_TIME;
   private showLoadingIcon: boolean;
 
-  private webManager: WebManager;
+  private requestService: ServerRequestService;
   private lobbyList: LobbyInfo[];
 
   constructor(sketch: p5) {
     this.sketch = sketch;
     this.keylistener = new KeyListener(sketch);
-    this.webManager = WebManager.getInstance();
+    this.requestService = ServerRequestService.getInstance();
     this.lobbyList = [];
     this.showLoadingIcon = false;
     this.fetchLobbyList(DEFAULT_LOBBY_DISPLAY_NUM);
@@ -382,12 +383,12 @@ export default class MultiplayerScreen implements Menu {
    */
   private async fetchLobbyList(maxListLength: number): Promise<void> {
     try {
-      // Await the promise from getLobbyList
-      const webManagerLobbies = await this.webManager.getLobbyList({
+      // Await the promise from searchLobbies
+      const lobbies = await this.requestService.searchLobbies({
         maxListLength: maxListLength,
       });
-      // Convert WebManagerLobbyInfo objects to LobbyDotInfo objects
-      webManagerLobbies.map((lobby) => {
+      // Convert lobby info objects to LobbyDotInfo objects
+      lobbies.map((lobby) => {
         this.lobbyList.push(
           new LobbyDotInfo(
             lobby.lobbyID,
@@ -615,8 +616,7 @@ export default class MultiplayerScreen implements Menu {
   private async joinLobby(selectedLobbyDot: LobbyDot): Promise<void> {
     const lobbyID = selectedLobbyDot.getLobbyInfo().lobbyID;
 
-    const webManager = WebManager.getInstance();
-    let lobbyInfo = await webManager.joinLobby(lobbyID);
+    let lobbyInfo = await this.requestService.joinLobby(lobbyID);
     if (lobbyInfo) {
       selectedLobbyDot.startSelectionTransition(async () => {
         // Create a promise factory that creates a new promise each time it's called
@@ -624,12 +624,12 @@ export default class MultiplayerScreen implements Menu {
           return new Promise<boolean>((resolve) => {
             const listener = (update: GameUpdate) => {
               if (update.gameState === "running") {
-                webManager.removeGameListener(listener);
+                this.requestService.removeGameUpdateListener(listener);
                 resolve(true);
               }
             };
 
-            webManager.addGameListener(listener);
+            this.requestService.addGameUpdateListener(listener);
           });
         };
 

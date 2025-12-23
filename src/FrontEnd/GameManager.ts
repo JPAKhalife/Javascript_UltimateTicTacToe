@@ -9,7 +9,8 @@
 import TicTac, { TictacStateObject } from "./TicTac";
 import { DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER } from "./TicTac";
 import { TicTacState } from "./TicTac";
-import WebManager, { GameUpdate } from "./WebManager";
+import { GameUpdate } from "./WebManager";
+import ServerRequestService from "./Services/ServerRequestService";
 
 //This is a constant that holds the types of games that can exist
 export enum GameType {
@@ -24,7 +25,7 @@ export default class GameManager {
   private turn: number;
   private isWon: boolean;
   private playerNumber: number;
-  private webManager: WebManager | null = null;
+  private requestService: ServerRequestService | null = null;
   private lobbyId: string | null = null;
 
   constructor(
@@ -43,7 +44,7 @@ export default class GameManager {
     this.isWon = false;
     this.playerNumber = DEFAULT_PLAYER_NUMBER;
 
-    console.log(
+    console.info(
       "[GameManager] Initializing game with mode: ",
       gameType === GameType.LOCAL ? "LOCAL" : "ONLINE",
     );
@@ -51,8 +52,8 @@ export default class GameManager {
     // Set up online game if applicable
     if (gameType === GameType.ONLINE && lobbyId) {
       this.lobbyId = lobbyId;
-      this.webManager = WebManager.getInstance();
-      this.webManager.addGameListener(this.handleGameUpdate.bind(this));
+      this.requestService = ServerRequestService.getInstance();
+      this.requestService.addGameUpdateListener(this.handleGameUpdate.bind(this));
     }
   }
 
@@ -76,8 +77,8 @@ export default class GameManager {
    * @description Clean up resources when the game ends
    */
   public cleanup(): void {
-    if (this.gameType === GameType.ONLINE && this.webManager) {
-      this.webManager.removeGameListener(this.handleGameUpdate.bind(this));
+    if (this.gameType === GameType.ONLINE && this.requestService) {
+      this.requestService.removeGameUpdateListener(this.handleGameUpdate.bind(this));
     }
   }
 
@@ -91,21 +92,21 @@ export default class GameManager {
     cursorRow: number,
   ): Promise<TictacStateObject> {
     if (this.gameType === GameType.ONLINE) {
-      if (!this.webManager || !this.lobbyId) {
+      if (!this.requestService || !this.lobbyId) {
         console.error(
-          "Cannot make move: WebManager or lobbyId not initialized",
+          "Cannot make move: ServerRequestService or lobbyId not initialized",
         );
         // return { state: TicTacState.INVALID };
       }
 
       // Send move to server
-      if (this.webManager && this.lobbyId) {
-        const success = await this.webManager.makeMove(this.lobbyId, {
+      if (this.requestService && this.lobbyId) {
+        const success = await this.requestService.makeMove(this.lobbyId, {
           col: cursorCol,
           row: cursorRow,
         });
       } else {
-        console.error("WebManager or lobbyId is null");
+        console.error("ServerRequestService or lobbyId is null");
       }
 
       // Server will send game_update if move is valid

@@ -14,9 +14,9 @@ import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 import Field from "../MenuObjects/Field";
-import WebManager from "../WebManager";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import ScreenBorder from "../MenuObjects/ScreenBorder";
+import ServerRequestService from "../Services/ServerRequestService";
 
 // Animation constants
 const ANIMATION_TIME = 60; // 1 second at 60fps
@@ -26,7 +26,7 @@ const LOADING_TIME = ANIMATION_TIME * 2;
 export default class UsernameScreen implements Menu {
   private sketch: p5;
   private keylistener: KeyListener;
-  private webManager: WebManager;
+  private requestService: ServerRequestService;
 
   // UI Elements
   private usernameField: Field;
@@ -46,7 +46,7 @@ export default class UsernameScreen implements Menu {
     this.sketch = sketch;
 
     this.keylistener = new KeyListener(sketch);
-    this.webManager = WebManager.getInstance();
+    this.requestService = ServerRequestService.getInstance();
 
     this.spinner = new LoadingSpinner(sketch, 0.25, 0.5, 0.04);
 
@@ -115,7 +115,7 @@ export default class UsernameScreen implements Menu {
       if (this.opacity >= 255) {
         this.transitionInActive = false;
         this.keylistener.activate();
-        console.log("Username Screen transition in complete");
+        console.info("Username Screen transition in complete");
       }
     }
   }
@@ -155,7 +155,7 @@ export default class UsernameScreen implements Menu {
   public draw(): void {
     //This check is to make sure that the session is not already drawn (while also ensuring that transitions and registering the user are not interfered with)
     if (
-      WebManager.isAuthenticated &&
+      this.requestService.isAuthenticated() &&
       !this.showLoadingIcon &&
       !this.transitionOutActive
     ) {
@@ -236,7 +236,7 @@ export default class UsernameScreen implements Menu {
           // If the confirm button is selected
           if (this.menuNav.getCurrentlySelected() === this.confirmButton) {
             this.showLoadingIcon = true; // Ensure icon is shown immediately when button is pressed
-            this.webManager.initiateConnectionIfNotEstablished();
+            this.requestService.ensureConnection();
             setTimeout(() => this.checkUsername(), 1000);
           }
         }
@@ -244,24 +244,22 @@ export default class UsernameScreen implements Menu {
     }
   }
 
-  private checkUsername(): void {
-    if (this.usernameField.getText() == "") {
+  private async checkUsername(): Promise<void> {
+    if (this.usernameField.getText() === "") {
       this.usernameField.setError("Please enter a username");
       this.usernameField.shake();
       this.showLoadingIcon = false;
       return;
     }
-    let sessionPromise = this.webManager.checkAndRegisterPlayer(
-      this.usernameField.getText(),
-    ) as Promise<[string, string]>;
-    sessionPromise.then((response) => {
-      const [sessionID, message] = response;
 
-      //Valid session ID
-      if (sessionID.length > 0) {
-        // Session ID is already stored in WebManager.setSessionId
-        // No need to store playerID anymore
+    try {
+      const response = await this.requestService.registerPlayer(
+        this.usernameField.getText(),
+      );
 
+      // Valid session ID
+      if (response.sessionID.length > 0) {
+        // Session ID is already stored in ServerRequestService
         this.usernameField.setError("");
         this.keylistener.deactivate();
         this.transitionOutActive = true;
@@ -269,10 +267,15 @@ export default class UsernameScreen implements Menu {
         this.confirmButton.setConfirmed(true);
         this.showLoadingIcon = false;
       } else {
-        this.usernameField.setError(message);
+        this.usernameField.setError(response.message);
         this.usernameField.shake();
         this.showLoadingIcon = false;
       }
-    });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Registration failed";
+      this.usernameField.setError(errorMessage);
+      this.usernameField.shake();
+      this.showLoadingIcon = false;
+    }
   }
 }
