@@ -1,5 +1,14 @@
+/**
+ * @file MessageToClientSchema.ts
+ * @description Zod schemas for messages sent from server to client.
+ * Shared between frontend and backend for type safety.
+ *
+ * @author John Khalife
+ * @created 2025-12-23
+ */
+
 import * as z from "zod";
-import { GAME_CONSTANTS, VALIDATION } from "../Contants";
+import { VALIDATION } from "../Constants";
 
 export enum FROM_SERVER_MESSAGE_TYPES {
   GAME_UPDATE = "game_update",
@@ -41,10 +50,9 @@ export const GameStateUpdateMessage = z.object({
 export const BasicResponseMessage = z.object({
   type: z.literal("basic_response"),
   success: z.boolean(),
-})
+});
 
 export const CreateLobbyResponse = z.object({
   BasicResponseMessage,
-  lobbyID: z.string().uuid({ version: "v4" })
-})
-
+  lobbyID: z.string().uuid({ version: "v4" }),
+});

@@ -27,10 +27,10 @@ import {
   BaseRequest,
   AuthenticatedRequest,
   LobbyJoinRequest,
-} from "../Contracts/MessageToServerSchema";
+} from "../../Shared/Contracts/MessageToServerSchema";
 import Session from "../Database/Session";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../Contants";
-import { FROM_SERVER_MESSAGE_TYPES } from "../Contracts/MessageToClientSchema";
+import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
 const { v4: uuidv4 } = require("uuid");
 
 type ReturnMessage = Record<string, any>;

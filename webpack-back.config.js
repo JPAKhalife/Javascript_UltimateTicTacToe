@@ -19,6 +19,9 @@ module.exports = (env, argv) => {
               loader: "ts-loader",
               options: {
                 configFile: "tsconfig.back.json", // Use the server-specific tsconfig
+                compilerOptions: {
+                  rootDir: path.resolve(__dirname, "src"),
+                },
               },
             },
           ],

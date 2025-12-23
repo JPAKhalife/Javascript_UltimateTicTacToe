@@ -4,26 +4,11 @@
  * Enhanced with authentication and security constants
  * @author John Khalife
  * @created 2024-06-9
- * @updated 2025-08-18
+ * @updated 2025-12-23
  */
 
-// ============================================================================
-// GAME CONSTANTS
-// ============================================================================
-export const DEFAULT_PLAYER_NUMBER = 2; // Defined here instead of importing from FrontEnd
-
-export const GAME_CONSTANTS = {
-  MAX_PLAYER_CAP: 10, // The maximum number of players that can be in a game at once
-  MAX_SPECTATOR_CAP: 10, // The maximum number of spectators that can be in a game at once
-  MAX_GRIDSIZE_CAP: 10, // The maximum number for the levelsize
-  MAX_LEVELSIZE_CAP: 10, // The maximum value for the levelsize
-};
-
-export enum GAME_STATES {
-  WAITING = "waiting",
-  RUNNING = "running",
-  PAUSED = "paused",
-}
+// Re-export shared constants
+export { DEFAULT_PLAYER_NUMBER, GAME_CONSTANTS, GAME_STATES, VALIDATION } from "../Shared/Constants";
 
 // ============================================================================
 // AUTHENTICATION CONSTANTS
@@ -135,29 +120,6 @@ export const SUCCESS_MESSAGES = {
   OPERATION_SUCCESS: "Operation completed successfully.",
 } as const;
 
-// ============================================================================
-// VALIDATION CONSTANTS
-// ============================================================================
-export const VALIDATION = {
-  // String length limits
-  MAX_USERNAME_LENGTH: 36,
-  MIN_USERNAME_LENGTH: 1,
-  MAX_STANDARD_LENGTH: 50,
-  MIN_STANDARD_LENGTH: 1,
-
-  //Max query results
-  MAX_RESULTS: 30,
-  MAX_SEARCH_LIMIT: 50,
-
-  MAX_MESSAGE_LENGTH: 1000,
-
-  // Token format validation
-  TOKEN_PARTS_COUNT: 3,
-  UUID_LENGTH: 36,
-
-  // Connection limits
-  MAX_CONNECTIONS_PER_DEVICE: 1,
-} as const;
 
 // ============================================================================
 // ENVIRONMENT CONFIGURATION
@@ -183,12 +145,14 @@ export const ENV_CONFIG = {
 // EXPORTS (maintaining backward compatibility)
 // ============================================================================
 
+import { VALIDATION as SHARED_VALIDATION } from "../Shared/Constants";
+
 // New exports for authentication system
 export default {
   AUTH_CONSTANTS,
   REDIS_KEYS,
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
-  VALIDATION,
+  VALIDATION: SHARED_VALIDATION,
   ENV_CONFIG,
 };

@@ -9,7 +9,7 @@
 
 import { DatabaseManager } from "../Database/DatabaseManager";
 import z from "zod"
-import { FROM_SERVER_MESSAGE_TYPES } from "../Contracts/MessageToClientSchema";
+import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
 import { Lobby } from "../Database/Lobby/Lobby";
 import { sendMessageToClient } from "./WebsocketEventHandler";
 import { getConnectionID, getPlayerID } from "../Database/ClientConnections";

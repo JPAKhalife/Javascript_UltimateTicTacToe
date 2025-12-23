@@ -31,7 +31,10 @@ module.exports = (env, argv) => {
           use: {
             loader: "ts-loader",
             options: {
-              configFile: "tsconfig.front.json", // Use the server-specific tsconfig
+              configFile: "tsconfig.front.json", // Use the frontend-specific tsconfig
+              compilerOptions: {
+                rootDir: path.resolve(__dirname, "src"),
+              },
             },
           },
           exclude: /node_modules/,

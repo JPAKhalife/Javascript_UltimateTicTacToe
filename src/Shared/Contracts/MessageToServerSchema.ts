@@ -1,14 +1,15 @@
 /**
- * @file MessageSchema.ts
- * @description Uses zod to validate all incoming messages.
+ * @file MessageToServerSchema.ts
+ * @description Uses zod to validate all incoming messages from client to server.
+ * Shared between frontend and backend for type safety.
  *
  * @author John Khalife
  * @created 2025-08-18
- * @updated 2025-08-20
+ * @updated 2025-12-23
  */
 
 import * as z from "zod";
-import { GAME_CONSTANTS, VALIDATION } from "../Contants";
+import { GAME_CONSTANTS, VALIDATION } from "../Constants";
 
 //These are the message types that the player can send.
 export enum FROM_CLIENT_MESSAGE_TYPES {

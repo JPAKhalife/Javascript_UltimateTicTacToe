@@ -46,6 +46,20 @@ npx eslint . --fix
 
 ## Architecture
 
+### Shared Code (`src/Shared/`)
+
+**Shared between frontend and backend for type safety and consistency:**
+
+1. **Constants** (`Constants.ts`)
+   - `GAME_CONSTANTS` - Game configuration (max players, grid size, level size)
+   - `VALIDATION` - Input validation limits (username length, message length, etc.)
+   - `GAME_STATES` - Enum for game states (waiting, running, paused)
+
+2. **Contracts** (`Contracts/`)
+   - `MessageToServerSchema.ts` - Zod schemas for client→server messages
+   - `MessageToClientSchema.ts` - Zod schemas for server→client messages
+   - All messages validated using Zod on both frontend and backend
+
 ### Backend (`src/BackEnd/`)
 
 **Entry Point:** `server.ts` - Express server with WebSocket support on port 3000
@@ -70,10 +84,12 @@ npx eslint . --fix
    - `ServerRedisGameEventHandler.ts` - Handles inter-server game events via Redis
    - `WebsocketEventHandler.ts` - Low-level WebSocket event handling
 
-3. **Contracts** (`Contracts/`)
-   - `MessageToServerSchema.ts` - Zod schemas for client→server messages
-   - `MessageToClientSchema.ts` - Schemas for server→client messages
-   - All messages validated using Zod before processing
+3. **Backend-Specific Constants** (`Contants.ts`)
+   - Re-exports shared constants from `Shared/Constants`
+   - `AUTH_CONSTANTS` - Authentication and session settings
+   - `REDIS_KEYS` - Redis key pattern generators
+   - `ERROR_MESSAGES` / `SUCCESS_MESSAGES` - Standardized response messages
+   - `ENV_CONFIG` - Environment-specific configuration
 
 **Message Flow:**
 1. Client sends JSON message via WebSocket
@@ -102,15 +118,17 @@ npx eslint . --fix
 - `Screens/` - Individual screen implementations (Start, Setup, Game, Multiplayer, etc.)
 - `MenuObjects/` - Reusable UI components (buttons, sliders, fields, etc.)
 - `TicTac.ts` - Core game board logic
+- `Constants.ts` - Re-exports shared constants and frontend-specific constants (FRAMERATE)
 
 **Environment Variables:**
 - `REMOTE_SERVER_ADDRESS` - WebSocket server URL (default: `ws://localhost:3000`)
 - `LOG_LEVEL` - Logging verbosity (DEBUG, INFO, etc.)
 
-### Dual TypeScript Configs
+### TypeScript Configurations
 
-- `tsconfig.back.json` - Backend (Node.js target)
-- `tsconfig.front.json` - Frontend (Browser target with DOM libs)
+- `tsconfig.back.json` - Backend config (Node.js target, includes BackEnd + Shared)
+- `tsconfig.front.json` - Frontend config (Browser target with DOM libs, includes FrontEnd + Shared)
+- Both configs share access to `src/Shared/` for type safety across the codebase
 
 ### Docker Setup
 

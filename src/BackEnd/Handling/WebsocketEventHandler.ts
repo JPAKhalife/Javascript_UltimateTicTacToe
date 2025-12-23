@@ -8,7 +8,7 @@
  */
 
 import { WebSocket } from "ws";
-import { FROM_SERVER_MESSAGE_TYPES } from "../Contracts/MessageToClientSchema";
+import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
 import { getWebsocketObject } from "../Database/ClientConnections";
 
 /**
