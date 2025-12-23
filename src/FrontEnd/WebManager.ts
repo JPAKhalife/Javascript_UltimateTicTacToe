@@ -367,7 +367,7 @@ export default class WebManager {
    * @param gridSize Size of the grid
    * @param playerID Unique ID of the player creating the lobby
    * @param allowSpectators whether or not spectators should be allowed
-   * @returns Promise that resolves with the result of the lobby creation
+   * @returns Promise that resolves the lobby id or null
    */
   public async createLobby(
     lobbyName: string,
@@ -376,7 +376,7 @@ export default class WebManager {
     gridSize: number,
     playerID: string,
     allowSpectators: boolean,
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     try {
       // Create message payload
       const message = {
@@ -394,17 +394,17 @@ export default class WebManager {
       };
 
       // Use the sendRequest method to create the lobby
-      const response = await this.sendRequest<{ success: boolean }>(
+      const response = await this.sendRequest<{ success: boolean, lobbyID: string }>(
         message,
         "create_lobby",
       );
       console.log("[WebSocket] Response received: ", response);
 
       // Return the success status from the response
-      return response && response.success === true;
+      return response.lobbyID;
     } catch (error) {
       console.error("[WebSocket] Error creating lobby:", error);
-      return false;
+      return null;
     }
   }
 

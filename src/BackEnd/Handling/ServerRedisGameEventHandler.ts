@@ -23,7 +23,7 @@ const activeSubscriptions: Record<string, string[]> = {};
  * @param playerId - The ID of the player subscribing
  * @return void
  */
-export function subscribeToLobby(lobbyID: string, playerID: string) {
+export async function subscribeToLobby(lobbyID: string, playerID: string) {
     const dbManager = DatabaseManager.getInstance();
     const subscriberClient = dbManager.getSubscriberClient();
 

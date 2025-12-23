@@ -225,6 +225,7 @@ export default class CreateLobbyScreen implements Menu {
             throw new Error("Failed to create lobby");
           });
 
+          
         GuiManager.changeScreen(
           Screens.LOADING_SCREEN,
           this.sketch,

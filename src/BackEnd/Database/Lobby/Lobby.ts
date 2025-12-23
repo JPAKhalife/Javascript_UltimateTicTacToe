@@ -11,7 +11,6 @@ import { DatabaseManager } from "../DatabaseManager";
 import { v4 as uuidv4 } from "uuid";
 import { Player } from "../Player";
 import { subscribeToLobby, unsubscribeFromLobby } from "../../Handling/ServerRedisGameEventHandler";
-import { unsubscribe } from "diagnostics_channel";
 
 /**
  * Interface defining the structure of lobby data stored in Redis
@@ -195,11 +194,17 @@ export class Lobby extends RedisObject<LobbyData> {
       throw new Error(`Player ${playerId} not found`);
     }
 
+    //Check if the capacity allows for a player to join
     if (
-      this.get("playersJoined") >= this.get("playerNum") &&
+      Number(this.get("playersJoined")) >= Number(this.get("playerNum")) &&
       !this.get("allowSpectators")
     ) {
       throw new Error(`Lobby ${this.id} is full`);
+    }
+
+    //Check if the playerID is already contained within the list of players
+    if (this.players.includes(playerId)) {
+      throw new Error(ERROR_MESSAGES.ALREADY_IN_LOBBY);
     }
 
     await this.withTransaction(async (multi) => {
@@ -207,9 +212,9 @@ export class Lobby extends RedisObject<LobbyData> {
       multi.rpush(REDIS_KEYS.LOBBY_PLAYERS(this.id), playerId);
 
       // Update lobby data
-      const newPlayersJoined = this.get("playersJoined") + 1;
+      const newPlayersJoined = Number(this.get("playersJoined")) + 1;
       const newState =
-        newPlayersJoined >= this.get("playerNum") ? "ready" : "waiting";
+        newPlayersJoined >= Number(this.get("playerNum")) ? "ready" : "waiting";
 
       await this.set("playersJoined", newPlayersJoined);
       await this.set("lobbyState", newState);
@@ -243,7 +248,7 @@ export class Lobby extends RedisObject<LobbyData> {
       multi.lrem(REDIS_KEYS.LOBBY_PLAYERS(this.id), 0, playerId);
 
       // Update lobby data
-      const newPlayersJoined = Math.max(0, this.get("playersJoined") - 1);
+      const newPlayersJoined = Math.max(0, Number(this.get("playersJoined")) - 1);
       const newState = newPlayersJoined === 0 ? "empty" : "waiting";
 
       await this.set("playersJoined", newPlayersJoined);

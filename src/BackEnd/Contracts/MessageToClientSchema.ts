@@ -34,3 +34,17 @@ export const GameStateUpdateMessage = z.object({
   state: z.enum(["started", "ended", "paused", "cancelled"]),
   message: z.string().max(VALIDATION.MAX_STANDARD_LENGTH).optional(),
 });
+
+/**
+ * The success message for when joining a lobby.
+ */
+export const BasicResponseMessage = z.object({
+  type: z.literal("basic_response"),
+  success: z.boolean(),
+})
+
+export const CreateLobbyResponse = z.object({
+  BasicResponseMessage,
+  lobbyID: z.string().uuid({ version: "v4" })
+})
+

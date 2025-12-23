@@ -632,27 +632,18 @@ async function handleJoinLobby(
         error: ERROR_MESSAGES.LOBBY_NOT_FOUND,
       };
     }
-
-    // Get player instance
-    const player = await Player.getById(playerID);
-    if (!player) {
-      return {
-        success: false,
-        error: ERROR_MESSAGES.PLAYER_NOT_FOUND,
-      };
-    }
-
     // Add player to lobby
     try {
-      await player.joinLobby(lobbyID);
+      await lobby.addPlayer(playerID);
     } catch (error) {
+      console.warn("[joinLobby] ", error)
       return {
         success: false,
         error: ERROR_MESSAGES.LOBBY_JOIN_FAILED,
       };
     }
 
-    console.log(`Player ${playerID} joined lobby ${lobbyID} successfully`);
+    console.info(`[joinLobby] Player ${playerID} joined lobby ${lobbyID}`);
 
     //Now, after joining the lobby, we need to kickoff a process that checks whether the game is ready to start.
 
