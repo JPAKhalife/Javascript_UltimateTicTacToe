@@ -25,7 +25,7 @@ export async function handleSessionExpiry(expiredKey: string) {
       "Session not found. This should not happen and indicates an error in the back-end.",
     );
   }
-  Player.remove(session.getPlayerID());
+  Player.remove(session.get("playerID"));
   //TODO: This needs to be updated for when lobbies also need to be disconnected from the lobby.
 }
 

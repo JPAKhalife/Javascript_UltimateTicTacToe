@@ -43,7 +43,6 @@ export const RegisterRequest = BaseRequest.extend({
       .string()
       .min(VALIDATION.MIN_USERNAME_LENGTH)
       .max(VALIDATION.MAX_USERNAME_LENGTH),
-    checkUsername: z.boolean().optional(),
   }),
 });
 export type RegisterRequest = z.infer<typeof RegisterRequest>;

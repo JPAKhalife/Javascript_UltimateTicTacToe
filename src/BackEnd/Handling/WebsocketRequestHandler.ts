@@ -12,7 +12,7 @@ import { Player } from "../Database/Player";
 import { DatabaseManager } from "../Database/DatabaseManager";
 import {
   newConnection,
-  playerRegistered,
+  registerPlayerConnection,
   getPlayerID,
   removeConnection,
   getWebsocketObject,
@@ -93,7 +93,7 @@ export async function handleWebsocketRequest(ws: any, req: any) {
     ) => {
       const validation = LobbyCreateRequest.safeParse(data);
       return validation.success
-        ? handleCreateLobby(ws, validation.data, sessionData.getPlayerID())
+        ? handleCreateLobby(ws, validation.data, sessionData.get("playerID"))
         : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.SEARCH_LOBBY]: async (
@@ -102,14 +102,14 @@ export async function handleWebsocketRequest(ws: any, req: any) {
     ) => {
       const validation = LobbySearchRequest.safeParse(data);
       return validation.success
-        ? handleSearchLobbies(ws, validation.data, sessionData.getPlayerID())
+        ? handleSearchLobbies(ws, validation.data, sessionData.get("playerID"))
         : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY]: async (
       data: any,
       sessionData: any,
     ) => {
-      return handleJoinLobby(ws, data, sessionData.getPlayerID());
+      return handleJoinLobby(ws, data, sessionData.get("playerID"));
     },
     [FROM_CLIENT_MESSAGE_TYPES.LEAVE_LOBBY]: async (
       data: any,
@@ -154,18 +154,20 @@ export async function handleWebsocketRequest(ws: any, req: any) {
             data.type !== FROM_CLIENT_MESSAGE_TYPES.REGISTER_PLAYER &&
             data.type !== FROM_CLIENT_MESSAGE_TYPES.RECONNECT
           ) {
+            console.debug("[WebsocketRequestHandler]: Authenticated message detected");
             // Handle authenticated requests
             const sessionData = data.sessionID
-              ? await Session.validateSession(data.sessionID, req)
+              ? await Session.validateSession(data.sessionID)
               : null;
 
-            if (!sessionData || sessionData.getConnectionID() !== ws.id) {
+            if (!sessionData || sessionData.get("connectionID") !== ws.id) {
               returnMessage = createErrorResponse(data.type, ERROR_MESSAGES.TOKEN_INVALID);
             } else {
-              await Session.refreshSession(data.sessionID);
+              await Session.validateSession(data.sessionID);
               returnMessage = await handler(data, sessionData);
             }
           } else {
+            console.debug("[WebsocketRequestHandler]: Non-authenticated message detected");
             // Handle non-authenticated requests
             returnMessage = await handler(data);
           }
@@ -173,7 +175,7 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       }
     } catch (error) {
       console.error("[WebSocket] Error processing message:", error);
-      returnMessage = createErrorResponse(FROM_CLIENT_MESSAGE_TYPES.NONE,ERROR_MESSAGES.INTERNAL_ERROR);
+      returnMessage = createErrorResponse(FROM_CLIENT_MESSAGE_TYPES.NONE, ERROR_MESSAGES.INTERNAL_ERROR);
     }
 
     if (messageID) returnMessage.messageID = messageID;
@@ -182,7 +184,7 @@ export async function handleWebsocketRequest(ws: any, req: any) {
 }
 
 function createErrorResponse(dataType: FROM_CLIENT_MESSAGE_TYPES, error: string): ReturnMessage {
-  console.info("[WebSocketRequestHandler: Sending error message of type + " + dataType + ": " + error);
+  console.info("[WebSocketRequestHandler]: Sending error message of type + " + dataType + ": " + error);
   return { success: false, error };
 }
 
@@ -401,10 +403,17 @@ async function handleRegisterPlayer(
     };
   }
 
-  console.log(`[Register] Checking if player ${username} exists`);
+  console.debug(`[WebsocketRequestHandler] Checking if player ${username} exists`);
 
   // Check if the user is already registered.
-  if (await getPlayerID(ws.id)) {
+  const playerID = await getPlayerID(ws.id);
+  if (playerID) {
+    console.debug(`[WebsocketRequestHandler] player ${username} is already registered`);
+    const player = await Player.getById(playerID);
+    if (player) {
+      console.debug('The player ' + player.get("username") + ' has a session id' + player.get("sessionID") + 'and a playerID ' + player.get('playerID'))
+
+    }
     return {
       success: false,
       message: ERROR_MESSAGES.CONCURRENT_LOGIN,
@@ -417,18 +426,19 @@ async function handleRegisterPlayer(
       const playerID = newPlayer.get("playerID");
 
       // Register the player with the connection
-      playerRegistered(ws.id, playerID);
+      await registerPlayerConnection(ws.id, playerID);
 
       // Create a session for the player
-      const sessionID = await Session.createSession(playerID, ws.id, req);
-
+      const { token } = await Session.create(playerID, ws.id, req);
+      console.debug("[WebsocketRequestHandler] Successfully registered player", username);
       return {
         success: true,
         message: SUCCESS_MESSAGES.REGISTRATION_SUCCESS,
-        sessionID: sessionID,
+        sessionID: token,
       };
     }
   } catch (error) {
+    console.debug("[WebsocketRequestHandler] There was an error registering the player: ", error);
     return {
       success: false,
       message: ERROR_MESSAGES.REGISTRATION_FAILED,
@@ -460,13 +470,13 @@ async function handleReconnect(
       `[Reconnect] Starting reconnection process for connection ID: ${ws.id}`,
     );
     console.log(
-      `[Reconnect] Session ID provided: ${data.sessionID.substring(0, 8)}...`,
+      `[Reconnect] Session ID provided: ${data.sessionID}...`,
     );
 
     // Validate the session
     console.log(`[Reconnect] Validating session token`);
     const startValidation = Date.now();
-    const sessionData = await Session.validateSession(data.sessionID, req);
+    const sessionData = await Session.validateSession(data.sessionID);
     const validationTime = Date.now() - startValidation;
     console.log(`[Reconnect] Session validation took ${validationTime}ms`);
 
@@ -479,11 +489,11 @@ async function handleReconnect(
     }
 
     console.log(
-      `[Reconnect] Session validation successful for player ID: ${sessionData.getPlayerID()}`,
+      `[Reconnect] Session validation successful for player ID: ${sessionData.get("playerID")}`,
     );
 
     // Get the current connection ID associated with the session
-    const currentConnectionID = sessionData.getConnectionID();
+    const currentConnectionID = sessionData.get("connectionID");
     console.log(
       `[Reconnect] Current connection ID from session: ${currentConnectionID}`,
     );
@@ -518,36 +528,20 @@ async function handleReconnect(
       `[Reconnect] Updating session with new connection ID: ${ws.id}`,
     );
     const startUpdate = Date.now();
-    const updated = await Session.updateSessionConnectionID(
-      data.sessionID,
-      ws.id,
-    );
+    await sessionData.updateConnectionID(ws.id);
     const updateTime = Date.now() - startUpdate;
-    console.log(
-      `[Reconnect] Session update took ${updateTime}ms, result: ${updated ? "success" : "failed"}`,
-    );
-
-    if (!updated) {
-      console.log(
-        `[Reconnect] Failed to update session with new connection ID`,
-      );
-      return {
-        success: false,
-        error: ERROR_MESSAGES.INTERNAL_ERROR,
-      };
-    }
-
+    console.debug(`[Reconnect] Session updated in ${updateTime}ms`);
     // Register the player with the connection
-    console.log(
-      `[Reconnect] Registering player ID ${sessionData.getPlayerID()} with connection ID ${ws.id}`,
+    console.info(
+      `[Reconnect] Registering player ID ${sessionData.get("playerID")} with connection ID ${ws.id}`,
     );
     const startRegistration = Date.now();
-    playerRegistered(ws.id, sessionData.getPlayerID());
+    await registerPlayerConnection(ws.id, sessionData.get("playerID"));
     const registrationTime = Date.now() - startRegistration;
-    console.log(`[Reconnect] Player registration took ${registrationTime}ms`);
+    console.debug(`[Reconnect] Player registration took ${registrationTime}ms`);
 
     // Verify the WebSocket is still valid
-    console.log(`[Reconnect] Verifying WebSocket state: ${ws.readyState}`);
+    console.debug(`[Reconnect] Verifying WebSocket state: ${ws.readyState}`);
     if (ws.readyState !== 1) {
       // 1 = OPEN
       console.warn(
@@ -559,7 +553,7 @@ async function handleReconnect(
     const directResponse = {
       success: true,
       message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
-      playerID: sessionData.getPlayerID(),
+      playerID: sessionData.get("playerID"),
       messageID: data.messageID,
     };
 
@@ -575,12 +569,12 @@ async function handleReconnect(
 
     // Return success for the normal response flow as well
     console.log(
-      `[Reconnect] Reconnection successful for player ID: ${sessionData.getPlayerID()}`,
+      `[Reconnect] Reconnection successful for player ID: ${sessionData.get("playerID")}`,
     );
     return {
       success: true,
       message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
-      playerID: sessionData.getPlayerID(),
+      playerID: sessionData.get("playerID"),
     };
   } catch (error) {
     console.error("[Reconnect] Error handling reconnect:", error);

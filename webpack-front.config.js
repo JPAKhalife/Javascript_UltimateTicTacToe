@@ -4,6 +4,8 @@ const webpack = require("webpack");
 
 module.exports = (env, argv) => {
   const isDevelopment = argv.mode === "development";
+  const logLevel = env?.LOG_LEVEL || process.env.LOG_LEVEL || 'INFO'
+
   return {
     entry: "./src/FrontEnd/sketch.ts",
     output: {
@@ -50,8 +52,9 @@ module.exports = (env, argv) => {
       new webpack.SourceMapDevToolPlugin({}),
       new webpack.DefinePlugin({
         "process.env.REMOTE_SERVER_ADDRESS": JSON.stringify(
-          process.env.REMOTE_SERVER_ADDRESS || "ws://localhost:3000",
+          process.env.REMOTE_SERVER_ADDRESS || "ws://localhost:3000"
         ),
+        "process.env.LOG_LEVEL": JSON.stringify(logLevel),
       }),
     ],
   };

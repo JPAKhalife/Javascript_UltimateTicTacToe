@@ -64,7 +64,7 @@ export function newConnection(ws: any, connectionID: string) {
  * @param connectionID Connection ID to associate with
  * @param playerID Player ID to associate
  */
-export function playerRegistered(connectionID: string, playerID: string) {
+export async function registerPlayerConnection(connectionID: string, playerID: string) {
   console.info(
     `[Connections] Registering player ID ${playerID} with connection ID ${connectionID}`,
   );
@@ -83,29 +83,29 @@ export function playerRegistered(connectionID: string, playerID: string) {
   // Set the player ID in Redis
   let redisClient = DatabaseManager.getInstance().getRegularClient();
 
-  // Set connectionID -> playerID mapping
-  redisClient
-    .set(REDIS_KEYS.CONNECTION(connectionID), playerID)
-    .then(() => {
-      console.info(
-        `[Connections] Successfully set player ID ${playerID} for connection ${connectionID} in Redis`,
-      );
-    })
-    .catch((error) => {
-      console.error(`[Connections] Error setting player ID in Redis:`, error);
-    });
+  //Redis operations catch
+  try {
+    // Set connectionID -> playerID mapping
+    await redisClient.set(REDIS_KEYS.CONNECTION(connectionID), playerID);
+    console.info(
+      `[Connections] Successfully set player ID ${playerID} for connection ${connectionID} in Redis`,
+    );
+  } catch (error) {
+    console.error(`[Connections] Error setting player ID in Redis:`, error);
+    redisClient.del(REDIS_KEYS.CONNECTION(connectionID));
+    throw error; //Cascade the error upwards - we can't allow this operation to fail and continue registering the player.
+  }
 
-  // Set playerID -> connectionID mapping
-  redisClient
-    .set(REDIS_KEYS.PLAYER_CONNECTION(playerID), connectionID)
-    .then(() => {
-      console.info(
-        `[Connections] Successfully set connection ID ${connectionID} for player ${playerID} in Redis`,
-      );
-    })
-    .catch((error) => {
-      console.error(`[Connections] Error setting connection ID in Redis:`, error);
-    });
+  try {
+    await redisClient.set(REDIS_KEYS.PLAYER_CONNECTION(playerID), connectionID);
+    console.info(
+      `[Connections] Successfully set connection ID ${connectionID} for player ${playerID} in Redis`,
+    );
+  } catch (error) {
+    console.error(`[Connections] Error setting connection ID in Redis:`, error);
+    redisClient.del(REDIS_KEYS.PLAYER_CONNECTION(playerID));
+    throw error; //Cascade the error upwards - we can't allow this operation to fail and continue registering the player.
+  }
 }
 
 /**

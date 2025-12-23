@@ -548,7 +548,7 @@ export default class WebManager {
       if (this.sessionId && action !== "registerPlayer") {
         message.sessionID = this.sessionId;
         console.log(
-          `[${action}] Using session ID: ${this.sessionId.substring(0, 8)}...`,
+          `[${action}] Using session ID: ${this.sessionId}...`,
         );
       }
 
@@ -617,8 +617,7 @@ export default class WebManager {
       const message = {
         type: "register_player",
         parameters: {
-          username: username,
-          checkUsername: true,
+          username: username
         },
       };
 

@@ -11,7 +11,6 @@ import { nanoid } from 'nanoid';
 import { AUTH_CONSTANTS, REDIS_KEYS, ENV_CONFIG } from '../Contants';
 import crypto from 'crypto';
 import { DatabaseManager } from './DatabaseManager';
-import { ServerConnections } from './ServerConnections';
 
 /**
  * Interface defining the structure of session data stored in Redis
@@ -20,7 +19,6 @@ export interface SessionData {
     sessionID: string;
     playerID: string;
     connectionID: string;
-    serverID: string;
     createdAt: string;
     lastActive: string;
     ip: string;
@@ -52,19 +50,14 @@ export default class Session extends RedisObject<SessionData> {
         // Generate session ID
         const sessionID = Session.generateSessionID();
         const now = new Date().toISOString();
-        
+
         // Get client info
         const { ip, agent } = Session.getClientInfo(req);
-        
-        // Get current server ID
-        const serverConnections = ServerConnections.getInstance();
-        const serverID = serverConnections.getServerID();
 
         const sessionData: SessionData = {
             sessionID,
             playerID,
             connectionID,
-            serverID,
             createdAt: now,
             lastActive: now,
             ip,
@@ -77,8 +70,7 @@ export default class Session extends RedisObject<SessionData> {
             // Save the session data and add to player's sessions list atomically
             await session.withTransaction(multi => {
                 multi.hset(session.getRedisKey(), {
-                    ...sessionData,
-                    version: "0"
+                    ...sessionData
                 });
                 multi.sadd(REDIS_KEYS.PLAYER_SESSIONS(playerID), sessionID);
             });
@@ -88,7 +80,8 @@ export default class Session extends RedisObject<SessionData> {
 
             return { session, token };
         } catch (error) {
-            throw new Error(`Failed to create session: ${error}`);
+            console.error('[Session] Failed to create session: ' + error);
+            throw error
         }
     }
 
@@ -102,7 +95,6 @@ export default class Session extends RedisObject<SessionData> {
                 sessionID,
                 playerID: "",
                 connectionID: "",
-                serverID: "",
                 createdAt: "",
                 lastActive: "",
                 ip: "",
@@ -123,8 +115,7 @@ export default class Session extends RedisObject<SessionData> {
      * @param req The request object containing client information
      */
     static async validateSession(
-        token: string,
-        req: any
+        token: string
     ): Promise<Session | null> {
         // Parse and verify the token
         const tokenData = Session.parseAndVerifyToken(token);
@@ -134,7 +125,7 @@ export default class Session extends RedisObject<SessionData> {
 
         const { baseId, timestamp, agent, ip } = tokenData;
 
-        console.log("Validate session: ", baseId, timestamp, agent, ip);
+        console.info("[Session]: Validating session: ", baseId, timestamp, agent, ip);
 
         try {
             // Get session by ID
@@ -148,7 +139,7 @@ export default class Session extends RedisObject<SessionData> {
 
             return session;
         } catch (error) {
-            console.error("Error validating session:", error);
+            console.error("[Session]: Error validating session:", error);
             return null;
         }
     }
@@ -188,14 +179,6 @@ export default class Session extends RedisObject<SessionData> {
         await this.set('lastActive', new Date().toISOString());
     }
 
-    /**
-     * Update the server ID for this session (for cross-server scenarios)
-     * @param newServerID The new server ID
-     */
-    async updateServerID(newServerID: string): Promise<void> {
-        await this.set('serverID', newServerID);
-        await this.set('lastActive', new Date().toISOString());
-    }
 
     /**
      * Invalidate this session
@@ -229,6 +212,13 @@ export default class Session extends RedisObject<SessionData> {
         console.log(`[Session] Connection ${connectionID} is ${isActive ? 'active' : 'inactive'}`);
         
         return isActive;
+    }
+
+    /**
+     * Check if the connection is active
+     */
+    async isConnectionActive(): Promise<boolean> {
+        return Session.isConnectionActive(this.get("connectionID"));
     }
 
     // Static utility methods
@@ -334,62 +324,6 @@ export default class Session extends RedisObject<SessionData> {
     // Instance getter methods
 
     /**
-     * Get the session ID
-     */
-    public getSessionID(): string {
-        return this.get('sessionID');
-    }
-
-    /**
-     * Get the player ID associated with this session
-     */
-    public getPlayerID(): string {
-        return this.get('playerID');
-    }
-
-    /**
-     * Get the connection ID associated with this session
-     */
-    public getConnectionID(): string {
-        return this.get('connectionID');
-    }
-
-    /**
-     * Get the server ID associated with this session
-     */
-    public getServerID(): string {
-        return this.get('serverID');
-    }
-
-    /**
-     * Get the creation timestamp
-     */
-    public getCreatedAt(): string {
-        return this.get('createdAt');
-    }
-
-    /**
-     * Get the last active timestamp
-     */
-    public getLastActive(): string {
-        return this.get('lastActive');
-    }
-
-    /**
-     * Get the IP address associated with this session
-     */
-    public getIP(): string {
-        return this.get('ip');
-    }
-
-    /**
-     * Get the user agent hash associated with this session
-     */
-    public getAgent(): string {
-        return this.get('agent');
-    }
-
-    /**
      * Get the Redis key for this session
      */
     protected getRedisKey(): string {
@@ -404,7 +338,6 @@ export default class Session extends RedisObject<SessionData> {
             sessionID: this.get('sessionID'),
             playerID: this.get('playerID'),
             connectionID: this.get('connectionID'),
-            serverID: this.get('serverID'),
             createdAt: this.get('createdAt'),
             lastActive: this.get('lastActive'),
             ip: this.get('ip'),
@@ -420,88 +353,10 @@ export default class Session extends RedisObject<SessionData> {
             sessionID: this.id,
             playerID: this.get('playerID'),
             connectionID: this.get('connectionID'),
-            serverID: this.get('serverID'),
             createdAt: this.get('createdAt'),
             lastActive: this.get('lastActive'),
             ip: this.get('ip'),
-            agent: this.get('agent'),
-            version: this.getVersion()
+            agent: this.get('agent')
         };
-    }
-
-    // Legacy static methods for backward compatibility
-
-    /**
-     * @deprecated Use Session.create() instead
-     */
-    static async createSession(
-        playerID: string,
-        connectionID: string,
-        req: any
-    ): Promise<string> {
-        const { token } = await Session.create(playerID, connectionID, req);
-        return token;
-    }
-
-    /**
-     * @deprecated Use session.updateConnectionID() instead
-     */
-    static async updateSessionConnectionID(
-        token: string,
-        newConnectionID: string
-    ): Promise<boolean> {
-        try {
-            const tokenData = Session.parseAndVerifyToken(token);
-            if (!tokenData) {
-                return false;
-            }
-
-            const session = await Session.getById(tokenData.baseId);
-            if (!session) {
-                return false;
-            }
-
-            await session.updateConnectionID(newConnectionID);
-            return true;
-        } catch (error) {
-            console.error("Error updating session connection ID:", error);
-            return false;
-        }
-    }
-
-    /**
-     * @deprecated Use session.invalidate() instead
-     */
-    static async invalidateSession(token: string): Promise<boolean> {
-        try {
-            const tokenData = Session.parseAndVerifyToken(token);
-            if (!tokenData) {
-                return false;
-            }
-
-            const session = await Session.getById(tokenData.baseId);
-            if (!session) {
-                return false;
-            }
-
-            await session.invalidate();
-            return true;
-        } catch (error) {
-            console.error("Error invalidating session:", error);
-            return false;
-        }
-    }
-
-    /**
-     * @deprecated Use Session.validateSession() instead
-     */
-    static async refreshSession(token: string): Promise<boolean> {
-        try {
-            const session = await Session.validateSession(token, {});
-            return session !== null;
-        } catch (error) {
-            console.error("Error refreshing session:", error);
-            return false;
-        }
     }
 }
