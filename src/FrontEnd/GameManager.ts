@@ -9,7 +9,7 @@
 import TicTac, { TictacStateObject } from "./TicTac";
 import { DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER } from "./TicTac";
 import { TicTacState } from "./TicTac";
-import { GameUpdate } from "./WebManager";
+import type { GameUpdateMessage, GameStateUpdateMessage } from "./WebManager";
 import ServerRequestService from "./Services/ServerRequestService";
 
 //This is a constant that holds the types of games that can exist
@@ -53,7 +53,7 @@ export default class GameManager {
     if (gameType === GameType.ONLINE && lobbyId) {
       this.lobbyId = lobbyId;
       this.requestService = ServerRequestService.getInstance();
-      this.requestService.addGameUpdateListener(this.handleGameUpdate.bind(this));
+      this.requestService.addGameListeners(this.handleGameUpdate.bind(this));
     }
   }
 
@@ -62,13 +62,19 @@ export default class GameManager {
    * @description Handle game updates from the server
    * @param update The game update from the server
    */
-  private handleGameUpdate(update: GameUpdate): void {
-    // Update game state
-    if (update.gameState) {
-      // this.board.updateFromServer(update.gameState);
-    }
-    if (update.turn) {
-      this.turn = update.turn;
+  private handleGameUpdate(update: GameUpdateMessage | GameStateUpdateMessage): void {
+    // Handle game state updates
+    if (update.type === "game_state_update") {
+      // Handle game state changes (started, paused, ended)
+      console.info("[GameManager] Game state update:", update.state);
+    } else if (update.type === "game_update") {
+      // Handle game board updates
+      if (update.gameState) {
+        // this.board.updateFromServer(update.gameState);
+      }
+      if (update.turn) {
+        this.turn = update.turn;
+      }
     }
   }
 
@@ -78,7 +84,7 @@ export default class GameManager {
    */
   public cleanup(): void {
     if (this.gameType === GameType.ONLINE && this.requestService) {
-      this.requestService.removeGameUpdateListener(this.handleGameUpdate.bind(this));
+      this.requestService.removeGameListeners();
     }
   }
 

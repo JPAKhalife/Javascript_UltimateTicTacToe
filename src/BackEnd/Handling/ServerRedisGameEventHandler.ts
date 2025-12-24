@@ -86,7 +86,7 @@ export function publishToLobby(lobbyID: string, message: any) {
  * @param message - The incoming message
  */
 export async function handleForwardLobbyMessage(lobbyID: string, message: any) {
-    console.info("Received lobby message:", message);
+    console.info("[handleForwardLobbyMessage] Forwarding lobby message:", message);
     // Check if the message type is within FROM_SERVER_MESSAGE_TYPES
     // This is so we know if we should send this to the client.
     if (Object.values(FROM_SERVER_MESSAGE_TYPES).includes(message.type)) {

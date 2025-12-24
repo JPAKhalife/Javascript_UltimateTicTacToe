@@ -11,7 +11,7 @@ import Redis from "ioredis";
 import { GAME_STATES } from "../Contants";
 import { DatabaseManager } from "../Database/DatabaseManager";
 import { Lobby } from "../Database/Lobby/Lobby";
-import { GameStateUpdateMessage, GameUpdateMessage } from '../../Shared/Contracts/MessageToClientSchema';
+import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage } from '../../Shared/Contracts/MessageToClientSchema';
 import { handleForwardLobbyMessage } from "./ServerRedisGameEventHandler";
 
 /**
@@ -67,8 +67,8 @@ export async function handleGameStart(lobby: Lobby) {
 
   // Notify all clients that the game has begun
   const gameStateUpdate: GameStateUpdateMessage = {
-    type: "game_state_update",
-    state: "started",
+    type: FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE,
+    state: GAME_STATES.RUNNING,
     message: "Game has started! Good luck!",
   };
   handleForwardLobbyMessage(lobby.getId(), gameStateUpdate);
@@ -94,7 +94,7 @@ export async function handlePlayerChange(lobby: Lobby) {
 
   // Create the game update message
   const gameUpdateMessage: GameUpdateMessage = {
-    type: "game_update",
+    type: FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE,
     turn: turn,
     gameState: lobby.get("lobbyState"),
   };

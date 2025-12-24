@@ -7,30 +7,16 @@
  */
 
 // Import shared types
-import type { LobbyInfo } from "../Shared/Contracts/MessageToClientSchema";
+import type {
+  LobbyInfo,
+  GameUpdateMessage,
+  GameStateUpdateMessage,
+} from "../Shared/Contracts/MessageToClientSchema";
 
 /**
- * Re-export LobbyInfo for backward compatibility
+ * Re-export shared types for backward compatibility
  */
-export type { LobbyInfo };
-
-/**
- * Interface representing a game update from the server
- */
-export interface GameUpdate {
-  type: "game_update";
-  gameState: string; // The current state of the game
-  board: number[]; // The current game state array
-  turn: number; // Current turn
-  lastMove?: {
-    // Optional info about the last move
-    player: string;
-    position: {
-      col: number;
-      row: number;
-    };
-  };
-}
+export type { LobbyInfo, GameUpdateMessage, GameStateUpdateMessage };
 
 export default class WebManager {
   private static instance: WebManager | null = null;
@@ -46,9 +32,6 @@ export default class WebManager {
   private reconnectDelay: number = 1000; // Base delay in ms
   private sessionId: string | null = null;
 
-  //Event listener list
-  private gameListeners: Array<(data: GameUpdate) => void> = [];
-
   /**
    * Private constructor to enforce singleton pattern
    */
@@ -57,43 +40,6 @@ export default class WebManager {
     this.sessionId = this.getStoredSessionId();
   }
 
-  /**
-   * @method addGameListener
-   * @description Add a listener for game updates
-   * @param listener Function to be called when a game update is received
-   */
-  public addGameListener(listener: (update: GameUpdate) => void): void {
-    this.gameListeners.push(listener);
-    console.info(
-      "[WebManager] Added game listener, total listeners:",
-      this.gameListeners.length,
-    );
-  }
-
-  /**
-   * @method removeGameListener
-   * @description Remove a specific game update listener
-   * @param listener The listener function to remove
-   */
-  public removeGameListener(listener: (update: GameUpdate) => void): void {
-    const index = this.gameListeners.indexOf(listener);
-    if (index > -1) {
-      this.gameListeners.splice(index, 1);
-      console.info(
-        "[WebManager] Removed game listener, remaining listeners:",
-        this.gameListeners.length,
-      );
-    }
-  }
-
-  /**
-   * @method clearGameListeners
-   * @description Remove all game update listeners
-   */
-  public clearGameListeners(): void {
-    this.gameListeners = [];
-    console.info("[WebManager] Cleared all game listeners");
-  }
 
   /**
    * @method getStoredSessionId
@@ -218,6 +164,7 @@ export default class WebManager {
       this.socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+
           // Handle exact message callbacks
           if (data.messageID) {
             if (this.exactMessageCallbacks.has(data.messageID)) {
@@ -227,12 +174,13 @@ export default class WebManager {
                 this.exactMessageCallbacks.delete(data.messageID);
               }
             }
-            // Handle type-based message callbacks
-            if (this.typeMessageCallbacks.has(data.type)) {
-              const callback = this.typeMessageCallbacks.get(data.type);
-              if (callback) {
-                callback(data);
-              }
+          }
+
+          // Handle type-based message callbacks (for both messages with and without messageID)
+          if (data.type && this.typeMessageCallbacks.has(data.type)) {
+            const callback = this.typeMessageCallbacks.get(data.type);
+            if (callback) {
+              callback(data);
             }
           }
         } catch (error) {
@@ -495,24 +443,13 @@ export default class WebManager {
   }
 
   /**
-   * @method handleGameUpdate
-   * @description Handle incoming game update messages and notify listeners
-   * @param update The game update data received from the server
+   * @method removeTypeCallback
+   * @description remove a callback for messages of a specific type
+   * @param type The message type to remove
    */
-  public handleGameUpdate(update: GameUpdate): void {
-    console.info("[Game Update] Received game update:", update);
-    // Notify all registered listeners
-    console.info(
-      "[Game Update] Notifying",
-      this.gameListeners.length,
-      "listeners",
-    );
-    this.gameListeners.forEach((listener) => {
-      try {
-        listener(update);
-      } catch (error) {
-        console.error("[Game Update] Error in listener:", error);
-      }
-    });
+  public removeTypeCallback(
+      type: string
+  ): void {
+    this.typeMessageCallbacks.delete(type);
   }
 }

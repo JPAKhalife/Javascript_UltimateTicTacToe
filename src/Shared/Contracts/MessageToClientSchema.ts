@@ -8,7 +8,7 @@
  */
 
 import * as z from "zod";
-import { VALIDATION, GAME_CONSTANTS } from "../Constants";
+import { VALIDATION, GAME_CONSTANTS, GAME_STATES } from "../Constants";
 
 export enum FROM_SERVER_MESSAGE_TYPES {
   GAME_UPDATE = "game_update",
@@ -127,11 +127,11 @@ export type GameUpdateMessage = z.infer<typeof GameUpdateMessage>;
 
 /**
  * The game state update message is responsible for notifying the client of any change in game state.
- * This includes start, end, paused, and cancelled. Sometimes an optional message can be included to provide additional context.
+ * This includes waiting, running, and paused states.
  */
 export const GameStateUpdateMessage = z.object({
   type: z.literal("game_state_update"),
-  state: z.enum(["started", "ended", "paused", "cancelled"]),
+  state: z.enum([GAME_STATES.WAITING, GAME_STATES.RUNNING, GAME_STATES.PAUSED]),
   message: z.string().max(VALIDATION.MAX_STANDARD_LENGTH).optional(),
 });
 export type GameStateUpdateMessage = z.infer<typeof GameStateUpdateMessage>;

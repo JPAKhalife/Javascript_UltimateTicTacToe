@@ -5,12 +5,14 @@
  * @created 2025-12-23
  */
 
-import WebManager, { GameUpdate } from "../WebManager";
-import type {
-  RegisterPlayerResponse,
-  CreateLobbyResponse,
-  LobbyInfo,
+import WebManager, { type GameUpdateMessage, type GameStateUpdateMessage } from "../WebManager";
+import {
+  type RegisterPlayerResponse,
+  type CreateLobbyResponse,
+  type LobbyInfo,
+  FROM_SERVER_MESSAGE_TYPES,
 } from "../../Shared/Contracts/MessageToClientSchema";
+import { FROM_CLIENT_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToServerSchema";
 
 /**
  * Interface for lobby search parameters
@@ -73,7 +75,7 @@ export default class ServerRequestService {
   public async registerPlayer(username: string): Promise<RegisterPlayerResponse> {
     try {
       const message = {
-        type: "register_player",
+        type: FROM_CLIENT_MESSAGE_TYPES.REGISTER_PLAYER,
         parameters: {
           username: username
         },
@@ -81,7 +83,7 @@ export default class ServerRequestService {
 
       const response = await this.webManager.sendRequest<RegisterPlayerResponse>(
         message,
-        "registerPlayer"
+        FROM_CLIENT_MESSAGE_TYPES.REGISTER_PLAYER
       );
 
       if (response.success && response.sessionID) {
@@ -118,7 +120,7 @@ export default class ServerRequestService {
   ): Promise<CreateLobbyResponse> {
     try {
       const message = {
-        type: "create_lobby",
+        type: FROM_CLIENT_MESSAGE_TYPES.CREATE_LOBBY,
         sessionID: this.webManager.getSessionId(),
         parameters: {
           lobbyData: {
@@ -133,7 +135,7 @@ export default class ServerRequestService {
 
       const response = await this.webManager.sendRequest<CreateLobbyResponse>(
         message,
-        "create_lobby"
+        FROM_CLIENT_MESSAGE_TYPES.CREATE_LOBBY
       );
 
       if (response.success && response.lobbyID) {
@@ -158,7 +160,7 @@ export default class ServerRequestService {
   public async searchLobbies(params: LobbySearchParams = {}): Promise<LobbyInfo[]> {
     try {
       const message = {
-        type: "search_lobby",
+        type: FROM_CLIENT_MESSAGE_TYPES.SEARCH_LOBBY,
         sessionID: this.webManager.getSessionId(),
         parameters: {
           lobbyID: params.lobbyID,
@@ -176,7 +178,7 @@ export default class ServerRequestService {
       const response = await this.webManager.sendRequest<{
         success: boolean;
         lobbies: any[];
-      }>(message, "search_lobby");
+      }>(message, FROM_CLIENT_MESSAGE_TYPES.SEARCH_LOBBY);
 
       if (response && response.success && Array.isArray(response.lobbies)) {
         return response.lobbies.map((lobby) => ({
@@ -208,7 +210,7 @@ export default class ServerRequestService {
   public async joinLobby(lobbyID: string): Promise<LobbyInfo | null> {
     try {
       const message = {
-        type: "join_lobby",
+        type: FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY,
         sessionID: this.webManager.getSessionId(),
         parameters: {
           lobbyID: lobbyID,
@@ -218,14 +220,9 @@ export default class ServerRequestService {
       const response = await this.webManager.sendRequest<{
         success: boolean;
         lobby: any;
-      }>(message, "join_lobby");
+      }>(message, FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY);
 
       if (response && response.success && response.lobby) {
-        // Register game update callback after successful join
-        this.webManager.registerTypeCallback("game_update", (update) =>
-          this.handleGameUpdate(update as GameUpdate),
-        );
-
         console.info("[ServerRequestService] Joined lobby successfully:", lobbyID);
 
         return {
@@ -261,7 +258,7 @@ export default class ServerRequestService {
   ): Promise<boolean> {
     try {
       const message = {
-        type: "make_move",
+        type: FROM_CLIENT_MESSAGE_TYPES.MAKE_MOVE,
         sessionID: this.webManager.getSessionId(),
         parameters: {
           lobbyID,
@@ -271,7 +268,7 @@ export default class ServerRequestService {
 
       const response = await this.webManager.sendRequest<{ success: boolean }>(
         message,
-        "make_move",
+        FROM_CLIENT_MESSAGE_TYPES.MAKE_MOVE,
       );
 
       return response && response.success === true;
@@ -282,41 +279,25 @@ export default class ServerRequestService {
   }
 
   /**
-   * @method addGameUpdateListener
+   * @method addGameListeners
    * @description Add a listener for game updates
    * @param listener Function to be called when a game update is received
    */
-  public addGameUpdateListener(listener: (update: GameUpdate) => void): void {
-    this.webManager.addGameListener(listener);
+  public addGameListeners(listener: (update: GameUpdateMessage | GameStateUpdateMessage) => void): void {
+    console.info("[ServerRequestService] Adding game listeners")
+    this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE, listener);
+    this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE, listener);
   }
 
   /**
-   * @method removeGameUpdateListener
+   * @method removeGameListeners
    * @description Remove a specific game update listener
    * @param listener The listener function to remove
    */
-  public removeGameUpdateListener(listener: (update: GameUpdate) => void): void {
-    this.webManager.removeGameListener(listener);
-  }
-
-  /**
-   * @method clearGameUpdateListeners
-   * @description Remove all game update listeners
-   */
-  public clearGameUpdateListeners(): void {
-    this.webManager.clearGameListeners();
-  }
-
-  /**
-   * @method handleGameUpdate
-   * @description Internal handler for game update messages
-   * @param update The game update data received from the server
-   * @private
-   */
-  private handleGameUpdate(update: GameUpdate): void {
-    // The WebManager already handles notifying listeners
-    // This is just a pass-through to maintain encapsulation
-    console.info("[ServerRequestService] Game update received:", update);
+  public removeGameListeners(): void {
+    console.info("[ServerRequestService] Removing game listeners")
+    this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE);
+    this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE);
   }
 
   /**

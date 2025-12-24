@@ -14,11 +14,12 @@ import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
 import Slider from "../MenuObjects/Slider";
-import { GameUpdate } from "../WebManager";
 import Field from "../MenuObjects/Field";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import Toggle from "../MenuObjects/Toggle";
 import ServerRequestService from "../Services/ServerRequestService";
+import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
+import { GAME_STATES } from "../../Shared/Constants";
 
 export default class CreateLobbyScreen implements Menu {
   private sketch: p5;
@@ -48,6 +49,9 @@ export default class CreateLobbyScreen implements Menu {
   private elementsOpacity: number = 0;
   private selectedButton: MenuButton;
   private showLoadingIcon: boolean;
+
+  // Store the game start promise for when transition completes
+  private gameStartPromise: Promise<boolean> | null = null;
 
   constructor(sketch: p5) {
     this.sketch = sketch;
@@ -205,27 +209,16 @@ export default class CreateLobbyScreen implements Menu {
       if (this.selectedButton.getText() === "Return") {
         GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
       } else if (this.selectedButton.getText() == "Create") {
-        //This is the bit that starts the game listener for updates
-        const gameStartPromise = (): Promise<boolean> => {
-          return new Promise<boolean>((resolve) => {
-            const listener = (update: GameUpdate) => {
-              if (update.gameState === "running") {
-                this.requestService.removeGameUpdateListener(listener);
-                resolve(true);
-              }
-            };
-
-            this.requestService.addGameUpdateListener(listener);
-          });
-        };
-
-        GuiManager.changeScreen(
-          Screens.LOADING_SCREEN,
-          this.sketch,
-          Screens.GAME_SCREEN,
-          "Waiting for game to start...",
-          gameStartPromise()
-        );
+        // Game start promise was already set up in createLobby()
+        if (this.gameStartPromise) {
+          GuiManager.changeScreen(
+            Screens.LOADING_SCREEN,
+            this.sketch,
+            Screens.GAME_SCREEN,
+            "Waiting for game to start...",
+            this.gameStartPromise
+          );
+        }
       }
       this.transitionComplete = true;
     }
@@ -337,7 +330,23 @@ export default class CreateLobbyScreen implements Menu {
     }
 
     try {
-      // Create the lobby using the service
+      // Set up game listeners BEFORE creating lobby to avoid race condition
+      // (server may send GAME_STATE_UPDATE immediately if enough players join)
+      // Create the promise that will be resolved when the game starts
+      this.gameStartPromise = new Promise<boolean>((resolve) => {
+        const listener = (update: any) => {
+          // Check for game_state_update message with state "running"
+          if (update.type === FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE && update.state === GAME_STATES.RUNNING) {
+            console.info("[gameStartPromise] Game state has been updated to running");
+            this.requestService.removeGameListeners();
+            resolve(true);
+          }
+        };
+        // Add listeners NOW, before creating lobby
+        this.requestService.addGameListeners(listener);
+      });
+
+      // NOW create the lobby with listeners already in place
       const response = await this.requestService.createLobby(
         lobbyName,
         this.playerNumSlider.getValue(),
@@ -351,13 +360,19 @@ export default class CreateLobbyScreen implements Menu {
         localStorage.setItem("currentLobby", lobbyName);
         localStorage.setItem("lobbyID", response.lobbyID);
 
-        // Start the transition out, which will handle the join request and listener being enabled.
+        // Start the transition out, which will use the game start promise
         this.selectedButton.setConfirmed(true);
         this.transition_out_active = true;
       } else {
+        // If lobby creation failed, remove listeners and show error
+        this.requestService.removeGameListeners();
+        this.gameStartPromise = null;
         this.displayLobbyCreationError("Failed to create lobby.");
       }
     } catch (error) {
+      // If an exception occurred, remove listeners and show error
+      this.requestService.removeGameListeners();
+      this.gameStartPromise = null;
       const errorMessage = error instanceof Error ? error.message : "Failed to create lobby";
       this.displayLobbyCreationError(errorMessage);
     }

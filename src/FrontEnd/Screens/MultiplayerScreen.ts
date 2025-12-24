@@ -16,10 +16,11 @@ import GuiManager from "../GuiManager";
 import LobbyDot, { LobbyInfo } from "../MenuObjects/LobbyDot";
 import { FRAMERATE } from "../Constants";
 import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
-import { GameUpdate } from "../WebManager";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import { GameType } from "../GameManager";
 import ServerRequestService from "../Services/ServerRequestService";
+import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
+import { GAME_STATES } from "../../Shared/Constants";
 
 const LOBBY_REFRESH_TIME = 7 * FRAMERATE; // 3 seconds
 const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
@@ -616,30 +617,33 @@ export default class MultiplayerScreen implements Menu {
   private async joinLobby(selectedLobbyDot: LobbyDot): Promise<void> {
     const lobbyID = selectedLobbyDot.getLobbyInfo().lobbyID;
 
+    // Set up game listeners BEFORE joining to avoid race condition
+    // (server may send GAME_STATE_UPDATE immediately if this is the last player)
+    // Create the promise that will be resolved when the game starts
+    const gameStartPromise = new Promise<boolean>((resolve) => {
+      const listener = (update: any) => {
+        // Check for game_state_update message with state "running"
+        if (update.type === FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE && update.state === GAME_STATES.RUNNING) {
+          console.info("[gameStartPromise] Game state has been updated to running");
+          this.requestService.removeGameListeners();
+          resolve(true);
+        }
+      };
+      // Add listeners NOW, before joining
+      this.requestService.addGameListeners(listener);
+    });
+
+    // NOW join the lobby with listeners already in place
     let lobbyInfo = await this.requestService.joinLobby(lobbyID);
     if (lobbyInfo) {
       selectedLobbyDot.startSelectionTransition(async () => {
-        // Create a promise factory that creates a new promise each time it's called
-        const gameStartPromise = (): Promise<boolean> => {
-          return new Promise<boolean>((resolve) => {
-            const listener = (update: GameUpdate) => {
-              if (update.gameState === "running") {
-                this.requestService.removeGameUpdateListener(listener);
-                resolve(true);
-              }
-            };
-
-            this.requestService.addGameUpdateListener(listener);
-          });
-        };
-
-        // Pass lobby info and promise factory to GameScreen through LoadingScreen
+        // Pass lobby info and the already-created promise to GameScreen through LoadingScreen
         GuiManager.changeScreen(
           Screens.LOADING_SCREEN,
           this.sketch,
           Screens.GAME_SCREEN,
           "Waiting for game to start...",
-          gameStartPromise(), // Execute the promise factory to get a new promise
+          gameStartPromise,
           GameType.ONLINE,
           lobbyInfo.gridSize,
           lobbyInfo.levelSize,
@@ -647,7 +651,8 @@ export default class MultiplayerScreen implements Menu {
         );
       });
     } else {
-      // If joining failed, re-enable input and hide loading icon
+      // If joining failed, remove listeners and re-enable input
+      this.requestService.removeGameListeners();
       this.keylistener.activate();
       this.showLoadingIcon = false;
     }

@@ -78,7 +78,7 @@ export class Lobby extends RedisHash<LobbyData> {
       lobbyID: lobbyId,
       lobbyName: lobbyData.lobbyName,
       playerNum: lobbyData.playerNum,
-      playersJoined: 1, // Start with creator
+      playersJoined: 0, 
       creator: creatorId,
       lobbyState: "waiting",
       allowSpectators: lobbyData.allowSpectators,
