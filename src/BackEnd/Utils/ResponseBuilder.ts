@@ -122,12 +122,13 @@ export class ResponseBuilder {
    * Convert a lobby database object to LobbyInfo schema
    */
   static lobbyToInfo(lobby: any): LobbyInfo {
+    const game = lobby.getGame();
     return {
       lobbyID: lobby.get("lobbyID"),
       lobbyName: lobby.get("lobbyName"),
       playerNum: lobby.get("playerNum"),
-      levelSize: lobby.get("levelSize"),
-      gridSize: lobby.get("gridSize"),
+      levelSize: game.get("levelSize"),
+      gridSize: game.get("gridSize"),
       playersJoined: lobby.get("playersJoined"),
       creator: lobby.get("creator"),
       lobbyState: lobby.get("lobbyState"),
