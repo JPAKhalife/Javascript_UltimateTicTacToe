@@ -73,8 +73,11 @@ export function unsubscribeFromLobby(lobbyID: string, playerID: string) {
 export function publishToLobby(lobbyID: string, message: any) {
     const dbManager = DatabaseManager.getInstance();
     const publisherClient = dbManager.getRegularClient();
-
-    publisherClient.publish(`lobby:${lobbyID}`, JSON.stringify(message));
+    try {
+        publisherClient.publish(`lobby:${lobbyID}`, JSON.stringify(message));
+    } catch (error) {
+        console.error("[publishToLobby] There was an error publishing to topic " + lobbyID + ": ", error);
+    }
 }
 
 /**
@@ -84,7 +87,6 @@ export function publishToLobby(lobbyID: string, message: any) {
  */
 export async function handleForwardLobbyMessage(lobbyID: string, message: any) {
     console.info("Received lobby message:", message);
-
     // Check if the message type is within FROM_SERVER_MESSAGE_TYPES
     // This is so we know if we should send this to the client.
     if (Object.values(FROM_SERVER_MESSAGE_TYPES).includes(message.type)) {
@@ -93,6 +95,10 @@ export async function handleForwardLobbyMessage(lobbyID: string, message: any) {
             let connectionID = await getConnectionID(playerID);
             if (connectionID != null) {
                 sendMessageToClient(connectionID, message);
+            } else {
+                //If the connection isn't null, then it's time to send a pubsub event to any other servers
+                console.debug("[handleForwardLobbyMessage] Sending notification to another server for player ", playerID);
+                publishToLobby(lobbyID, message);
             }
         }
     } else {

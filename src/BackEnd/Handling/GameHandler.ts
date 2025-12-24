@@ -11,6 +11,8 @@ import Redis from "ioredis";
 import { GAME_STATES } from "../Contants";
 import { DatabaseManager } from "../Database/DatabaseManager";
 import { Lobby } from "../Database/Lobby/Lobby";
+import { GameStateUpdateMessage, GameUpdateMessage } from '../../Shared/Contracts/MessageToClientSchema';
+import { handleForwardLobbyMessage } from "./ServerRedisGameEventHandler";
 
 /**
  * @function handleGameReadyCheck
@@ -58,13 +60,21 @@ export async function handleGameStart(lobby: Lobby) {
   //Set the lobby state to running!
   lobby.set("lobbyState", GAME_STATES.RUNNING);
 
-  // Initialize the gameState with the proper structure
-  //* Should already be initialized when the lobby is created.
-  //? Would this save performance to set it now? (yes)
+  // Initialize the board now that the game is starting
+  // This defers board creation until needed to save memory
+  const game = lobby.getGame();
+  await game.initializeGame();
 
   // Notify all clients that the game has begun
+  const gameStateUpdate: GameStateUpdateMessage = {
+    type: "game_state_update",
+    state: "started",
+    message: "Game has started! Good luck!",
+  };
+  handleForwardLobbyMessage(lobby.getId(), gameStateUpdate);
 
   // Call the handlePlayerChange method to notify the correct player of the turn change.
+  handlePlayerChange(lobby);
 }
 
 /**
@@ -73,8 +83,28 @@ export async function handleGameStart(lobby: Lobby) {
  * @param lobby the lobby object that the player turn should be changed for
  */
 export async function handlePlayerChange(lobby: Lobby) {
-  //Update the lobby state to reflect the player change
-  //Notify all clients of the player change.
+  const game = lobby.getGame();
+
+  // Get the current player's turn (1-based index for display)
+  const currentPlayerIndex = game.get("currentPlayerIndex");
+  const turn = currentPlayerIndex + 1;
+
+  // Get the board state
+  const boardState = game.getBoardState();
+
+  // Create the game update message
+  const gameUpdateMessage: GameUpdateMessage = {
+    type: "game_update",
+    turn: turn,
+    gameState: lobby.get("lobbyState"),
+  };
+
+  // Notify all clients of the player turn change
+  handleForwardLobbyMessage(lobby.getId(), gameUpdateMessage);
+
+  console.info(
+    `[GameHandler] Player turn changed in lobby ${lobby.getId()}. Current turn: ${turn}`,
+  );
 }
 
 /**

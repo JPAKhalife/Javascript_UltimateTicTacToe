@@ -77,11 +77,8 @@ export class Game extends RedisHash<GameData> {
       );
     }
 
-    // Calculate board size based on level and grid size
-    const boardSize = Math.pow(gridSize * gridSize, levelSize);
-
-    // Create the board using the static factory method
-    const board = await Board.create(lobbyID, boardSize);
+    // Create an empty board (no array initialization yet - deferred until game starts)
+    const board = new Board(lobbyID);
 
     // Create game data
     const gameData: GameData = {
@@ -165,20 +162,24 @@ export class Game extends RedisHash<GameData> {
   }
 
   /**
+   * Initialize the board for the game when the game starts
+   * This defers board creation until the game actually begins to save memory
+   */
+  public async initializeGame(): Promise<void> {
+    // Calculate board size based on level and grid size
+    const boardSize = Math.pow(this.data.gridSize * this.data.gridSize, this.data.levelSize);
+
+    // Initialize the board with the calculated size
+    await this.board.initializeBoard(boardSize);
+  }
+
+  /**
    * Get the current player ID whose turn it is
    * @returns The player ID of the current player
    */
   public getCurrentPlayerId(): string {
     const players = this.playerList.getItems();
     return players[this.data.currentPlayerIndex];
-  }
-
-  /**
-   * Get the current player index
-   * @returns The index of the current player
-   */
-  public getCurrentPlayerIndex(): number {
-    return this.data.currentPlayerIndex;
   }
 
   /**
@@ -215,13 +216,6 @@ export class Game extends RedisHash<GameData> {
     return this.playerList;
   }
 
-  /**
-   * Get all player IDs in the game
-   * @returns Array of player IDs
-   */
-  public getPlayerIds(): string[] {
-    return this.playerList.getItems();
-  }
 
   /**
    * Make a move on the board
@@ -268,39 +262,6 @@ export class Game extends RedisHash<GameData> {
   }
 
   /**
-   * Set the winner of the game
-   * @param winnerId The ID of the winning player
-   */
-  public async setWinner(winnerId: string): Promise<void> {
-    this.data.winnerId = winnerId;
-    await this.save();
-  }
-
-  /**
-   * Get the winner of the game
-   * @returns The winner's player ID or undefined if no winner yet
-   */
-  public getWinner(): string | undefined {
-    return this.data.winnerId;
-  }
-
-  /**
-   * Get the level size of the game
-   * @returns The level size
-   */
-  public getLevelSize(): number {
-    return this.data.levelSize;
-  }
-
-  /**
-   * Get the grid size of the game
-   * @returns The grid size
-   */
-  public getGridSize(): number {
-    return this.data.gridSize;
-  }
-
-  /**
    * Delete the game and clean up all related data
    */
   public async delete(): Promise<void> {
@@ -320,7 +281,7 @@ export class Game extends RedisHash<GameData> {
       gridSize: this.data.gridSize,
       currentPlayerIndex: this.data.currentPlayerIndex,
       currentPlayerId: this.getCurrentPlayerId(),
-      playerIds: this.getPlayerIds(),
+      playerIds: this.getPlayerList().getItems(),
       boardState: this.getBoardState(),
       winnerId: this.data.winnerId,
     };
