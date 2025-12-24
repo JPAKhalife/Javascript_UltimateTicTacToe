@@ -5,8 +5,8 @@
  * @created 2025-11-16
  */
 
-import { RedisHash } from "./RedisHash";
-import { ConcurrentModificationError } from "./RedisObject";
+import { RedisHash } from "./RedisBase/RedisHash";
+import { ConcurrentModificationError } from "./RedisBase/RedisObject";
 import { REDIS_KEYS } from "../Contants";
 import { DatabaseManager } from "./DatabaseManager";
 import { v4 as uuidv4 } from "uuid";
@@ -50,11 +50,7 @@ export class Player extends RedisHash<PlayerData> {
       lobbyID,
     };
 
-    const player = new Player(
-      playerID,
-      playerData,
-      DatabaseManager.getInstance().getRegularClient(),
-    );
+    const player = new Player(playerID, playerData);
 
     try {
       // Save the player data and username mapping atomically
@@ -80,8 +76,7 @@ export class Player extends RedisHash<PlayerData> {
     try {
       const player = new Player(
         playerID,
-        { playerID, username: "", lobbyID: "" },
-        DatabaseManager.getInstance().getRegularClient(),
+        { playerID, username: "", lobbyID: "" }
       );
       await player.load();
       return player;
@@ -140,7 +135,7 @@ export class Player extends RedisHash<PlayerData> {
     if (this.get("lobbyID")) {
       throw new Error("Player is already in a lobby");
     }
-    
+
     await this.set("lobbyID", lobbyID);
   }
 

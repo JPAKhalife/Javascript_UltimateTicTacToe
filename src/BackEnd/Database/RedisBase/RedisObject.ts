@@ -24,31 +24,28 @@ export class ConcurrentModificationError extends Error {
  */
 export abstract class RedisObject {
   public id: string;
-  protected redisClient: Redis;
   protected static readonly MAX_RETRIES = 3;
 
   /**
    * @constructor
    * @param id Unique identifier for this object
-   * @param redisClient Redis client instance
    */
-  constructor(id: string, redisClient: Redis) {
+  constructor(id: string) {
     if (!id || id.trim() === "") {
       throw new Error("id cannot be empty");
     }
-    if (!redisClient) {
-      throw new Error("Redis client is required");
-    }
     this.id = id;
-    this.redisClient = redisClient;
   }
 
   /**
-   * Get the Redis client instance
+   * Get the Redis client instance from DatabaseManager
+   * Uses dynamic import to avoid circular dependency
    * @protected
    */
   protected getRedisClient(): Redis {
-    return this.redisClient;
+    // Lazy load DatabaseManager to avoid circular dependency
+    const { DatabaseManager } = require("../DatabaseManager");
+    return DatabaseManager.getInstance().getRegularClient();
   }
 
   /**

@@ -267,9 +267,9 @@ async function handleSearchLobbies(
       .filter((lobby) => {
         if (params.playerNum && lobby.get("playerNum") !== params.playerNum)
           return false;
-        if (params.levelSize && lobby.get("levelSize") !== params.levelSize)
+        if (params.levelSize && lobby.getGame().get("levelSize") !== params.levelSize)
           return false;
-        if (params.gridSize && lobby.get("gridSize") !== params.gridSize)
+        if (params.gridSize && lobby.getGame().get("gridSize") !== params.gridSize)
           return false;
         if (
           params.joinedPlayers &&

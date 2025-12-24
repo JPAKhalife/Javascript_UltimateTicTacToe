@@ -6,7 +6,7 @@
  * @updated 2025-11-29
  */
 
-import { RedisHash } from "./RedisHash";
+import { RedisHash } from "./RedisBase/RedisHash";
 import { nanoid } from 'nanoid';
 import { AUTH_CONSTANTS, REDIS_KEYS, ENV_CONFIG } from '../Contants';
 import crypto from 'crypto';
@@ -64,7 +64,7 @@ export default class Session extends RedisHash<SessionData> {
             agent
         };
 
-        const session = new Session(sessionID, sessionData, DatabaseManager.getInstance().getRegularClient());
+        const session = new Session(sessionID, sessionData);
 
         try {
             // Save the session data and add to player's sessions list atomically
@@ -101,7 +101,7 @@ export default class Session extends RedisHash<SessionData> {
                 agent: ""
             };
 
-            const session = new Session(sessionID, dummyData, DatabaseManager.getInstance().getRegularClient());
+            const session = new Session(sessionID, dummyData);
             await session.load();
             return session;
         } catch (error) {

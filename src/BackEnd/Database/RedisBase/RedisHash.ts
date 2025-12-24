@@ -5,7 +5,6 @@
  * @created 2025-12-23
  */
 
-import Redis, { ChainableCommander } from "ioredis";
 import { RedisObject, ConcurrentModificationError } from "./RedisObject";
 
 /**
@@ -20,10 +19,9 @@ export abstract class RedisHash<T extends Record<string, any>> extends RedisObje
    * @constructor
    * @param id Unique identifier for this object
    * @param data Initial data
-   * @param redisClient Redis client instance
    */
-  constructor(id: string, data: T, redisClient: Redis) {
-    super(id, redisClient);
+  constructor(id: string, data: T) {
+    super(id);
     this.data = data;
     this.version = 0;
   }

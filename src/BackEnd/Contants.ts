@@ -41,17 +41,20 @@ export const REDIS_KEYS = {
   // Session management
   SESSION: (sessionID: string) => `session:${sessionID}`,
   PLAYER_SESSIONS: (playerID: string) => `player_sessions:${playerID}`,
+  CONNECTION: (connectionID: string) => `connection:${connectionID}`, //Mapping of connection ID to playerID
+  PLAYER_CONNECTION: (playerID: string) => `player:${playerID}:connection`, //Mapping of playerID to connectionID
 
-  // Existing patterns (maintained for compatibility)
-  PLAYER: (playerID: string) => `player:${playerID}`,
-  CONNECTION: (connectionID: string) => `connection:${connectionID}`,
-  PLAYER_CONNECTION: (playerID: string) => `player:${playerID}:connection`,
-  LOBBY: (lobbyID: string) => `lobby:${lobbyID}`,
-  LOBBY_PLAYERS: (lobbyID: string) => `lobbyplayers:${lobbyID}`,
-  LOBBY_SPECTATORS: (lobbyID: string) => `lobbyspectators:${lobbyID}`,
-  USERNAMES: "usernames",
-  GAME_STATES: (lobbyID: string) => `gamestate:${lobbyID}`,
+  //Lobby and game management
+  LOBBY: (lobbyID: string) => `lobby:${lobbyID}`, // lobby object
+  LOBBY_PLAYERS: (lobbyID: string) => `lobbyplayers:${lobbyID}`, // playerlist of a given lobby
+  LOBBY_SPECTATORS: (lobbyID: string) => `lobbyspectators:${lobbyID}`, // spectatorlist of a given lobby
+  USERNAMES: "usernames", // Set of all active usernames
+  BOARD: (lobbyID: string) => `board:${lobbyID}`, // The state of a board of a given lobby
   LOBBY_NAMES: "lobby_names", // Set of all active lobby names
+  GAME: (lobbyID: string) => `game:${lobbyID}`,
+
+  //Player
+  PLAYER: (playerID: string) => `player:${playerID}`, //player object
 
   // Redis Streams for inter-server communication
   LOBBY_STREAM: (lobbyID: string) => `lobby_stream:${lobbyID}`,

@@ -5,7 +5,6 @@
  * @created 2025-12-23
  */
 
-import Redis from "ioredis";
 import { RedisObject } from "./RedisObject";
 
 /**
@@ -19,10 +18,9 @@ export abstract class RedisList<T> extends RedisObject {
    * @constructor
    * @param id Unique identifier for this object
    * @param items Initial items
-   * @param redisClient Redis client instance
    */
-  constructor(id: string, items: T[] = [], redisClient: Redis) {
-    super(id, redisClient);
+  constructor(id: string, items: T[] = []) {
+    super(id);
     this.items = items;
   }
 
@@ -229,5 +227,29 @@ export abstract class RedisList<T> extends RedisObject {
    */
   size(): number {
     return this.items.length;
+  }
+
+  /**
+   * Perform multiple updates without saving after each operation
+   * Executes a callback function that can make multiple changes to the list
+   * Then saves all changes to Redis in a single operation
+   * @param updater Function that receives the items array and can modify it
+   */
+  async batchUpdate(updater: (items: T[]) => void): Promise<void> {
+    updater(this.items);
+    await this.save();
+  }
+
+  /**
+   * Update multiple items at specific indices without saving after each
+   * @param updates Array of {index, value} pairs to update
+   */
+  async batchSetAt(updates: Array<{ index: number; value: T }>): Promise<void> {
+    for (const { index, value } of updates) {
+      if (index >= 0 && index < this.items.length) {
+        this.items[index] = value;
+      }
+    }
+    await this.save();
   }
 }
