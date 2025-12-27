@@ -18,7 +18,8 @@ import Field from "../MenuObjects/Field";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import Toggle from "../MenuObjects/Toggle";
 import ServerRequestService from "../Communication/ServerRequestService";
-import { createGameStartPromise } from "../Communication/ServerEventHandler";
+import { setupGameStartListener } from "../Communication/ServerEventHandler";
+import LoadingScreen from "./LoadingScreen";
 
 export default class CreateLobbyScreen implements Menu {
   private sketch: p5;
@@ -48,9 +49,6 @@ export default class CreateLobbyScreen implements Menu {
   private elementsOpacity: number = 0;
   private selectedButton: MenuButton;
   private showLoadingIcon: boolean;
-
-  // Store the game start promise for when transition completes
-  private gameStartPromise: Promise<boolean> | null = null;
 
   constructor(sketch: p5) {
     this.sketch = sketch;
@@ -208,16 +206,14 @@ export default class CreateLobbyScreen implements Menu {
       if (this.selectedButton.getText() === "Return") {
         GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
       } else if (this.selectedButton.getText() == "Create") {
-        // Game start promise was already set up in createLobby()
-        if (this.gameStartPromise) {
-          GuiManager.changeScreen(
-            Screens.LOADING_SCREEN,
-            this.sketch,
-            Screens.GAME_SCREEN,
-            "Waiting for game to start...",
-            this.gameStartPromise
-          );
-        }
+        // Navigate to loading screen - game listener will trigger transition
+        GuiManager.changeScreen(
+          Screens.LOADING_SCREEN,
+          this.sketch,
+          Screens.GAME_SCREEN,
+          "Waiting for game to start...",
+          () => {} // Empty function - listener handles transition
+        );
       }
       this.transitionComplete = true;
     }
@@ -329,10 +325,7 @@ export default class CreateLobbyScreen implements Menu {
     }
 
     try {
-      // Set up game listeners BEFORE creating lobby to avoid race condition
-      this.gameStartPromise = createGameStartPromise(this.requestService);
-
-      // NOW create the lobby with listeners already in place
+      // NOW create the lobby
       const response = await this.requestService.createLobby(
         lobbyName,
         this.playerNumSlider.getValue(),
@@ -346,19 +339,25 @@ export default class CreateLobbyScreen implements Menu {
         localStorage.setItem("currentLobby", lobbyName);
         localStorage.setItem("lobbyID", response.lobbyID);
 
-        // Start the transition out, which will use the game start promise
+        // Set up game listener to trigger LoadingScreen transition when game starts
+        // This must happen BEFORE we transition to LoadingScreen
+        setupGameStartListener(this.requestService, () => {
+          // Get the LoadingScreen instance and trigger its transition
+          const currentScreen = GuiManager.getCurrentScreen();
+          if (currentScreen instanceof LoadingScreen) {
+            currentScreen.activateTransitionOut();
+          }
+        });
+
+        // Start the transition out to LoadingScreen
         this.selectedButton.setConfirmed(true);
         this.transition_out_active = true;
       } else {
-        // If lobby creation failed, remove listeners and show error
-        this.requestService.removeGameListeners();
-        this.gameStartPromise = null;
+        // If lobby creation failed, show error
         this.displayLobbyCreationError("Failed to create lobby.");
       }
     } catch (error) {
-      // If an exception occurred, remove listeners and show error
-      this.requestService.removeGameListeners();
-      this.gameStartPromise = null;
+      // If an exception occurred, show error
       const errorMessage = error instanceof Error ? error.message : "Failed to create lobby";
       this.displayLobbyCreationError(errorMessage);
     }

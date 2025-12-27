@@ -12,26 +12,29 @@ import ServerRequestService from "./ServerRequestService";
 
 
 /**
- * @function createGameStartPromise
- * @description Creates a promise that resolves when the game state changes to "running".
+ * @function setupGameStartListener
+ * @description Sets up a listener that triggers a callback when the game state changes to "running".
  * Sets up game listeners BEFORE joining/creating a lobby to avoid race conditions.
  * (Server may send GAME_STATE_UPDATE immediately if this is the last player)
  * @param requestService - The ServerRequestService instance to use for adding/removing listeners
- * @returns A promise that resolves to true when the game starts
+ * @param onGameStartCallback - Callback function to execute when the game starts
  */
-export function createGameStartPromise(requestService: ServerRequestService): Promise<boolean> {
-  return new Promise<boolean>((resolve) => {
-    const onGameStart = (update: any) => {
-      // Check for game_state_update message with state "running"
-      if (update.type === FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE && update.state === GAME_STATES.RUNNING) {
-        console.info("[createGameStartPromise] Game state has been updated to running");
+export function setupGameStartListener(
+  requestService: ServerRequestService,
+  onGameStartCallback: () => void
+): void {
+  const onGameStart = (update: any) => {
+    // Check for game_state_update message with state "running"
+    if (update.type === FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE && update.state === GAME_STATES.RUNNING) {
+      console.info("[setupGameStartListener] Game state has been updated to running");
 
-        //The game has started, switching to core game event handlers
+      // Remove listeners before triggering callback
+      requestService.removeGameListeners();
 
-        resolve(true);
-      }
-    };
-    // Add listeners NOW, before joining/creating lobby
-      requestService.addGameListeners(onGameStart);
-  });
+      // Trigger the callback (e.g., transition to game screen)
+      onGameStartCallback();
+    }
+  };
+  // Add listeners NOW, before joining/creating lobby
+  requestService.addGameListeners(onGameStart);
 }

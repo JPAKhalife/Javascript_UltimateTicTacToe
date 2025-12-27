@@ -10,6 +10,11 @@ import LoadingScreen from "../Screens/LoadingScreen";
 import UsernameScreen from "../Screens/UsernameScreen";
 import ServerRequestService from "./ServerRequestService";
 import WebManager from "./WebManager";
+import { setupGameStartListener } from "./ServerEventHandler";
+import { Screens } from "../Menu";
+import { GameType } from "../GameManager";
+import p5 from "p5";
+import type LobbyDot from "../MenuObjects/LobbyDot";
 
 /**
  * Responsible for handling the response from attempting to connect to the server via websocket
@@ -41,5 +46,54 @@ export async function handleRegisterPlayerResponse(username: string) {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Registration failed";
         usernameScreen.displayUsernameFieldError(errorMessage);
+    }
+}
+
+/**
+ * Handles the response from joining a lobby
+ * @param lobbyID - The ID of the lobby to join
+ * @param sketch - The p5 sketch instance
+ * @param selectedLobbyDot - The lobby dot that was selected
+ * @param onJoinFailed - Callback to execute if joining fails
+ */
+export async function handleJoinLobbyResponse(
+    lobbyID: string,
+    sketch: p5,
+    selectedLobbyDot: LobbyDot,
+    onJoinFailed: () => void
+) {
+    const requestService = ServerRequestService.getInstance();
+
+    // Join the lobby
+    const lobbyInfo = await requestService.joinLobby(lobbyID);
+
+    if (lobbyInfo) {
+        // Set up game listener to trigger LoadingScreen transition when game starts
+        // This must happen BEFORE we transition to LoadingScreen
+        setupGameStartListener(requestService, () => {
+            // Get the LoadingScreen instance and trigger its transition
+            const currentScreen = GuiManager.getCurrentScreen();
+            if (currentScreen instanceof LoadingScreen) {
+                currentScreen.activateTransitionOut();
+            }
+        });
+
+        selectedLobbyDot.startSelectionTransition(async () => {
+            // Navigate to LoadingScreen - game listener will trigger transition when ready
+            GuiManager.changeScreen(
+                Screens.LOADING_SCREEN,
+                sketch,
+                Screens.GAME_SCREEN,
+                "Waiting for game to start...",
+                () => {}, // Empty function - listener handles transition
+                GameType.ONLINE,
+                lobbyInfo.gridSize,
+                lobbyInfo.levelSize,
+                lobbyInfo.lobbyID,
+            );
+        });
+    } else {
+        // If joining failed, execute callback
+        onJoinFailed();
     }
 }

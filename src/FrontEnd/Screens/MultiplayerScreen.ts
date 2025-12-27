@@ -19,7 +19,7 @@ import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import { GameType } from "../GameManager";
 import ServerRequestService from "../Communication/ServerRequestService";
-import { createGameStartPromise } from "../Communication/ServerEventHandler";
+import { handleJoinLobbyResponse } from "../Communication/ServerResponseHandler";
 
 const LOBBY_REFRESH_TIME = 7 * FRAMERATE; // 3 seconds
 const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
@@ -616,31 +616,15 @@ export default class MultiplayerScreen implements Menu {
   private async joinLobby(selectedLobbyDot: LobbyDot): Promise<void> {
     const lobbyID = selectedLobbyDot.getLobbyInfo().lobbyID;
 
-    // Set up game listeners BEFORE joining to avoid race condition
-    const gameStartPromise = createGameStartPromise(this.requestService);
-
-    // NOW join the lobby with listeners already in place
-    let lobbyInfo = await this.requestService.joinLobby(lobbyID);
-    if (lobbyInfo) {
-      selectedLobbyDot.startSelectionTransition(async () => {
-        // Pass lobby info and the already-created promise to GameScreen through LoadingScreen
-        GuiManager.changeScreen(
-          Screens.LOADING_SCREEN,
-          this.sketch,
-          Screens.GAME_SCREEN,
-          "Waiting for game to start...",
-          gameStartPromise,
-          GameType.ONLINE,
-          lobbyInfo.gridSize,
-          lobbyInfo.levelSize,
-          lobbyInfo.lobbyID,
-        );
-      });
-    } else {
-      // If joining failed, remove listeners and re-enable input
-      this.requestService.removeGameListeners();
-      this.keylistener.activate();
-      this.showLoadingIcon = false;
-    }
+    await handleJoinLobbyResponse(
+      lobbyID,
+      this.sketch,
+      selectedLobbyDot,
+      () => {
+        // If joining failed, re-enable input
+        this.keylistener.activate();
+        this.showLoadingIcon = false;
+      }
+    );
   }
 }

@@ -243,4 +243,8 @@ export default class LoadingScreen implements Menu {
   public activateTransitionOut(): void {
     this.proceed = true;
   }
+
+  public setNextScreen(nextScreen: Screens): void {
+    this.nextScreen = nextScreen;
+  }
 }
