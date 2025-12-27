@@ -9,8 +9,8 @@
 import TicTac, { TictacStateObject } from "./TicTac";
 import { DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER } from "./TicTac";
 import { TicTacState } from "./TicTac";
-import type { GameUpdateMessage, GameStateUpdateMessage } from "./WebManager";
-import ServerRequestService from "./Services/ServerRequestService";
+import type { GameUpdateMessage, GameStateUpdateMessage } from "./Communication/WebManager";
+import ServerRequestService from "./Communication/ServerRequestService";
 
 //This is a constant that holds the types of games that can exist
 export enum GameType {

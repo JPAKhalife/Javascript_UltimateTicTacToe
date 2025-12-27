@@ -44,14 +44,14 @@ export default class LoadingScreen implements Menu {
   private proceed: boolean;
   private nextScreen: Screens;
   private titleText: string;
+  private loadingProcess?: () => void;
   private args: any[];
 
   constructor(
     sketch: p5,
     nextScreen?: Screens,
     titleText?: string,
-    waitCondition?: Promise<any> | (() => void),
-    proceedCondition?: () => boolean,
+    loadingProcess?: () => void,
     ...args: any[]
   ) {
     this.sketch = sketch;
@@ -59,6 +59,7 @@ export default class LoadingScreen implements Menu {
     this.keylistener = new KeyListener(this.sketch);
     this.titleText = titleText || HEADER.LOADING_SCREEN_TITLE_MESSAGES[0];
     this.nextScreen = nextScreen || Screens.START_SCREEN;
+    this.loadingProcess = loadingProcess;
 
     this.spinner = new LoadingSpinner(
       sketch,
@@ -91,34 +92,7 @@ export default class LoadingScreen implements Menu {
     this.startTransitionIn();
 
     // Initialize proceed as true if no wait condition
-    this.proceed = !waitCondition && !proceedCondition;
-
-    // Handle Promise-based wait condition
-    if (waitCondition instanceof Promise) {
-      waitCondition
-        .then(() => {
-          this.proceed = true;
-        })
-        .catch((error) => {
-          console.error("Loading screen wait condition failed:", error);
-          this.proceed = true;
-        });
-    }
-    // Handle function-based wait condition with polling
-    else if (typeof waitCondition === "function") {
-      waitCondition();
-      if (proceedCondition) {
-        this.proceed = false;
-        const checkProceed = () => {
-          if (proceedCondition()) {
-            this.proceed = true;
-          } else {
-            setTimeout(checkProceed, 100);
-          }
-        };
-        checkProceed();
-      }
-    }
+    this.proceed = !loadingProcess;
   }
 
   private startTransitionIn(): void {
@@ -136,6 +110,9 @@ export default class LoadingScreen implements Menu {
     } else {
       this.keylistener.activate();
       this.transitionInActive = false;
+      if (this.loadingProcess) {
+        this.loadingProcess();
+      }
     }
   }
 
@@ -245,16 +222,15 @@ export default class LoadingScreen implements Menu {
 
     // Check for the transition Timer to start the transition out
     if (this.transitionTimer <= 0) {
-      // If the connection has been established, start the transition out
       this.transitionOutActive = true;
-      this.keylistener.deactivate();
-      this.transitionTimer = FRAMERATE * 3;
     }
 
     // Handle transitions
     if (this.transitionInActive) {
       this.animateTransitionIn();
     } else if (this.transitionOutActive) {
+      this.keylistener.deactivate();
+      this.transitionTimer = FRAMERATE * 3;
       this.animateTransitionOut();
     } else if (this.proceed) {
       this.transitionTimer--;
@@ -262,5 +238,9 @@ export default class LoadingScreen implements Menu {
 
     // Animate the loading dots and message
     this.animateLoading();
+  }
+
+  public activateTransitionOut(): void {
+    this.proceed = true;
   }
 }

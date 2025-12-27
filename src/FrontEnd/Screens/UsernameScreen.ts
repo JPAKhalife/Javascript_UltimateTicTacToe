@@ -16,7 +16,8 @@ import GuiManager from "../GuiManager";
 import Field from "../MenuObjects/Field";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import ScreenBorder from "../MenuObjects/ScreenBorder";
-import ServerRequestService from "../Services/ServerRequestService";
+import ServerRequestService from "../Communication/ServerRequestService";
+import { handleRegisterPlayerResponse } from "../Communication/ServerResponseHandler";
 
 // Animation constants
 const ANIMATION_TIME = 60; // 1 second at 60fps
@@ -244,38 +245,33 @@ export default class UsernameScreen implements Menu {
     }
   }
 
+  /**
+   * Displays a username field error 
+   * @param error - the error string to be displayed.
+   */
+  public displayUsernameFieldError(error: string) {
+    this.usernameField.setError(error);
+    this.usernameField.shake();
+    this.showLoadingIcon = false;
+  }
+
+  /**
+   * Initiates the transition out
+   */
+  public initiateTransitionOut() {
+    this.usernameField.setError("");
+    this.keylistener.deactivate();
+    this.transitionOutActive = true;
+    this.border.setTransitionOut(true);
+    this.confirmButton.setConfirmed(true);
+    this.showLoadingIcon = false;
+  }
+
   private async checkUsername(): Promise<void> {
     if (this.usernameField.getText() === "") {
-      this.usernameField.setError("Please enter a username");
-      this.usernameField.shake();
-      this.showLoadingIcon = false;
+      this.displayUsernameFieldError("Please enter a username")
       return;
     }
-
-    try {
-      const response = await this.requestService.registerPlayer(
-        this.usernameField.getText(),
-      );
-
-      // Valid session ID
-      if (response.sessionID.length > 0) {
-        // Session ID is already stored in ServerRequestService
-        this.usernameField.setError("");
-        this.keylistener.deactivate();
-        this.transitionOutActive = true;
-        this.border.setTransitionOut(true);
-        this.confirmButton.setConfirmed(true);
-        this.showLoadingIcon = false;
-      } else {
-        this.usernameField.setError(response.message);
-        this.usernameField.shake();
-        this.showLoadingIcon = false;
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Registration failed";
-      this.usernameField.setError(errorMessage);
-      this.usernameField.shake();
-      this.showLoadingIcon = false;
-    }
+    handleRegisterPlayerResponse(this.usernameField.getText());
   }
 }

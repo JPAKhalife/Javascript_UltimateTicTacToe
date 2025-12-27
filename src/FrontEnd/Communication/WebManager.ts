@@ -11,7 +11,7 @@ import type {
   LobbyInfo,
   GameUpdateMessage,
   GameStateUpdateMessage,
-} from "../Shared/Contracts/MessageToClientSchema";
+} from "../../Shared/Contracts/MessageToClientSchema";
 
 /**
  * Re-export shared types for backward compatibility
@@ -448,7 +448,7 @@ export default class WebManager {
    * @param type The message type to remove
    */
   public removeTypeCallback(
-      type: string
+    type: string
   ): void {
     this.typeMessageCallbacks.delete(type);
   }

@@ -5,7 +5,7 @@
  * @created 2025-12-23
  */
 
-import WebManager, { type GameUpdateMessage, type GameStateUpdateMessage } from "../WebManager";
+import WebManager, { type GameUpdateMessage, type GameStateUpdateMessage } from "./WebManager";
 import {
   type RegisterPlayerResponse,
   type CreateLobbyResponse,

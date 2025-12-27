@@ -17,9 +17,8 @@ import Slider from "../MenuObjects/Slider";
 import Field from "../MenuObjects/Field";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import Toggle from "../MenuObjects/Toggle";
-import ServerRequestService from "../Services/ServerRequestService";
-import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
-import { GAME_STATES } from "../../Shared/Constants";
+import ServerRequestService from "../Communication/ServerRequestService";
+import { createGameStartPromise } from "../Communication/ServerEventHandler";
 
 export default class CreateLobbyScreen implements Menu {
   private sketch: p5;
@@ -331,20 +330,7 @@ export default class CreateLobbyScreen implements Menu {
 
     try {
       // Set up game listeners BEFORE creating lobby to avoid race condition
-      // (server may send GAME_STATE_UPDATE immediately if enough players join)
-      // Create the promise that will be resolved when the game starts
-      this.gameStartPromise = new Promise<boolean>((resolve) => {
-        const listener = (update: any) => {
-          // Check for game_state_update message with state "running"
-          if (update.type === FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE && update.state === GAME_STATES.RUNNING) {
-            console.info("[gameStartPromise] Game state has been updated to running");
-            this.requestService.removeGameListeners();
-            resolve(true);
-          }
-        };
-        // Add listeners NOW, before creating lobby
-        this.requestService.addGameListeners(listener);
-      });
+      this.gameStartPromise = createGameStartPromise(this.requestService);
 
       // NOW create the lobby with listeners already in place
       const response = await this.requestService.createLobby(

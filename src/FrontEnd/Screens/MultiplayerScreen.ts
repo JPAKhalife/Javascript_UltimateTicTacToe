@@ -18,9 +18,8 @@ import { FRAMERATE } from "../Constants";
 import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import { GameType } from "../GameManager";
-import ServerRequestService from "../Services/ServerRequestService";
-import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
-import { GAME_STATES } from "../../Shared/Constants";
+import ServerRequestService from "../Communication/ServerRequestService";
+import { createGameStartPromise } from "../Communication/ServerEventHandler";
 
 const LOBBY_REFRESH_TIME = 7 * FRAMERATE; // 3 seconds
 const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
@@ -339,9 +338,9 @@ export default class MultiplayerScreen implements Menu {
         if (this.lobbyList.at(0)?.lobbyID == lobbyDot.getLobbyInfo().lobbyID) {
           lobbyDot.setLobbyInfo(
             this.lobbyList.shift() ??
-              (() => {
-                throw new Error("Lobby list is empty");
-              })(),
+            (() => {
+              throw new Error("Lobby list is empty");
+            })(),
           );
           return;
         }
@@ -368,9 +367,9 @@ export default class MultiplayerScreen implements Menu {
         0.005, // 0.5% of canvas size for dot size
         getRandomInt(3, 15) * FRAMERATE,
         this.lobbyList.shift() ??
-          (() => {
-            throw new Error("Lobby list is empty");
-          })(),
+        (() => {
+          throw new Error("Lobby list is empty");
+        })(),
         this.lobbyNav,
         0.25, // 25% of canvas width for box X position
         0.5, // 50% of canvas height for box Y position
@@ -477,9 +476,9 @@ export default class MultiplayerScreen implements Menu {
     );
     this.sketch.text(
       "Players: " +
-        selectedLobbyInfo.joinedPlayers +
-        "/" +
-        selectedLobbyInfo.playerNum,
+      selectedLobbyInfo.joinedPlayers +
+      "/" +
+      selectedLobbyInfo.playerNum,
       leftPanelX,
       topMargin + lineHeight * 4.5,
     );
@@ -499,9 +498,9 @@ export default class MultiplayerScreen implements Menu {
     this.sketch.textSize(TEXT_SIZES.NORMAL * canvasSize);
     this.sketch.text(
       "Grid Size: " +
-        selectedLobbyInfo.gridsize +
-        "×" +
-        selectedLobbyInfo.gridsize,
+      selectedLobbyInfo.gridsize +
+      "×" +
+      selectedLobbyInfo.gridsize,
       leftPanelX,
       topMargin + lineHeight * 8,
     );
@@ -618,20 +617,7 @@ export default class MultiplayerScreen implements Menu {
     const lobbyID = selectedLobbyDot.getLobbyInfo().lobbyID;
 
     // Set up game listeners BEFORE joining to avoid race condition
-    // (server may send GAME_STATE_UPDATE immediately if this is the last player)
-    // Create the promise that will be resolved when the game starts
-    const gameStartPromise = new Promise<boolean>((resolve) => {
-      const listener = (update: any) => {
-        // Check for game_state_update message with state "running"
-        if (update.type === FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE && update.state === GAME_STATES.RUNNING) {
-          console.info("[gameStartPromise] Game state has been updated to running");
-          this.requestService.removeGameListeners();
-          resolve(true);
-        }
-      };
-      // Add listeners NOW, before joining
-      this.requestService.addGameListeners(listener);
-    });
+    const gameStartPromise = createGameStartPromise(this.requestService);
 
     // NOW join the lobby with listeners already in place
     let lobbyInfo = await this.requestService.joinLobby(lobbyID);

@@ -14,8 +14,9 @@ import Menu, { Screens } from "../Menu";
 import MenuNav from "../MenuObjects/MenuNav";
 import { MenuButton } from "../MenuObjects/MenuButton";
 import { whiteTicTac, getCanvasSize, HEADER, fontPointless } from "../sketch";
-import WebManager from "../WebManager";
+import WebManager from "../Communication/WebManager";
 import ScreenBorder from "../MenuObjects/ScreenBorder";
+import { handleWebsocketConnectionInitiation } from "../Communication/ServerResponseHandler";
 
 export const STROKEWEIGHT = 15;
 const SETUP_SCREEN_ANIMATION_TIME = 120;
@@ -141,15 +142,12 @@ export default class SetupScreen implements Menu {
         this.multiplayer_MenuButton_list.getCurrentlySelected() as MenuButton
       ).getText();
       if (selectedPhrase === "Online") {
-        // Navigate to multiplayer screen with loading screen in between
-        const connectionPromise =
-          WebManager.getInstance().initiateConnectionIfNotEstablished();
         GuiManager.changeScreen(
           Screens.LOADING_SCREEN,
           this.sketch,
           Screens.USERNAME_SCREEN,
           "Connecting to Server",
-          connectionPromise,
+          handleWebsocketConnectionInitiation,
         );
       } else if (selectedPhrase === "Local") {
         GuiManager.changeScreen(Screens.GAME_SCREEN, this.sketch);
