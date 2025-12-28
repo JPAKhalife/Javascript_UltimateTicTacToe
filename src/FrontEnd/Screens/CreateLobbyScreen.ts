@@ -17,14 +17,11 @@ import Slider from "../MenuObjects/Slider";
 import Field from "../MenuObjects/Field";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import Toggle from "../MenuObjects/Toggle";
-import ServerRequestService from "../Communication/ServerRequestService";
-import { setupGameStartListener } from "../Communication/ServerEventHandler";
-import LoadingScreen from "./LoadingScreen";
+import { handleCreateLobbyResponse } from "../Communication/ServerResponseHandler";
 
 export default class CreateLobbyScreen implements Menu {
   private sketch: p5;
   private keylistener: KeyListener;
-  private requestService: ServerRequestService;
 
   //Buttons
   private returnToOnlineScreen: MenuButton;
@@ -53,7 +50,6 @@ export default class CreateLobbyScreen implements Menu {
   constructor(sketch: p5) {
     this.sketch = sketch;
     this.keylistener = new KeyListener(sketch);
-    this.requestService = ServerRequestService.getInstance();
 
     //This is where the menu buttons will be defined
     this.returnToOnlineScreen = new MenuButton(
@@ -324,43 +320,22 @@ export default class CreateLobbyScreen implements Menu {
       return;
     }
 
-    try {
-      // NOW create the lobby
-      const response = await this.requestService.createLobby(
-        lobbyName,
-        this.playerNumSlider.getValue(),
-        this.levelSizeSlider.getValue(),
-        this.slotNumSlider.getValue(),
-        this.spectatorToggle.isConfirmed(),
-      );
-
-      if (response.lobbyID) {
-        // Store lobby information
-        localStorage.setItem("currentLobby", lobbyName);
-        localStorage.setItem("lobbyID", response.lobbyID);
-
-        // Set up game listener to trigger LoadingScreen transition when game starts
-        // This must happen BEFORE we transition to LoadingScreen
-        setupGameStartListener(this.requestService, () => {
-          // Get the LoadingScreen instance and trigger its transition
-          const currentScreen = GuiManager.getCurrentScreen();
-          if (currentScreen instanceof LoadingScreen) {
-            currentScreen.activateTransitionOut();
-          }
-        });
-
-        // Start the transition out to LoadingScreen
+    await handleCreateLobbyResponse(
+      lobbyName,
+      this.playerNumSlider.getValue(),
+      this.levelSizeSlider.getValue(),
+      this.slotNumSlider.getValue(),
+      this.spectatorToggle.isConfirmed(),
+      () => {
+        // On success: start the transition out to LoadingScreen
         this.selectedButton.setConfirmed(true);
         this.transition_out_active = true;
-      } else {
-        // If lobby creation failed, show error
-        this.displayLobbyCreationError("Failed to create lobby.");
+      },
+      (error: string) => {
+        // On failure: display error
+        this.displayLobbyCreationError(error);
       }
-    } catch (error) {
-      // If an exception occurred, show error
-      const errorMessage = error instanceof Error ? error.message : "Failed to create lobby";
-      this.displayLobbyCreationError(errorMessage);
-    }
+    );
   }
 
   /**

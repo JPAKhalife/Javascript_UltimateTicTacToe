@@ -50,6 +50,65 @@ export async function handleRegisterPlayerResponse(username: string) {
 }
 
 /**
+ * Handles the response from creating a lobby
+ * @param lobbyName - The name of the lobby to create
+ * @param playerNum - Number of players
+ * @param levelSize - Size of the level
+ * @param gridSize - Size of the grid (slot number)
+ * @param allowSpectators - Whether spectators are allowed
+ * @param onCreateSuccess - Callback to execute when lobby is created successfully
+ * @param onCreateFailed - Callback to execute if creation fails
+ */
+export async function handleCreateLobbyResponse(
+    lobbyName: string,
+    playerNum: number,
+    levelSize: number,
+    gridSize: number,
+    allowSpectators: boolean,
+    onCreateSuccess: () => void,
+    onCreateFailed: (error: string) => void
+) {
+    const requestService = ServerRequestService.getInstance();
+
+    try {
+        // Create the lobby
+        const response = await requestService.createLobby(
+            lobbyName,
+            playerNum,
+            levelSize,
+            gridSize,
+            allowSpectators,
+        );
+
+        if (response.lobbyID) {
+            // Store lobby information
+            localStorage.setItem("currentLobby", lobbyName);
+            localStorage.setItem("lobbyID", response.lobbyID);
+
+            // Set up game listener to trigger LoadingScreen transition when game starts
+            // This must happen BEFORE we transition to LoadingScreen
+            setupGameStartListener(requestService, () => {
+                // Get the LoadingScreen instance and trigger its transition
+                const currentScreen = GuiManager.getCurrentScreen();
+                if (currentScreen instanceof LoadingScreen) {
+                    currentScreen.activateTransitionOut();
+                }
+            });
+
+            // Execute success callback (will trigger transition to LoadingScreen)
+            onCreateSuccess();
+        } else {
+            // If lobby creation failed, show error
+            onCreateFailed(response.error || "Failed to create lobby.");
+        }
+    } catch (error) {
+        // If an exception occurred, show error
+        const errorMessage = error instanceof Error ? error.message : "Failed to create lobby";
+        onCreateFailed(errorMessage);
+    }
+}
+
+/**
  * Handles the response from joining a lobby
  * @param lobbyID - The ID of the lobby to join
  * @param sketch - The p5 sketch instance
