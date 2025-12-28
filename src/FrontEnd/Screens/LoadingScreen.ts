@@ -21,6 +21,7 @@ import {
 import GuiManager from "../GuiManager";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import { checkIfGameStarted } from "../Communication/ServerEventHandler";
+import ServerRequestService from "../Communication/ServerRequestService";
 
 // Constants for the loading screen
 const LOADING_TRANSITION_IN = 180;
@@ -111,6 +112,13 @@ export default class LoadingScreen implements Menu {
     } else {
       this.keylistener.activate();
       this.transitionInActive = false;
+
+      // Send acknowledgment to server that LoadingScreen is ready
+      const lobbyID = localStorage.getItem("lobbyID");
+      if (lobbyID) {
+        console.info("[LoadingScreen] Sending ready acknowledgment to server");
+        ServerRequestService.getInstance().acknowledgeLoadingScreenReady(lobbyID);
+      }
 
       // Check if game already started (race condition handling)
       if (checkIfGameStarted()) {

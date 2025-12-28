@@ -279,6 +279,33 @@ export default class ServerRequestService {
   }
 
   /**
+   * @method acknowledgeLoadingScreenReady
+   * @description Send acknowledgment to server that LoadingScreen is ready and waiting
+   * This helps synchronize all clients before starting the game
+   * @param lobbyID The ID of the lobby where the player is waiting
+   */
+  public acknowledgeLoadingScreenReady(lobbyID: string): void {
+    try {
+      const message = {
+        type: FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_LOADING_SCREEN_READY,
+        sessionID: this.webManager.getSessionId(),
+        parameters: {
+          lobbyID,
+        },
+      };
+
+      // Fire and forget - send request but don't wait for response
+      this.webManager.sendRequest(message, FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_LOADING_SCREEN_READY)
+        .catch((error) => {
+          console.error("[ServerRequestService] Acknowledge error:", error);
+        });
+      console.info("[ServerRequestService] Sent loading screen ready acknowledgment for lobby:", lobbyID);
+    } catch (error) {
+      console.error("[ServerRequestService] Acknowledge loading screen ready error:", error);
+    }
+  }
+
+  /**
    * @method addGameListeners
    * @description Add a listener for game updates
    * @param listener Function to be called when a game update is received
