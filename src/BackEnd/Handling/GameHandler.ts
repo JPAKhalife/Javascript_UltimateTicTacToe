@@ -7,15 +7,11 @@
  * @updated 2025-08-20
  */
 
-import Redis from "ioredis";
-import { GAME_STATES } from "../Contants";
+import { GAME_STATES, REDIS_KEYS } from "../Contants";
 import { DatabaseManager } from "../Database/DatabaseManager";
 import { Lobby } from "../Database/Lobby/Lobby";
 import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage } from '../../Shared/Contracts/MessageToClientSchema';
 import { handleForwardLobbyMessage } from "./ServerRedisGameEventHandler";
-
-// Map to track timeout timers for each lobby
-const lobbyTimeouts = new Map<string, NodeJS.Timeout>();
 
 /**
  * @function handleGameReadyCheck
@@ -23,7 +19,6 @@ const lobbyTimeouts = new Map<string, NodeJS.Timeout>();
  * @param lobby - The ID of the lobby to check
  */
 export async function handleGameReadyCheck(lobby: Lobby) {
-  let redisClient = DatabaseManager.getInstance().getRegularClient();
   //First handle cases where this method is pointless.
 
   //Get the lobby Object
@@ -47,41 +42,41 @@ export async function handleGameReadyCheck(lobby: Lobby) {
   }
   //? There may be other checks that are neccessary in the future
 
-  // If all checks are passed, set up acknowledgment timeout and wait for players
+  // If all checks are passed, set up acknowledgment timeout using Redis expiry
   console.info(
     `[GameHandler] All players have joined in lobby ${lobby.get("lobbyID")}. Waiting for LoadingScreen acknowledgments...`,
   );
 
-  // Set up a 5-second timeout - if not all players acknowledge, start anyway
   const lobbyID = lobby.get("lobbyID");
+  const redisClient = DatabaseManager.getInstance().getRegularClient();
 
-  // Clear any existing timeout for this lobby
-  if (lobbyTimeouts.has(lobbyID)) {
-    clearTimeout(lobbyTimeouts.get(lobbyID)!);
-  }
+  // Create a Redis key that will expire in 5 seconds
+  // When it expires, the InternalHandler will call handleGameStart
+  const ackTimeoutKey = REDIS_KEYS.LOBBY_ACK_TIMEOUT(lobbyID);
 
-  // Set new timeout
-  const timeoutId = setTimeout(async () => {
-    console.info(
-      `[GameHandler] Timeout reached for lobby ${lobbyID}. Starting game with ${lobby.get("acknowledgedPlayers")}/${lobby.get("playerNum")} players acknowledged.`,
-    );
-    lobbyTimeouts.delete(lobbyID);
-    await handleGameStart(lobby);
-  }, 5000); // 5 second timeout
+  // Delete any existing timeout key first
+  await redisClient.del(ackTimeoutKey);
 
-  lobbyTimeouts.set(lobbyID, timeoutId);
+  // Set the timeout key with 5-second expiration
+  await redisClient.set(ackTimeoutKey, lobbyID, "EX", 5);
+
+  console.info(`[GameHandler] Set acknowledgment timeout for lobby ${lobbyID} (5 seconds)`);
 }
 
 /**
  * @function cancelGameStartTimeout
- * @description Cancel the timeout for a lobby (called when all players acknowledge early)
+ * @description Cancel the Redis-based timeout for a lobby (called when all players acknowledge early)
  * @param lobbyID - The ID of the lobby
  */
-export function cancelGameStartTimeout(lobbyID: string): void {
-  if (lobbyTimeouts.has(lobbyID)) {
-    clearTimeout(lobbyTimeouts.get(lobbyID)!);
-    lobbyTimeouts.delete(lobbyID);
-    console.info(`[GameHandler] Cancelled timeout for lobby ${lobbyID}`);
+export async function cancelGameStartTimeout(lobbyID: string): Promise<void> {
+  const redisClient = DatabaseManager.getInstance().getRegularClient();
+  const ackTimeoutKey = REDIS_KEYS.LOBBY_ACK_TIMEOUT(lobbyID);
+
+  // Delete the timeout key to prevent it from expiring and triggering game start
+  const deleted = await redisClient.del(ackTimeoutKey);
+
+  if (deleted > 0) {
+    console.info(`[GameHandler] Cancelled acknowledgment timeout for lobby ${lobbyID}`);
   }
 }
 

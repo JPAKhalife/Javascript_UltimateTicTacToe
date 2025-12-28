@@ -11,6 +11,10 @@ import Redis from "ioredis";
 import { disconnect } from "../Database/ClientConnections";
 import Session from "../Database/Session";
 import { Player } from "../Database/Player";
+import { Lobby } from "../Database/Lobby/Lobby";
+import { handleGameStart } from "./GameHandler";
+import { REDIS_KEYS, SERVER_ID } from "../Contants";
+import { DatabaseManager } from "../Database/DatabaseManager";
 
 /**
  * @function handleSessionExpiry
@@ -31,9 +35,53 @@ export async function handleSessionExpiry(expiredKey: string) {
 
 /**
  * @function handleConnectionExpiry
- * @description This function handles cleanup related to when a connecion expires
+ * @description This function handles cleanup related to when a connection expires
+ * Only processes if this server owns the connection
  */
 export async function handleConnectionExpiry(expiredKey: string) {
-  console.info("Disconnecting");
+  // Extract connectionID from the expired key (format: connection:connectionID)
+  const connectionID = expiredKey.replace(REDIS_KEYS.CONNECTION(""), "");
+
+  // Check if this server owns this connection
+  const redisClient = DatabaseManager.getInstance().getRegularClient();
+  const ownerServerID = await redisClient.get(REDIS_KEYS.CONNECTION_SERVER(connectionID));
+
+  if (ownerServerID !== SERVER_ID) {
+    console.debug(
+      `[InternalHandler] Connection ${connectionID} not owned by this server (owner: ${ownerServerID}, current: ${SERVER_ID}). Skipping cleanup.`
+    );
+    return;
+  }
+
+  console.info(`[InternalHandler] Connection ${connectionID} owned by this server. Disconnecting.`);
   disconnect(expiredKey);
+}
+
+/**
+ * @function handleLobbyAckTimeout
+ * @description Handles when a lobby acknowledgment timeout expires (5 seconds without all players acknowledging)
+ * @param expiredKey - The Redis key that expired (format: lobby_ack_timeout:lobbyID)
+ */
+export async function handleLobbyAckTimeout(expiredKey: string) {
+  // Extract lobbyID from the key
+  const lobbyID = expiredKey.split(":")[1];
+
+  console.info(`[InternalHandler] Acknowledgment timeout expired for lobby ${lobbyID}`);
+
+  // Fetch the lobby
+  const lobby = await Lobby.getById(lobbyID);
+  if (!lobby) {
+    console.warn(`[InternalHandler] Lobby ${lobbyID} not found for timeout handling`);
+    return;
+  }
+
+  const acknowledgedPlayers = Number(lobby.get("acknowledgedPlayers") || 0);
+  const totalPlayers = Number(lobby.get("playerNum"));
+
+  console.info(
+    `[InternalHandler] Starting game with ${acknowledgedPlayers}/${totalPlayers} players acknowledged`
+  );
+
+  // Start the game with however many players have acknowledged
+  await handleGameStart(lobby);
 }

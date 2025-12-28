@@ -102,7 +102,7 @@ export class ResponseBuilder {
     };
   }
 
-  /**
+  /**\
    * Create a reconnect response
    */
   static reconnect(

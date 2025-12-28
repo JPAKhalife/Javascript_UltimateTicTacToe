@@ -10,6 +10,7 @@ import { REDIS_KEYS } from "../Contants";
 import {
   handleSessionExpiry,
   handleConnectionExpiry,
+  handleLobbyAckTimeout,
 } from "../Handling/InternalHandler";
 import { handleForwardLobbyMessage } from "../Handling/ServerRedisGameEventHandler";
 
@@ -192,6 +193,8 @@ export class DatabaseManager {
         handleSessionExpiry(expiredKey);
       } else if (expiredKey.includes(REDIS_KEYS.CONNECTION(""))) {
         handleConnectionExpiry(expiredKey);
+      } else if (expiredKey.startsWith("lobby_ack_timeout:")) {
+        handleLobbyAckTimeout(expiredKey);
       }
     });
 

@@ -42,12 +42,14 @@ export const REDIS_KEYS = {
   SESSION: (sessionID: string) => `session:${sessionID}`,
   PLAYER_SESSIONS: (playerID: string) => `player_sessions:${playerID}`,
   CONNECTION: (connectionID: string) => `connection:${connectionID}`, //Mapping of connection ID to playerID
+  CONNECTION_SERVER: (connectionID: string) => `connection_server:${connectionID}`, //Mapping of connection ID to server ID
   PLAYER_CONNECTION: (playerID: string) => `player:${playerID}:connection`, //Mapping of playerID to connectionID
 
   //Lobby and game management
   LOBBY: (lobbyID: string) => `lobby:${lobbyID}`, // lobby object
   LOBBY_PLAYERS: (lobbyID: string) => `lobbyplayers:${lobbyID}`, // playerlist of a given lobby
   LOBBY_SPECTATORS: (lobbyID: string) => `lobbyspectators:${lobbyID}`, // spectatorlist of a given lobby
+  LOBBY_ACK_TIMEOUT: (lobbyID: string) => `lobby_ack_timeout:${lobbyID}`, // Expiring key for acknowledgment timeout
   USERNAMES: "usernames", // Set of all active usernames
   BOARD: (lobbyID: string) => `board:${lobbyID}`, // The state of a board of a given lobby
   LOBBY_NAMES: "lobby_names", // Set of all active lobby names
@@ -123,6 +125,13 @@ export const SUCCESS_MESSAGES = {
   OPERATION_SUCCESS: "Operation completed successfully.",
 } as const;
 
+
+// ============================================================================
+// SERVER IDENTIFICATION
+// ============================================================================
+// Unique server ID for this instance (used for distributed cleanup)
+// Generated once per server startup to identify which server owns which connections
+export const SERVER_ID = `server_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
 // ============================================================================
 // ENVIRONMENT CONFIGURATION
