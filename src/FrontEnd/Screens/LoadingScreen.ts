@@ -20,6 +20,7 @@ import {
 } from "../sketch";
 import GuiManager from "../GuiManager";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
+import { checkIfGameStarted } from "../Communication/ServerEventHandler";
 
 // Constants for the loading screen
 const LOADING_TRANSITION_IN = 180;
@@ -110,7 +111,12 @@ export default class LoadingScreen implements Menu {
     } else {
       this.keylistener.activate();
       this.transitionInActive = false;
-      if (this.loadingProcess) {
+
+      // Check if game already started (race condition handling)
+      if (checkIfGameStarted()) {
+        console.info("[LoadingScreen] Game already started, triggering transition immediately");
+        this.activateTransitionOut();
+      } else if (this.loadingProcess) {
         this.loadingProcess();
       }
     }

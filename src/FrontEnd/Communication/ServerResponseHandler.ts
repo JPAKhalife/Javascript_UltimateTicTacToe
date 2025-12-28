@@ -87,13 +87,7 @@ export async function handleCreateLobbyResponse(
 
             // Set up game listener to trigger LoadingScreen transition when game starts
             // This must happen BEFORE we transition to LoadingScreen
-            setupGameStartListener(requestService, () => {
-                // Get the LoadingScreen instance and trigger its transition
-                const currentScreen = GuiManager.getCurrentScreen();
-                if (currentScreen instanceof LoadingScreen) {
-                    currentScreen.activateTransitionOut();
-                }
-            });
+            setupGameStartListener(requestService);
 
             // Execute success callback (will trigger transition to LoadingScreen)
             onCreateSuccess();
@@ -129,13 +123,7 @@ export async function handleJoinLobbyResponse(
     if (lobbyInfo) {
         // Set up game listener to trigger LoadingScreen transition when game starts
         // This must happen BEFORE we transition to LoadingScreen
-        setupGameStartListener(requestService, () => {
-            // Get the LoadingScreen instance and trigger its transition
-            const currentScreen = GuiManager.getCurrentScreen();
-            if (currentScreen instanceof LoadingScreen) {
-                currentScreen.activateTransitionOut();
-            }
-        });
+        setupGameStartListener(requestService);
 
         selectedLobbyDot.startSelectionTransition(async () => {
             // Navigate to LoadingScreen - game listener will trigger transition when ready
