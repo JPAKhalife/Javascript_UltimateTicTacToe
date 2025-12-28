@@ -14,6 +14,9 @@ import { Lobby } from "../Database/Lobby/Lobby";
 import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage } from '../../Shared/Contracts/MessageToClientSchema';
 import { handleForwardLobbyMessage } from "./ServerRedisGameEventHandler";
 
+// Map to track timeout timers for each lobby
+const lobbyTimeouts = new Map<string, NodeJS.Timeout>();
+
 /**
  * @function handleGameReadyCheck
  * @description This function checks whether or not the game is ready to started (transition from waiting to running)
@@ -44,11 +47,42 @@ export async function handleGameReadyCheck(lobby: Lobby) {
   }
   //? There may be other checks that are neccessary in the future
 
-  // If all checks are passed, start the game
+  // If all checks are passed, set up acknowledgment timeout and wait for players
   console.info(
-    `[GameHandler] All players have joined in lobby ${lobby.get("lobbyID")}. Starting game...`,
+    `[GameHandler] All players have joined in lobby ${lobby.get("lobbyID")}. Waiting for LoadingScreen acknowledgments...`,
   );
-  await handleGameStart(lobby);
+
+  // Set up a 5-second timeout - if not all players acknowledge, start anyway
+  const lobbyID = lobby.get("lobbyID");
+
+  // Clear any existing timeout for this lobby
+  if (lobbyTimeouts.has(lobbyID)) {
+    clearTimeout(lobbyTimeouts.get(lobbyID)!);
+  }
+
+  // Set new timeout
+  const timeoutId = setTimeout(async () => {
+    console.info(
+      `[GameHandler] Timeout reached for lobby ${lobbyID}. Starting game with ${lobby.get("acknowledgedPlayers")}/${lobby.get("playerNum")} players acknowledged.`,
+    );
+    lobbyTimeouts.delete(lobbyID);
+    await handleGameStart(lobby);
+  }, 5000); // 5 second timeout
+
+  lobbyTimeouts.set(lobbyID, timeoutId);
+}
+
+/**
+ * @function cancelGameStartTimeout
+ * @description Cancel the timeout for a lobby (called when all players acknowledge early)
+ * @param lobbyID - The ID of the lobby
+ */
+export function cancelGameStartTimeout(lobbyID: string): void {
+  if (lobbyTimeouts.has(lobbyID)) {
+    clearTimeout(lobbyTimeouts.get(lobbyID)!);
+    lobbyTimeouts.delete(lobbyID);
+    console.info(`[GameHandler] Cancelled timeout for lobby ${lobbyID}`);
+  }
 }
 
 /**

@@ -27,12 +27,13 @@ import {
   BaseRequest,
   AuthenticatedRequest,
   LobbyJoinRequest,
+  AcknowledgeLoadingScreenReadyRequest,
 } from "../../Shared/Contracts/MessageToServerSchema";
 import Session from "../Database/Session";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../Contants";
 import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
-import { handleGameReadyCheck } from "./GameHandler";
+import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout } from "./GameHandler";
 const { v4: uuidv4 } = require("uuid");
 
 type ReturnMessage = Record<string, any>;
@@ -124,6 +125,15 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       sessionData: any,
     ) => {
       return createErrorResponse(data.type, ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
+    },
+    [FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_LOADING_SCREEN_READY]: async (
+      data: any,
+      sessionData: any,
+    ) => {
+      const validation = AcknowledgeLoadingScreenReadyRequest.safeParse(data);
+      return validation.success
+        ? handleAcknowledgeLoadingScreenReady(ws, validation.data, sessionData.get("playerID"))
+        : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.NONE]: async (data: any, sessionData: any) => {
       return createErrorResponse(data.type, ERROR_MESSAGES.INTERNAL_ERROR)
@@ -632,6 +642,60 @@ async function handleJoinLobby(
     return ResponseBuilder.joinLobby(lobbyInfo, SUCCESS_MESSAGES.OPERATION_SUCCESS);
   } catch (error) {
     console.error("Error joining lobby:", error);
+    return ResponseBuilder.error(ERROR_MESSAGES.INTERNAL_ERROR);
+  }
+}
+
+/**
+ * @function handleAcknowledgeLoadingScreenReady
+ * @description Handles acknowledgment from a client that their LoadingScreen is ready
+ * @param ws WebSocket connection
+ * @param data Acknowledgment request data
+ * @param playerID Player ID from the validated session
+ * @returns Promise resolving to response object
+ */
+async function handleAcknowledgeLoadingScreenReady(
+  ws: any,
+  data: AcknowledgeLoadingScreenReadyRequest,
+  playerID: string,
+): Promise<object> {
+  try {
+    const params = data.parameters || {};
+    const lobbyID = params.lobbyID;
+
+    if (!lobbyID) {
+      return ResponseBuilder.error(ERROR_MESSAGES.INVALID_REQUEST_FORMAT);
+    }
+
+    console.info(`[AcknowledgeLoadingScreenReady] Player ${playerID} acknowledged ready in lobby ${lobbyID}`);
+
+    // Fetch the lobby
+    const lobby = await Lobby.getById(lobbyID);
+    if (!lobby) {
+      return ResponseBuilder.error(ERROR_MESSAGES.LOBBY_NOT_FOUND);
+    }
+
+    // Acknowledge the player - this increments the counter and returns true if all players acknowledged
+    const allPlayersReady = await lobby.acknowledgePlayerReady();
+
+    // If all players have acknowledged, cancel the timeout and start the game immediately
+    if (allPlayersReady) {
+      console.info(`[AcknowledgeLoadingScreenReady] All players ready in lobby ${lobbyID}, starting game immediately`);
+
+      // Cancel the timeout since all players are ready
+      cancelGameStartTimeout(lobbyID);
+
+      // Start the game immediately
+      await handleGameStart(lobby);
+    }
+
+    // Return success (fire-and-forget on client side, so this may not be used)
+    return {
+      success: true,
+      message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
+    };
+  } catch (error) {
+    console.error("[AcknowledgeLoadingScreenReady] Error:", error);
     return ResponseBuilder.error(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 }
