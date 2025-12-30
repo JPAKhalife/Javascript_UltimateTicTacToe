@@ -10,6 +10,18 @@
 // Re-export shared constants
 export { DEFAULT_PLAYER_NUMBER, GAME_CONSTANTS, GAME_STATES, VALIDATION } from "../Shared/Constants";
 
+import { v4 as uuidv4 } from "uuid";
+import os from "os";
+
+// ============================================================================
+// SERVER IDENTIFICATION
+// ============================================================================
+/**
+ * Unique identifier for this server instance
+ * Used for multi-server deployments to identify which server owns which connections
+ */
+export const SERVER_ID = process.env.SERVER_ID || `server_${os.hostname()}_${uuidv4().slice(0, 8)}`;
+
 // ============================================================================
 // AUTHENTICATION CONSTANTS
 // ============================================================================
@@ -42,14 +54,15 @@ export const REDIS_KEYS = {
   SESSION: (sessionID: string) => `session:${sessionID}`,
   PLAYER_SESSIONS: (playerID: string) => `player_sessions:${playerID}`,
   CONNECTION: (connectionID: string) => `connection:${connectionID}`, //Mapping of connection ID to playerID
-  CONNECTION_SERVER: (connectionID: string) => `connection_server:${connectionID}`, //Mapping of connection ID to server ID
+  CONNECTION_SERVER: (connectionID: string) => `connection_server:${connectionID}`, //Mapping of connection ID to owning server ID
   PLAYER_CONNECTION: (playerID: string) => `player:${playerID}:connection`, //Mapping of playerID to connectionID
 
   //Lobby and game management
   LOBBY: (lobbyID: string) => `lobby:${lobbyID}`, // lobby object
   LOBBY_PLAYERS: (lobbyID: string) => `lobbyplayers:${lobbyID}`, // playerlist of a given lobby
   LOBBY_SPECTATORS: (lobbyID: string) => `lobbyspectators:${lobbyID}`, // spectatorlist of a given lobby
-  LOBBY_ACK_TIMEOUT: (lobbyID: string) => `lobby_ack_timeout:${lobbyID}`, // Expiring key for acknowledgment timeout
+  LOBBY_ACK_SET: (lobbyID: string) => `lobby_ack_set:${lobbyID}`, // Set of player IDs who acknowledged ready (expires in 5s)
+  LOBBY_ACK_SET_PREFIX: "lobby_ack_set:", // Prefix for acknowledgment set keys
   USERNAMES: "usernames", // Set of all active usernames
   BOARD: (lobbyID: string) => `board:${lobbyID}`, // The state of a board of a given lobby
   LOBBY_NAMES: "lobby_names", // Set of all active lobby names
@@ -125,13 +138,6 @@ export const SUCCESS_MESSAGES = {
   OPERATION_SUCCESS: "Operation completed successfully.",
 } as const;
 
-
-// ============================================================================
-// SERVER IDENTIFICATION
-// ============================================================================
-// Unique server ID for this instance (used for distributed cleanup)
-// Generated once per server startup to identify which server owns which connections
-export const SERVER_ID = `server_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
 // ============================================================================
 // ENVIRONMENT CONFIGURATION

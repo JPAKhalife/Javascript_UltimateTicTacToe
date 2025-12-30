@@ -13,6 +13,8 @@ import { VALIDATION, GAME_CONSTANTS, GAME_STATES } from "../Constants";
 export enum FROM_SERVER_MESSAGE_TYPES {
   GAME_UPDATE = "game_update",
   GAME_STATE_UPDATE = "game_state_update",
+  ACKNOWLEDGMENT_REQUEST = "acknowledgment_request",
+  GAME_CANCELLED = "game_cancelled",
 }
 
 // ============================================================================
@@ -135,3 +137,22 @@ export const GameStateUpdateMessage = z.object({
   message: z.string().max(VALIDATION.MAX_STANDARD_LENGTH).optional(),
 });
 export type GameStateUpdateMessage = z.infer<typeof GameStateUpdateMessage>;
+
+/**
+ * Server request for clients to acknowledge they are ready to start the game
+ * Sent when all players have joined and game is about to start
+ */
+export const AcknowledgmentRequestMessage = z.object({
+  type: z.literal("acknowledgment_request"),
+  message: z.string().max(VALIDATION.MAX_STANDARD_LENGTH).optional(),
+});
+export type AcknowledgmentRequestMessage = z.infer<typeof AcknowledgmentRequestMessage>;
+
+/**
+ * Notification that the game has been cancelled (e.g., timeout waiting for acknowledgments)
+ */
+export const GameCancelledMessage = z.object({
+  type: z.literal("game_cancelled"),
+  reason: z.string().max(VALIDATION.MAX_STANDARD_LENGTH),
+});
+export type GameCancelledMessage = z.infer<typeof GameCancelledMessage>;

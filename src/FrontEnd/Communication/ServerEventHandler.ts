@@ -11,30 +11,58 @@ import GuiManager from "../GuiManager";
 import { Screens } from "../Menu";
 import LoadingScreen from "../Screens/LoadingScreen";
 import ServerRequestService from "./ServerRequestService";
-
-// Flag to track if game has started (to handle race condition)
-let gameHasStarted = false;
+import { GameType } from "../GameManager";
+import p5 from "p5";
 
 /**
  * @function setupGameStartListener
- * @description Sets up a listener that triggers a callback when the game state changes to "running".
+ * @description Sets up listeners for game-related messages from the server:
+ * - ACKNOWLEDGMENT_REQUEST: Server asking all players to acknowledge they're ready
+ * - GAME_STATE_UPDATE (running): Server confirming game has started
  * Sets up game listeners BEFORE joining/creating a lobby to avoid race conditions.
- * (Server may send GAME_STATE_UPDATE immediately if this is the last player)
  * @param requestService - The ServerRequestService instance to use for adding/removing listeners
+ * @param sketch - The p5 sketch instance
+ * @param gridSize - The grid size of the lobby
+ * @param levelSize - The level size of the lobby
+ * @param lobby - The ID of the lobby
  */
 export function setupGameStartListener(
-  requestService: ServerRequestService
+  requestService: ServerRequestService,
+  sketch: p5,
+  gridSize: number,
+  levelSize: number,
+  lobbyID: string
 ): void {
-  // Reset the flag when setting up a new listener
-  gameHasStarted = false;
+  const onGameEvent = (message: any) => {
+    // Handle ACKNOWLEDGMENT_REQUEST - server asking all players to confirm they're ready
+    if (message.type === FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST) {
+      console.info("[ServerEventHandler] Received ACKNOWLEDGMENT_REQUEST from server");
 
-  const onGameStart = (update: any) => {
-    // Check for game_state_update message with state "running"
-    if (update.type === FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE && update.state === GAME_STATES.RUNNING) {
-      console.info("[setupGameStartListener] Game state has been updated to running");
+      // Transition to LoadingScreen with stored lobby info
+      if (sketch && gridSize !== null && levelSize !== null && lobbyID !== null) {
+        GuiManager.changeScreen(
+          Screens.LOADING_SCREEN,
+          sketch,
+          Screens.GAME_SCREEN,
+          "Waiting for game to start...",
+          () => { }, // Empty function - listener handles transition
+          GameType.ONLINE,
+          gridSize,
+          levelSize,
+          lobbyID,
+        );
+        // Send acknowledgment to server that we received the request and are ready
+        console.info("[ServerEventHandler] Sending acknowledgment for lobby:", lobbyID);
+        requestService.AcknowledgeReady(lobbyID);
+      } else {
+        console.error("[ServerEventHandler] Missing lobby information for LoadingScreen transition");
+      }
+      return;
+    }
 
-      // Set flag that game has started
-      gameHasStarted = true;
+    // Handle GAME_STATE_UPDATE with state "running" - game has actually started
+    if (message.type === FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE && message.state === GAME_STATES.RUNNING) {
+      console.info("[ServerEventHandler] Game state has been updated to running");
 
       // Remove listeners before triggering callback
       requestService.removeGameListeners();
@@ -47,25 +75,7 @@ export function setupGameStartListener(
       }
     }
   };
+
   // Add listeners NOW, before joining/creating lobby
-  requestService.addGameListeners(onGameStart);
-}
-
-/**
- * @function checkIfGameStarted
- * @description Check if the game has already started (for race condition handling)
- * This should be called by LoadingScreen when it's created to handle cases where
- * the game start event arrived before the LoadingScreen was ready
- * @returns true if game has started, false otherwise
- */
-export function checkIfGameStarted(): boolean {
-  return gameHasStarted;
-}
-
-/**
- * @function resetGameStartedFlag
- * @description Reset the game started flag
- */
-export function resetGameStartedFlag(): void {
-  gameHasStarted = false;
+  requestService.addGameListeners(onGameEvent);
 }

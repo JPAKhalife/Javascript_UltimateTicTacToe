@@ -11,6 +11,8 @@ import { nanoid } from 'nanoid';
 import { AUTH_CONSTANTS, REDIS_KEYS, ENV_CONFIG } from '../Contants';
 import crypto from 'crypto';
 import { DatabaseManager } from './DatabaseManager';
+import { RedisEventManager, RedisEventType } from './RedisEventManager';
+import { Player } from './Player';
 
 /**
  * Interface defining the structure of session data stored in Redis
@@ -74,6 +76,22 @@ export default class Session extends RedisHash<SessionData> {
                 });
                 multi.sadd(REDIS_KEYS.PLAYER_SESSIONS(playerID), sessionID);
             });
+
+            // Subscribe to session expiry events for this specific session
+            // This server owns this session and will handle cleanup when it expires
+            const sessionKey = REDIS_KEYS.SESSION(sessionID);
+            await RedisEventManager.subscribe(
+                sessionKey,
+                [RedisEventType.EXPIRED],
+                async (_expiredKey, eventType) => {
+                    if (eventType === RedisEventType.EXPIRED) {
+                        console.info(`[Session] Session expired: ${sessionID} for player: ${playerID}`);
+                        await Session.handleSessionExpiry(sessionID, playerID);
+                    }
+                }
+            );
+
+            console.info(`[Session] Subscribed to expiry events for session: ${sessionID}`);
 
             // Create HMAC token
             const token = Session.generateHmacToken(sessionID, Date.now(), agent, ip);
@@ -181,10 +199,40 @@ export default class Session extends RedisHash<SessionData> {
 
 
     /**
+     * Handle session expiry event
+     * Called when a session expires in Redis
+     * Performs complete cleanup including removing player data
+     * @param sessionID The ID of the expired session
+     * @param playerID The ID of the player associated with the session
+     */
+    private static async handleSessionExpiry(sessionID: string, playerID: string): Promise<void> {
+        console.info(`[Session] Session expired: ${sessionID} for player: ${playerID}`);
+
+        try {
+            // Clean up player's session reference
+            const redisClient = DatabaseManager.getInstance().getRegularClient();
+            await redisClient.srem(REDIS_KEYS.PLAYER_SESSIONS(playerID), sessionID);
+
+            // Remove player data (this is what InternalHandler.handleSessionExpiry did)
+            console.info("[Session] Removing player data for expired session");
+            await Player.remove(playerID);
+
+            // Unsubscribe from further events for this session
+            const sessionKey = REDIS_KEYS.SESSION(sessionID);
+            await RedisEventManager.unsubscribe(sessionKey);
+
+            console.info(`[Session] Cleaned up expired session: ${sessionID} and removed player: ${playerID}`);
+        } catch (error) {
+            console.error(`[Session] Error handling session expiry for ${sessionID}:`, error);
+        }
+    }
+
+    /**
      * Invalidate this session
      */
     async invalidate(): Promise<void> {
         const playerID = this.get('playerID');
+        const sessionID = this.id;
 
         await this.withTransaction(multi => {
             // Delete session
@@ -192,9 +240,15 @@ export default class Session extends RedisHash<SessionData> {
 
             // Remove from player's sessions list
             if (playerID) {
-                multi.srem(REDIS_KEYS.PLAYER_SESSIONS(playerID), this.id);
+                multi.srem(REDIS_KEYS.PLAYER_SESSIONS(playerID), sessionID);
             }
         });
+
+        // Unsubscribe from expiry events since we're manually invalidating
+        const sessionKey = REDIS_KEYS.SESSION(sessionID);
+        await RedisEventManager.unsubscribe(sessionKey);
+
+        console.info(`[Session] Invalidated and unsubscribed from session: ${sessionID}`);
     }
 
     /**

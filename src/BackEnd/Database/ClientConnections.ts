@@ -12,7 +12,7 @@ const activeWebsockets = new Map<string, any>(); // Map of connection IDs to Web
 
 import Redis from "ioredis";
 import { Player } from "./Player";
-import { AUTH_CONSTANTS, REDIS_KEYS, SERVER_ID } from "../Contants";
+import { AUTH_CONSTANTS, REDIS_KEYS } from "../Contants";
 import { DatabaseManager } from "./DatabaseManager";
 
 /**
@@ -50,22 +50,7 @@ export function newConnection(ws: any, connectionID: string) {
   console.info(
     `[Connections] Setting Redis key for connection: ${REDIS_KEYS.CONNECTION(connectionID)}`,
   );
-  redisClient.set(
-    REDIS_KEYS.CONNECTION(connectionID),
-    "",
-    "EX",
-    Math.floor(AUTH_CONSTANTS.CONNECTION_EXPIRE_TIME),
-  );
-
-  // Store which server owns this connection (with same expiration time)
-  redisClient.set(
-    REDIS_KEYS.CONNECTION_SERVER(connectionID),
-    SERVER_ID,
-    "EX",
-    Math.floor(AUTH_CONSTANTS.CONNECTION_EXPIRE_TIME),
-  );
-
-  console.info(`[Connections] Connection ${connectionID} assigned to server ${SERVER_ID}`);
+  redisClient.set(REDIS_KEYS.CONNECTION(connectionID), "");
 }
 
 /**
@@ -161,7 +146,6 @@ export async function removeConnection(connectionID: string): Promise<void> {
   //     Player.removePlayer(redisClient, playerID);
   // }
   redisClient.del(REDIS_KEYS.CONNECTION(connectionID));
-  redisClient.del(REDIS_KEYS.CONNECTION_SERVER(connectionID));
   redisClient.del(REDIS_KEYS.PLAYER_CONNECTION(playerID || ""));
   activeWebsockets.delete(connectionID);
 }

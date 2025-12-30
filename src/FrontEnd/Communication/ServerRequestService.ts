@@ -279,12 +279,12 @@ export default class ServerRequestService {
   }
 
   /**
-   * @method acknowledgeLoadingScreenReady
+   * @method AcknowledgeReady
    * @description Send acknowledgment to server that LoadingScreen is ready and waiting
    * This helps synchronize all clients before starting the game
    * @param lobbyID The ID of the lobby where the player is waiting
    */
-  public acknowledgeLoadingScreenReady(lobbyID: string): void {
+  public AcknowledgeReady(lobbyID: string): void {
     try {
       const message = {
         type: FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_LOADING_SCREEN_READY,
@@ -299,9 +299,9 @@ export default class ServerRequestService {
         .catch((error) => {
           console.error("[ServerRequestService] Acknowledge error:", error);
         });
-      console.info("[ServerRequestService] Sent loading screen ready acknowledgment for lobby:", lobbyID);
+      console.info("[ServerRequestService] Sent ready acknowledgment for lobby:", lobbyID);
     } catch (error) {
-      console.error("[ServerRequestService] Acknowledge loading screen ready error:", error);
+      console.error("[ServerRequestService] Acknowledge ready error:", error);
     }
   }
 
@@ -314,6 +314,8 @@ export default class ServerRequestService {
     console.info("[ServerRequestService] Adding game listeners")
     this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE, listener);
     this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE, listener);
+    this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, listener);
+    console.info("[ServerRequestService] Registered listeners for: GAME_UPDATE, GAME_STATE_UPDATE, ACKNOWLEDGMENT_REQUEST");
   }
 
   /**
@@ -325,6 +327,7 @@ export default class ServerRequestService {
     console.info("[ServerRequestService] Removing game listeners")
     this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE);
     this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE);
+    this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST);
   }
 
   /**

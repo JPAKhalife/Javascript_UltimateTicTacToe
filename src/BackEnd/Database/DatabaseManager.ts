@@ -6,13 +6,7 @@
  */
 
 import Redis from "ioredis";
-import { REDIS_KEYS } from "../Contants";
-import {
-  handleSessionExpiry,
-  handleConnectionExpiry,
-  handleLobbyAckTimeout,
-} from "../Handling/InternalHandler";
-import { handleForwardLobbyMessage } from "../Handling/ServerRedisGameEventHandler";
+import { RedisEventManager } from "./RedisEventManager";
 
 export class DatabaseManager {
   private static instance: DatabaseManager | null = null;
@@ -166,6 +160,7 @@ export class DatabaseManager {
       port: port,
     });
 
+    // Enable keyspace notifications for expired events
     redisClient.config("SET", "notify-keyspace-events", "Ex");
 
     redisClient.on("error", (err) => {
@@ -177,33 +172,10 @@ export class DatabaseManager {
 
     redisClient.on("connect", () => {
       console.info("Connected to Redis subscriber server");
-    });
 
-    redisClient.psubscribe("__keyevent@0__:expired", (err, count) => {
-      if (err) {
-        console.error("Failed to subscribe to key expiration events:", err);
-      } else {
-        console.info(`Subscribed to ${count} key expiration event(s).`);
-      }
-    });
-
-    redisClient.on("pmessage", (pattern, channel, expiredKey) => {
-      console.info(`Key expired: ${expiredKey}`);
-      if (expiredKey.includes(REDIS_KEYS.SESSION(""))) {
-        handleSessionExpiry(expiredKey);
-      } else if (expiredKey.includes(REDIS_KEYS.CONNECTION(""))) {
-        handleConnectionExpiry(expiredKey);
-      } else if (expiredKey.startsWith("lobby_ack_timeout:")) {
-        handleLobbyAckTimeout(expiredKey);
-      }
-    });
-
-    redisClient.on("message", (channel, message) => {
-      //Check if the channel name fontains lobby:
-      if (channel.startsWith("lobby:")) {
-        const lobbyID = channel.split(":")[1];
-        handleForwardLobbyMessage(lobbyID, JSON.parse(message));
-      }
+      // Initialize RedisEventManager after connection is established
+      // This sets up the event handlers that will route messages to registered callbacks
+      RedisEventManager.initialize();
     });
 
     return redisClient;

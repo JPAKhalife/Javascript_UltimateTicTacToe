@@ -13,6 +13,7 @@ import rateLimit from "express-rate-limit"; // This is the express-rate-limit fr
 import cors from "cors"; // The cors framework allows for resources (assets like fonts, ect) to be shared across different domains
 import { handleWebsocketRequest } from "./Handling/WebsocketRequestHandler";
 import { DatabaseManager } from "./Database/DatabaseManager";
+import { registerInternalEventHandlers } from "./Handling/InternalHandler";
 import 'dotenv/config';
 
 //Important constants - read from environment variables
@@ -49,7 +50,17 @@ app.use((req: any, res: any, next: any) => {
 // Initialize the DatabaseManager with Redis connections
 const dbManager = DatabaseManager.getInstance();
 dbManager.initialize(host, port);
-console.info("Initialized successfully");
+console.info("DatabaseManager initialized successfully");
+
+// Register all internal event handlers (session expiry, connection expiry, etc.)
+// This sets up callbacks with RedisEventManager for keyspace notifications
+registerInternalEventHandlers()
+  .then(() => {
+    console.info("[Server] Internal event handlers registered successfully");
+  })
+  .catch((error) => {
+    console.error("[Server] Failed to register internal event handlers:", error);
+  });
 //Automatically statically serves the frontEnd directory for the user
 app.use(express.static(process.cwd() + "/FrontEnd"));
 console.info("Local directory is: " + process.cwd());

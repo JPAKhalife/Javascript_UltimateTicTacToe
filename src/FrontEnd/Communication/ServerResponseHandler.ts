@@ -51,6 +51,7 @@ export async function handleRegisterPlayerResponse(username: string) {
 
 /**
  * Handles the response from creating a lobby
+ * @param sketch - The p5 sketch instance
  * @param lobbyName - The name of the lobby to create
  * @param playerNum - Number of players
  * @param levelSize - Size of the level
@@ -60,6 +61,7 @@ export async function handleRegisterPlayerResponse(username: string) {
  * @param onCreateFailed - Callback to execute if creation fails
  */
 export async function handleCreateLobbyResponse(
+    sketch: p5,
     lobbyName: string,
     playerNum: number,
     levelSize: number,
@@ -87,7 +89,14 @@ export async function handleCreateLobbyResponse(
 
             // Set up game listener to trigger LoadingScreen transition when game starts
             // This must happen BEFORE we transition to LoadingScreen
-            setupGameStartListener(requestService);
+            // Use the lobby parameters that were just used to create the lobby
+            setupGameStartListener(
+                requestService,
+                sketch,
+                gridSize,
+                levelSize,
+                response.lobbyID
+            );
 
             // Execute success callback (will trigger transition to LoadingScreen)
             onCreateSuccess();
@@ -123,7 +132,13 @@ export async function handleJoinLobbyResponse(
     if (lobbyInfo) {
         // Set up game listener to trigger LoadingScreen transition when game starts
         // This must happen BEFORE we transition to LoadingScreen
-        setupGameStartListener(requestService);
+        setupGameStartListener(
+            requestService,
+            sketch,
+            lobbyInfo.gridSize,
+            lobbyInfo.levelSize,
+            lobbyInfo.lobbyID
+        );
 
         selectedLobbyDot.startSelectionTransition(async () => {
             // Navigate to LoadingScreen - game listener will trigger transition when ready

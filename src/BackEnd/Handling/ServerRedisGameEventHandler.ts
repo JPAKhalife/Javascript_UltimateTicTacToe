@@ -1,107 +1,134 @@
 /**
  * @file ServerRedisGameEventHandler.ts
- * @description This file is reponsible for handling communication between webservers via Redis Pub/Sub
+ * @description This file is responsible for handling communication between webservers via Redis Pub/Sub
+ * Now uses RedisEventManager for callback-based subscriptions
  *
  * @author John Khalife
  * @created 2025-08-18
- * @updated 2025-08-20
+ * @updated 2025-12-27
  */
 
-import { DatabaseManager } from "../Database/DatabaseManager";
-import z from "zod"
+import { RedisEventManager } from "../Database/RedisEventManager";
 import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
-import { Lobby } from "../Database/Lobby/Lobby";
 import { sendMessageToClient } from "./WebsocketEventHandler";
-import { getConnectionID, getPlayerID } from "../Database/ClientConnections";
+import { getConnectionID } from "../Database/ClientConnections";
+import { Lobby } from "../Database/Lobby/Lobby";
 
+// Track which players are subscribed to which lobbies for this server
 const activeSubscriptions: Record<string, string[]> = {};
+
+// Track callback references for cleanup
+const lobbyCallbacks: Map<string, (channel: string, message: string) => Promise<void>> = new Map();
 
 /**
  * @function subscribeToLobby
  * @description Subscribes to a specific lobby channel for inter-server communication
- * @param lobbyId - The ID of the lobby to subscribe to
- * @param playerId - The ID of the player subscribing
+ * @param lobbyID - The ID of the lobby to subscribe to
+ * @param playerID - The ID of the player subscribing
  * @return void
  */
 export async function subscribeToLobby(lobbyID: string, playerID: string) {
-    const dbManager = DatabaseManager.getInstance();
-    const subscriberClient = dbManager.getSubscriberClient();
+    const channel = `lobby:${lobbyID}`;
 
-    //Check if we are already subscribed
+    // Check if we are already subscribed
     if (activeSubscriptions[lobbyID] && activeSubscriptions[lobbyID].includes(playerID)) {
-        console.info("Already subscribed to lobby:", lobbyID);
-    } else {
-        subscriberClient.subscribe(`lobby:${lobbyID}`);
-        if (!activeSubscriptions[lobbyID]) {
-            activeSubscriptions[lobbyID] = [];
-        }
-        activeSubscriptions[lobbyID].push(playerID);
+        console.info(`[ServerRedisGameEventHandler] Player ${playerID} already subscribed to lobby: ${lobbyID}`);
+        return;
     }
+
+    // If this is the first subscription to this lobby, register the callback
+    if (!activeSubscriptions[lobbyID] || activeSubscriptions[lobbyID].length === 0) {
+        // Create the callback for this lobby
+        const callback = async (_channel: string, message: string) => {
+            await handleReceiveLobbyMessage(lobbyID, JSON.parse(message));
+        };
+
+        // Store the callback reference for cleanup
+        lobbyCallbacks.set(lobbyID, callback);
+
+        // Subscribe to the Redis channel with the callback
+        await RedisEventManager.subscribeToChannel(channel, callback);
+        console.info(`[ServerRedisGameEventHandler] Subscribed to lobby channel: ${channel}`);
+    }
+
+    // Track the player subscription
+    if (!activeSubscriptions[lobbyID]) {
+        activeSubscriptions[lobbyID] = [];
+    }
+    activeSubscriptions[lobbyID].push(playerID);
+    console.info(`[ServerRedisGameEventHandler] Player ${playerID} subscribed to lobby: ${lobbyID}`);
 }
 
 /**
  * @function unsubscribeFromLobby
  * @description Unsubscribes from a specific lobby channel for inter-server communication
- * @param lobbyId - The ID of the lobby to unsubscribe from
+ * @param lobbyID - The ID of the lobby to unsubscribe from
+ * @param playerID - The ID of the player unsubscribing
  */
-export function unsubscribeFromLobby(lobbyID: string, playerID: string) {
-    const dbManager = DatabaseManager.getInstance();
-    const subscriberClient = dbManager.getSubscriberClient();
+export async function unsubscribeFromLobby(lobbyID: string, playerID: string = "") {
+    const channel = `lobby:${lobbyID}`;
 
     if (!activeSubscriptions[lobbyID]) {
-        console.info("No active subscriptions for lobby:", lobbyID);
+        console.info(`[ServerRedisGameEventHandler] No active subscriptions for lobby: ${lobbyID}`);
         return;
-    }
-    //First remove the playerID from the activeSubscriptions
-    if (!activeSubscriptions[lobbyID].includes(playerID)) {
-        console.info("Player not subscribed to lobby:", lobbyID);
-        return;
-    }
-    activeSubscriptions[lobbyID] = activeSubscriptions[lobbyID].filter(id => id !== playerID);
-    if (activeSubscriptions[lobbyID].length === 0) {
-        subscriberClient.unsubscribe(`lobby:${lobbyID}`);
     }
 
+    // Remove the playerID from the activeSubscriptions
+    activeSubscriptions[lobbyID] = activeSubscriptions[lobbyID].filter(id => id !== playerID);
+    console.info(`[ServerRedisGameEventHandler] Player ${playerID} unsubscribed from lobby: ${lobbyID}`);
+
+    // If no more players are subscribed, unsubscribe from Redis
+    if (activeSubscriptions[lobbyID].length === 0) {
+        const callback = lobbyCallbacks.get(lobbyID);
+        if (callback) {
+            await RedisEventManager.unsubscribeFromChannel(channel, callback);
+            lobbyCallbacks.delete(lobbyID);
+            console.info(`[ServerRedisGameEventHandler] Unsubscribed from lobby channel: ${channel}`);
+        }
+        delete activeSubscriptions[lobbyID];
+    }
 }
 
 /**
  * @function publishToLobby
  * @description Publishes a message to a specific lobby channel for inter-server communication
- * @param lobbyId - The ID of the lobby to publish to
+ * @param lobbyID - The ID of the lobby to publish to
  * @param message - The message to publish
  */
-export function publishToLobby(lobbyID: string, message: any) {
-    const dbManager = DatabaseManager.getInstance();
-    const publisherClient = dbManager.getRegularClient();
+export async function publishToLobby(lobbyID: string, message: any) {
+    const channel = `lobby:${lobbyID}`;
     try {
-        publisherClient.publish(`lobby:${lobbyID}`, JSON.stringify(message));
+        await RedisEventManager.publish(channel, message);
+        console.info(`[ServerRedisGameEventHandler] Published message to lobby: ${lobbyID}, type: ${message.type || 'unknown'}`);
     } catch (error) {
-        console.error("[publishToLobby] There was an error publishing to topic " + lobbyID + ": ", error);
+        console.error(`[ServerRedisGameEventHandler] Error publishing to lobby ${lobbyID}:`, error);
     }
 }
 
 /**
- * @function handleForwardLobbyMessage
- * @description Handles incoming messages from lobby channels
- * @param message - The incoming message
+ * @function handleReceiveLobbyMessage
+ * @description Call back that handles when receiving an event for a specific lobby
+ * @param lobbyID 
+ * @param message 
  */
-export async function handleForwardLobbyMessage(lobbyID: string, message: any) {
-    console.info("[handleForwardLobbyMessage] Forwarding lobby message:", message);
-    // Check if the message type is within FROM_SERVER_MESSAGE_TYPES
-    // This is so we know if we should send this to the client.
-    if (Object.values(FROM_SERVER_MESSAGE_TYPES).includes(message.type)) {
-        //Next, we need to find all the players it will be neccessary to send this to.
-        for (const playerID of activeSubscriptions[lobbyID] || []) {
-            let connectionID = await getConnectionID(playerID);
-            if (connectionID != null) {
-                sendMessageToClient(connectionID, message);
-            } else {
-                //If the connection isn't null, then it's time to send a pubsub event to any other servers
-                console.debug("[handleForwardLobbyMessage] Sending notification to another server for player ", playerID);
-                publishToLobby(lobbyID, message);
-            }
+export async function handleReceiveLobbyMessage(lobbyID: string, message: any) {
+    //First check to see if there are actually any players subbed (just in case of lingering subscription)
+    if (!activeSubscriptions[lobbyID] || activeSubscriptions[lobbyID].length <= 0) {
+        console.info(`[ServerRedisGameEventHandler] No active subscriptions for lobby ${lobbyID}, unsubscribing`);
+        unsubscribeFromLobby(lobbyID);
+        return;
+    }
+
+    console.info(`[ServerRedisGameEventHandler] Sending message to ${activeSubscriptions[lobbyID].length} players in lobby ${lobbyID}`);
+
+    //Iterate through every single player that has subscribed to this lobby
+    for (const playerID of activeSubscriptions[lobbyID]) {
+        let connectionID = await getConnectionID(playerID);
+        if (connectionID != null) {
+            console.info(`[ServerRedisGameEventHandler] Sending message to player ${playerID} (connection ${connectionID})`);
+            sendMessageToClient(connectionID, message);
+        } else {
+            console.warn(`[ServerRedisGameEventHandler] No connection found for player ${playerID}`);
         }
-    } else {
-        console.warn(`Unknown message type: ${message.type}`);
     }
 }

@@ -8,10 +8,11 @@
  */
 
 import { GAME_STATES, REDIS_KEYS } from "../Contants";
-import { DatabaseManager } from "../Database/DatabaseManager";
 import { Lobby } from "../Database/Lobby/Lobby";
-import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage } from '../../Shared/Contracts/MessageToClientSchema';
-import { handleForwardLobbyMessage } from "./ServerRedisGameEventHandler";
+import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage, AcknowledgmentRequestMessage } from '../../Shared/Contracts/MessageToClientSchema';
+import { publishToLobby } from "./ServerRedisGameEventHandler";
+import { LobbyAcknowledgmentSet } from "../Database/Lobby/LobbyAcknowledgmentSet";
+import { DatabaseManager } from "../Database/DatabaseManager";
 
 /**
  * @function handleGameReadyCheck
@@ -42,38 +43,39 @@ export async function handleGameReadyCheck(lobby: Lobby) {
   }
   //? There may be other checks that are neccessary in the future
 
-  // If all checks are passed, set up acknowledgment timeout using Redis expiry
+  // If all checks are passed, send acknowledgment requests to all players
   console.info(
-    `[GameHandler] All players have joined in lobby ${lobby.get("lobbyID")}. Waiting for LoadingScreen acknowledgments...`,
+    `[GameHandler] All players have joined in lobby ${lobby.get("lobbyID")}. Sending acknowledgment requests...`,
   );
 
   const lobbyID = lobby.get("lobbyID");
-  const redisClient = DatabaseManager.getInstance().getRegularClient();
 
-  // Create a Redis key that will expire in 5 seconds
-  // When it expires, the InternalHandler will call handleGameStart
-  const ackTimeoutKey = REDIS_KEYS.LOBBY_ACK_TIMEOUT(lobbyID);
+  // 1. Create empty acknowledgment set with 5-second expiry
+  // When the set expires, InternalHandler will call handleLobbyAckTimeout
+  await LobbyAcknowledgmentSet.create(lobbyID);
 
-  // Delete any existing timeout key first
-  await redisClient.del(ackTimeoutKey);
+  // 2. Send acknowledgment request to all players in the lobby
+  const ackRequest: AcknowledgmentRequestMessage = {
+    type: FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST,
+    message: "Please confirm you are ready to start the game",
+  };
+  await publishToLobby(lobbyID, ackRequest);
 
-  // Set the timeout key with 5-second expiration
-  await redisClient.set(ackTimeoutKey, lobbyID, "EX", 5);
-
-  console.info(`[GameHandler] Set acknowledgment timeout for lobby ${lobbyID} (5 seconds)`);
+  console.info(`[GameHandler] Sent acknowledgment request to lobby ${lobbyID} (5 second timeout)`);
 }
 
 /**
  * @function cancelGameStartTimeout
  * @description Cancel the Redis-based timeout for a lobby (called when all players acknowledge early)
+ * Deletes the acknowledgment set to prevent it from expiring and triggering game cancellation
  * @param lobbyID - The ID of the lobby
  */
 export async function cancelGameStartTimeout(lobbyID: string): Promise<void> {
   const redisClient = DatabaseManager.getInstance().getRegularClient();
-  const ackTimeoutKey = REDIS_KEYS.LOBBY_ACK_TIMEOUT(lobbyID);
+  const ackSetKey = REDIS_KEYS.LOBBY_ACK_SET(lobbyID);
 
-  // Delete the timeout key to prevent it from expiring and triggering game start
-  const deleted = await redisClient.del(ackTimeoutKey);
+  // Delete the acknowledgment set to prevent it from expiring and triggering timeout
+  const deleted = await redisClient.del(ackSetKey);
 
   if (deleted > 0) {
     console.info(`[GameHandler] Cancelled acknowledgment timeout for lobby ${lobbyID}`);
@@ -100,7 +102,7 @@ export async function handleGameStart(lobby: Lobby) {
     state: GAME_STATES.RUNNING,
     message: "Game has started! Good luck!",
   };
-  handleForwardLobbyMessage(lobby.getId(), gameStateUpdate);
+  await publishToLobby(lobby.getId(), gameStateUpdate);
 
   // Call the handlePlayerChange method to notify the correct player of the turn change.
   handlePlayerChange(lobby);
@@ -129,7 +131,7 @@ export async function handlePlayerChange(lobby: Lobby) {
   };
 
   // Notify all clients of the player turn change
-  handleForwardLobbyMessage(lobby.getId(), gameUpdateMessage);
+  await publishToLobby(lobby.getId(), gameUpdateMessage);
 
   console.info(
     `[GameHandler] Player turn changed in lobby ${lobby.getId()}. Current turn: ${turn}`,

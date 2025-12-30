@@ -20,7 +20,6 @@ import {
 } from "../sketch";
 import GuiManager from "../GuiManager";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
-import { checkIfGameStarted } from "../Communication/ServerEventHandler";
 import ServerRequestService from "../Communication/ServerRequestService";
 
 // Constants for the loading screen
@@ -48,6 +47,7 @@ export default class LoadingScreen implements Menu {
   private titleText: string;
   private loadingProcess?: () => void;
   private args: any[];
+  private lobbyID?: string;
 
   constructor(
     sketch: p5,
@@ -58,6 +58,16 @@ export default class LoadingScreen implements Menu {
   ) {
     this.sketch = sketch;
     this.args = args;
+    // Extract lobbyID from args if present (last argument when called from ServerEventHandler)
+    // Args order: gameType, gridSize, levelSize, lobbyID
+    this.lobbyID = args.length >= 4 ? args[3] : undefined;
+
+    // Update localStorage with the correct lobbyID if provided
+    if (this.lobbyID) {
+      localStorage.setItem("lobbyID", this.lobbyID);
+      console.info(`[LoadingScreen] Updated localStorage with lobbyID: ${this.lobbyID}`);
+    }
+
     this.keylistener = new KeyListener(this.sketch);
     this.titleText = titleText || HEADER.LOADING_SCREEN_TITLE_MESSAGES[0];
     this.nextScreen = nextScreen || Screens.START_SCREEN;
@@ -113,18 +123,7 @@ export default class LoadingScreen implements Menu {
       this.keylistener.activate();
       this.transitionInActive = false;
 
-      // Send acknowledgment to server that LoadingScreen is ready
-      const lobbyID = localStorage.getItem("lobbyID");
-      if (lobbyID) {
-        console.info("[LoadingScreen] Sending ready acknowledgment to server");
-        ServerRequestService.getInstance().acknowledgeLoadingScreenReady(lobbyID);
-      }
-
-      // Check if game already started (race condition handling)
-      if (checkIfGameStarted()) {
-        console.info("[LoadingScreen] Game already started, triggering transition immediately");
-        this.activateTransitionOut();
-      } else if (this.loadingProcess) {
+      if (this.loadingProcess) {
         this.loadingProcess();
       }
     }

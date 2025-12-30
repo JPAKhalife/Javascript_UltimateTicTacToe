@@ -27,13 +27,14 @@ import {
   BaseRequest,
   AuthenticatedRequest,
   LobbyJoinRequest,
-  AcknowledgeLoadingScreenReadyRequest,
+  AcknowledgeReadyRequest,
 } from "../../Shared/Contracts/MessageToServerSchema";
 import Session from "../Database/Session";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../Contants";
 import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
 import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout } from "./GameHandler";
+import { LobbyAcknowledgmentSet } from "../Database/Lobby/LobbyAcknowledgmentSet";
 const { v4: uuidv4 } = require("uuid");
 
 type ReturnMessage = Record<string, any>;
@@ -130,9 +131,9 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       data: any,
       sessionData: any,
     ) => {
-      const validation = AcknowledgeLoadingScreenReadyRequest.safeParse(data);
+      const validation = AcknowledgeReadyRequest.safeParse(data);
       return validation.success
-        ? handleAcknowledgeLoadingScreenReady(ws, validation.data, sessionData.get("playerID"))
+        ? handleAcknowledgeReady(ws, validation.data, sessionData.get("playerID"))
         : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.NONE]: async (data: any, sessionData: any) => {
@@ -357,6 +358,10 @@ async function handleCreateLobby(
       playerID,
     );
     console.info(`Lobby ${params.lobbyData.lobbyName} created successfully`);
+
+    // Check if the game is ready to start (e.g., single-player lobby)
+    // IMPORTANT: Await this to ensure acknowledgment set is created before response is sent
+    await handleGameReadyCheck(newLobby);
 
     // Send response back to client using ResponseBuilder
     return ResponseBuilder.createLobby(newLobby.get("lobbyID"));
@@ -634,7 +639,8 @@ async function handleJoinLobby(
     console.info(`[joinLobby] Player ${playerID} joined lobby ${lobbyID}`);
 
     //Now, after joining the lobby, we need to kickoff a process that checks whether the game is ready to start.
-    handleGameReadyCheck(lobby);
+    // IMPORTANT: Await this to ensure acknowledgment set is created before response is sent
+    await handleGameReadyCheck(lobby);
 
     // All we need to return the player is whether or not the joining was a success, so they can move on to the loading screen.
     // They will receive another message when the game actually starts.
@@ -647,16 +653,17 @@ async function handleJoinLobby(
 }
 
 /**
- * @function handleAcknowledgeLoadingScreenReady
+ * @function handleAcknowledgeReady
  * @description Handles acknowledgment from a client that their LoadingScreen is ready
+ * Adds the player to the acknowledgment set and starts the game if all players have acknowledged
  * @param ws WebSocket connection
  * @param data Acknowledgment request data
  * @param playerID Player ID from the validated session
  * @returns Promise resolving to response object
  */
-async function handleAcknowledgeLoadingScreenReady(
+async function handleAcknowledgeReady(
   ws: any,
-  data: AcknowledgeLoadingScreenReadyRequest,
+  data: AcknowledgeReadyRequest,
   playerID: string,
 ): Promise<object> {
   try {
@@ -667,7 +674,7 @@ async function handleAcknowledgeLoadingScreenReady(
       return ResponseBuilder.error(ERROR_MESSAGES.INVALID_REQUEST_FORMAT);
     }
 
-    console.info(`[AcknowledgeLoadingScreenReady] Player ${playerID} acknowledged ready in lobby ${lobbyID}`);
+    console.info(`[AcknowledgeReady] Player ${playerID} acknowledged ready in lobby ${lobbyID}`);
 
     // Fetch the lobby
     const lobby = await Lobby.getById(lobbyID);
@@ -675,15 +682,30 @@ async function handleAcknowledgeLoadingScreenReady(
       return ResponseBuilder.error(ERROR_MESSAGES.LOBBY_NOT_FOUND);
     }
 
-    // Acknowledge the player - this increments the counter and returns true if all players acknowledged
-    const allPlayersReady = await lobby.acknowledgePlayerReady();
+    // Get the acknowledgment set for this lobby
+    const ackSet = await LobbyAcknowledgmentSet.getById(lobbyID);
+    if (!ackSet) {
+      console.warn(`[AcknowledgeReady] No acknowledgment set found for lobby ${lobbyID}`);
+      return ResponseBuilder.error(ERROR_MESSAGES.INTERNAL_ERROR);
+    }
 
-    // If all players have acknowledged, cancel the timeout and start the game immediately
-    if (allPlayersReady) {
-      console.info(`[AcknowledgeLoadingScreenReady] All players ready in lobby ${lobbyID}, starting game immediately`);
+    // Add the player to the acknowledgment set
+    await ackSet.add(playerID);
 
-      // Cancel the timeout since all players are ready
-      cancelGameStartTimeout(lobbyID);
+    const acknowledgedCount = await ackSet.size();
+    const totalPlayers = Number(lobby.get("playerNum"));
+
+    console.info(
+      `[AcknowledgeReady] ${acknowledgedCount}/${totalPlayers} players acknowledged in lobby ${lobbyID}`
+    );
+    console.info(`[AcknowledgeReady] Player ${playerID} added to ack set. Checking if game should start...`);
+
+    // Check if all players have acknowledged
+    if (acknowledgedCount >= totalPlayers) {
+      console.info(`[AcknowledgeReady] ✓ All players ready in lobby ${lobbyID}, starting game immediately`);
+
+      // Cancel the timeout since all players are ready (this deletes the acknowledgment set)
+      await cancelGameStartTimeout(lobbyID);
 
       // Start the game immediately
       await handleGameStart(lobby);
@@ -695,7 +717,7 @@ async function handleAcknowledgeLoadingScreenReady(
       message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
     };
   } catch (error) {
-    console.error("[AcknowledgeLoadingScreenReady] Error:", error);
+    console.error("[AcknowledgeReady] Error:", error);
     return ResponseBuilder.error(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 }

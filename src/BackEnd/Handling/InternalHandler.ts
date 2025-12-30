@@ -1,37 +1,24 @@
 /**
  * @file InternalHandler.ts
  * @description This file processes internal server events (such as expiry of sessions)
+ * and registers callbacks with RedisEventManager
  *
  * @author John Khalife
  * @created 2025-08-18
- * @updated 2025-08-20
+ * @updated 2025-12-27
  */
 
-import Redis from "ioredis";
 import { disconnect } from "../Database/ClientConnections";
-import Session from "../Database/Session";
-import { Player } from "../Database/Player";
 import { Lobby } from "../Database/Lobby/Lobby";
 import { handleGameStart } from "./GameHandler";
 import { REDIS_KEYS, SERVER_ID } from "../Contants";
 import { DatabaseManager } from "../Database/DatabaseManager";
+import { RedisEventManager, RedisEventType } from "../Database/RedisEventManager";
 
 /**
- * @function handleSessionExpiry
- * @description This function is meant to handle the cleanup related to function expiry
+ * NOTE: Session expiry is now handled per-session in Session.ts
+ * Each session subscribes to its own expiry event and handles cleanup
  */
-export async function handleSessionExpiry(expiredKey: string) {
-  console.info("Session expired, removing player Data if exists");
-  //This will be useful for removing the player
-  const session = await Session.getById(expiredKey);
-  if (!session) {
-    throw Error(
-      "Session not found. This should not happen and indicates an error in the back-end.",
-    );
-  }
-  Player.remove(session.get("playerID"));
-  //TODO: This needs to be updated for when lobbies also need to be disconnected from the lobby.
-}
 
 /**
  * @function handleConnectionExpiry
@@ -60,13 +47,13 @@ export async function handleConnectionExpiry(expiredKey: string) {
 /**
  * @function handleLobbyAckTimeout
  * @description Handles when a lobby acknowledgment timeout expires (5 seconds without all players acknowledging)
- * @param expiredKey - The Redis key that expired (format: lobby_ack_timeout:lobbyID)
+ * @param expiredKey - The Redis key that expired (format: lobby_ack_set:lobbyID)
  */
 export async function handleLobbyAckTimeout(expiredKey: string) {
-  // Extract lobbyID from the key
-  const lobbyID = expiredKey.split(":")[1];
+  // Extract lobbyID from the key (format: lobby_ack_set:lobbyID)
+  const lobbyID = expiredKey.replace("lobby_ack_set:", "");
 
-  console.info(`[InternalHandler] Acknowledgment timeout expired for lobby ${lobbyID}`);
+  console.info(`[InternalHandler] Acknowledgment timeout expired for lobby ${lobbyID} (key: ${expiredKey})`);
 
   // Fetch the lobby
   const lobby = await Lobby.getById(lobbyID);
@@ -84,4 +71,47 @@ export async function handleLobbyAckTimeout(expiredKey: string) {
 
   // Start the game with however many players have acknowledged
   await handleGameStart(lobby);
+}
+
+/**
+ * @function registerInternalEventHandlers
+ * @description Register all internal event handlers with RedisEventManager
+ * This should be called once during server initialization
+ *
+ * NOTE: Session expiry events are handled per-session in Session.create()
+ * This function only registers global pattern subscriptions for:
+ * - Connection expiry (all connections)
+ * - Lobby acknowledgment timeouts (all lobbies)
+ */
+export async function registerInternalEventHandlers(): Promise<void> {
+  console.info("[InternalHandler] Registering internal event handlers");
+
+  // Register handler for connection expiry events
+  // Global pattern subscription for all connections
+  await RedisEventManager.subscribe(
+    REDIS_KEYS.CONNECTION("*"),
+    [RedisEventType.EXPIRED],
+    async (expiredKey: string, eventType: RedisEventType) => {
+      if (eventType === RedisEventType.EXPIRED) {
+        await handleConnectionExpiry(expiredKey);
+      }
+    }
+  );
+
+  // Register handler for lobby acknowledgment set expiry events
+  // When a lobby_ack_set expires, it means not all players acknowledged in time
+  // Global pattern subscription for all lobby acknowledgment sets
+  await RedisEventManager.subscribe(
+    REDIS_KEYS.LOBBY_ACK_SET("*"),
+    [RedisEventType.EXPIRED],
+    async (expiredKey: string, eventType: RedisEventType) => {
+      if (eventType === RedisEventType.EXPIRED) {
+        console.info(`[InternalHandler] Lobby acknowledgment set expired (key: ${expiredKey})`);
+        await handleLobbyAckTimeout(expiredKey);
+      }
+    }
+  );
+
+  console.info("[InternalHandler] Global event handlers registered (connections, lobby acks)");
+  console.info("[InternalHandler] Session expiry handlers are registered per-session");
 }

@@ -18,6 +18,7 @@ import Field from "../MenuObjects/Field";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import Toggle from "../MenuObjects/Toggle";
 import { handleCreateLobbyResponse } from "../Communication/ServerResponseHandler";
+import { GameType } from "../GameManager";
 
 export default class CreateLobbyScreen implements Menu {
   private sketch: p5;
@@ -203,12 +204,21 @@ export default class CreateLobbyScreen implements Menu {
         GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
       } else if (this.selectedButton.getText() == "Create") {
         // Navigate to loading screen - game listener will trigger transition
+        // Get lobby info from localStorage (set by handleCreateLobbyResponse)
+        const lobbyID = localStorage.getItem("lobbyID");
+        const gridSize = this.slotNumSlider.getValue();
+        const levelSize = this.levelSizeSlider.getValue();
+
         GuiManager.changeScreen(
           Screens.LOADING_SCREEN,
           this.sketch,
           Screens.GAME_SCREEN,
           "Waiting for game to start...",
-          () => {} // Empty function - listener handles transition
+          () => {}, // Empty function - listener handles transition
+          GameType.ONLINE,
+          gridSize,
+          levelSize,
+          lobbyID
         );
       }
       this.transitionComplete = true;
@@ -321,6 +331,7 @@ export default class CreateLobbyScreen implements Menu {
     }
 
     await handleCreateLobbyResponse(
+      this.sketch,
       lobbyName,
       this.playerNumSlider.getValue(),
       this.levelSizeSlider.getValue(),

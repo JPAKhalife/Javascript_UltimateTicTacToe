@@ -20,7 +20,7 @@ export enum FROM_CLIENT_MESSAGE_TYPES {
   JOIN_LOBBY = "join_lobby",
   LEAVE_LOBBY = "leave_lobby",
   MAKE_MOVE = "make_move",
-  ACKNOWLEDGE_LOADING_SCREEN_READY = "acknowledge_loading_screen_ready",
+  ACKNOWLEDGE_LOADING_SCREEN_READY = "ack_ready",
   NONE = "None"
 }
 
@@ -146,9 +146,9 @@ export const MakeMoveRequest = AuthenticatedRequest.extend({
 export type MakeMoveRequest = z.infer<typeof MakeMoveRequest>;
 
 //This request is used when a player acknowledges that their loading screen is ready
-export const AcknowledgeLoadingScreenReadyRequest = AuthenticatedRequest.extend({
+export const AcknowledgeReadyRequest = AuthenticatedRequest.extend({
   parameters: z.object({
     lobbyID: z.string().uuid({ version: "v4" }),
   }),
 });
-export type AcknowledgeLoadingScreenReadyRequest = z.infer<typeof AcknowledgeLoadingScreenReadyRequest>;
+export type AcknowledgeReadyRequest = z.infer<typeof AcknowledgeReadyRequest>;

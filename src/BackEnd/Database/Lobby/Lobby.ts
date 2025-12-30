@@ -203,7 +203,7 @@ export class Lobby extends RedisHash<LobbyData> {
       await player.leaveLobby();
     }
     //Unsubscribe
-    unsubscribeFromLobby(this.id, playerId);
+    await unsubscribeFromLobby(this.id, playerId);
     await this.withTransaction(async (multi) => {
       // Remove player from lobby's player list
       multi.lrem(REDIS_KEYS.LOBBY_PLAYERS(this.id), 0, playerId);
