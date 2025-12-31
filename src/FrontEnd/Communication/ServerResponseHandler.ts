@@ -130,8 +130,13 @@ export async function handleJoinLobbyResponse(
     const lobbyInfo = await requestService.joinLobby(lobbyID);
 
     if (lobbyInfo) {
+        // Determine if this is a spectator joining a running game
+        const isSpectator = lobbyInfo.playersJoined > lobbyInfo.playerNum;
+        const isGameRunning = lobbyInfo.lobbyState === "running";
+
         // Set up game listener to trigger LoadingScreen transition when game starts
         // This must happen BEFORE we transition to LoadingScreen
+        // For spectators joining running games, these listeners will receive ongoing game updates
         setupGameStartListener(
             requestService,
             sketch,
@@ -141,13 +146,22 @@ export async function handleJoinLobbyResponse(
         );
 
         selectedLobbyDot.startSelectionTransition(async () => {
-            // Navigate to LoadingScreen - game listener will trigger transition when ready
+            // Navigate to LoadingScreen
+            // For spectators joining running games, pass undefined to auto-transition
+            // For regular players, pass empty function to wait for game start event
+            const loadingProcess = (isSpectator && isGameRunning) ? undefined : () => {};
+            const titleText = (isSpectator && isGameRunning) ? "Joining game..." : "Waiting for game to start...";
+
+            if (isSpectator && isGameRunning) {
+                console.info("[ServerResponseHandler] Spectator joining running game, will auto-transition after loading screen");
+            }
+
             GuiManager.changeScreen(
                 Screens.LOADING_SCREEN,
                 sketch,
                 Screens.GAME_SCREEN,
-                "Waiting for game to start...",
-                () => {}, // Empty function - listener handles transition
+                titleText,
+                loadingProcess,
                 GameType.ONLINE,
                 lobbyInfo.gridSize,
                 lobbyInfo.levelSize,

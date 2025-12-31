@@ -174,8 +174,14 @@ export class Lobby extends RedisHash<LobbyData> {
 
       // Update lobby data
       const newPlayersJoined = Number(this.get("playersJoined")) + 1;
-      const newState =
-        newPlayersJoined >= Number(this.get("playerNum")) ? "ready" : "waiting";
+      const currentState = this.get("lobbyState");
+
+      // Only update state if game is not already running or paused
+      // This allows spectators to join without changing the game state
+      let newState = currentState;
+      if (currentState !== "running" && currentState !== "paused") {
+        newState = newPlayersJoined >= Number(this.get("playerNum")) ? "ready" : "waiting";
+      }
 
       await this.set("playersJoined", newPlayersJoined);
       await this.set("lobbyState", newState);

@@ -30,7 +30,7 @@ import {
   AcknowledgeReadyRequest,
 } from "../../Shared/Contracts/MessageToServerSchema";
 import Session from "../Database/Session";
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "../Contants";
+import { ERROR_MESSAGES, GAME_STATES, SUCCESS_MESSAGES } from "../Contants";
 import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
 import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout } from "./GameHandler";
@@ -638,9 +638,19 @@ async function handleJoinLobby(
 
     console.info(`[joinLobby] Player ${playerID} joined lobby ${lobbyID}`);
 
-    //Now, after joining the lobby, we need to kickoff a process that checks whether the game is ready to start.
-    // IMPORTANT: Await this to ensure acknowledgment set is created before response is sent
-    await handleGameReadyCheck(lobby);
+    // Determine if this is a spectator joining a running game
+    const isSpectator = lobby.get("playersJoined") > lobby.get("playerNum");
+    const isGameRunning = lobby.get("lobbyState") === GAME_STATES.RUNNING;
+
+    // Only perform game ready check if:
+    // 1. Game is not yet running (waiting state), AND
+    // 2. Not enough players have joined yet (non-spectator)
+    if (!isGameRunning && !isSpectator) {
+      // IMPORTANT: Await this to ensure acknowledgment set is created before response is sent
+      await handleGameReadyCheck(lobby);
+    } else if (isSpectator && isGameRunning) {
+      console.info(`[joinLobby] Player ${playerID} joined as spectator to running game ${lobbyID}`);
+    }
 
     // All we need to return the player is whether or not the joining was a success, so they can move on to the loading screen.
     // They will receive another message when the game actually starts.

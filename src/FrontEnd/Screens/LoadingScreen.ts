@@ -58,16 +58,6 @@ export default class LoadingScreen implements Menu {
   ) {
     this.sketch = sketch;
     this.args = args;
-    // Extract lobbyID from args if present (last argument when called from ServerEventHandler)
-    // Args order: gameType, gridSize, levelSize, lobbyID
-    this.lobbyID = args.length >= 4 ? args[3] : undefined;
-
-    // Update localStorage with the correct lobbyID if provided
-    if (this.lobbyID) {
-      localStorage.setItem("lobbyID", this.lobbyID);
-      console.info(`[LoadingScreen] Updated localStorage with lobbyID: ${this.lobbyID}`);
-    }
-
     this.keylistener = new KeyListener(this.sketch);
     this.titleText = titleText || HEADER.LOADING_SCREEN_TITLE_MESSAGES[0];
     this.nextScreen = nextScreen || Screens.START_SCREEN;
@@ -103,11 +93,14 @@ export default class LoadingScreen implements Menu {
     this.keylistener.deactivate();
     this.startTransitionIn();
 
-    // Initialize proceed as true if no wait condition
+    // Initialize proceed based on whether a loading process is provided
+    // If no loading process, we'll auto-transition after a brief display
     this.proceed = !loadingProcess;
+    console.debug("[LoadingScreen] proceed is ", this.proceed);
   }
 
   private startTransitionIn(): void {
+    console.debug("[LoadingScreen] Transitioning in...")
     this.titleOpacity = 0;
     this.transitionInActive = true;
   }
@@ -235,6 +228,7 @@ export default class LoadingScreen implements Menu {
 
     // Check for the transition Timer to start the transition out
     if (this.transitionTimer <= 0) {
+      console.debug("[LoadingScreen] Setting transition out to true.");
       this.transitionOutActive = true;
     }
 

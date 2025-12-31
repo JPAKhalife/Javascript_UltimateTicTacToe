@@ -38,25 +38,34 @@ export function setupGameStartListener(
     if (message.type === FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST) {
       console.info("[ServerEventHandler] Received ACKNOWLEDGMENT_REQUEST from server");
 
-      // Transition to LoadingScreen with stored lobby info
-      if (sketch && gridSize !== null && levelSize !== null && lobbyID !== null) {
-        GuiManager.changeScreen(
-          Screens.LOADING_SCREEN,
-          sketch,
-          Screens.GAME_SCREEN,
-          "Waiting for game to start...",
-          () => { }, // Empty function - listener handles transition
-          GameType.ONLINE,
-          gridSize,
-          levelSize,
-          lobbyID,
-        );
-        // Send acknowledgment to server that we received the request and are ready
-        console.info("[ServerEventHandler] Sending acknowledgment for lobby:", lobbyID);
-        requestService.AcknowledgeReady(lobbyID);
+      // Check if we're already on the LoadingScreen to avoid restarting it
+      const currentScreen = GuiManager.getCurrentScreen();
+      const alreadyOnLoadingScreen = currentScreen instanceof LoadingScreen;
+
+      if (alreadyOnLoadingScreen) {
+        console.info("[ServerEventHandler] Already on LoadingScreen, not recreating screen");
       } else {
-        console.error("[ServerEventHandler] Missing lobby information for LoadingScreen transition");
+        // Transition to LoadingScreen with stored lobby info
+        if (sketch && gridSize !== null && levelSize !== null && lobbyID !== null) {
+          GuiManager.changeScreen(
+            Screens.LOADING_SCREEN,
+            sketch,
+            Screens.GAME_SCREEN,
+            "Waiting for game to start...",
+            () => { }, // Empty function - listener handles transition
+            GameType.ONLINE,
+            gridSize,
+            levelSize,
+            lobbyID,
+          );
+        } else {
+          console.error("[ServerEventHandler] Missing lobby information for LoadingScreen transition");
+        }
       }
+
+      // Send acknowledgment to server that we received the request and are ready
+      console.info("[ServerEventHandler] Sending acknowledgment for lobby:", lobbyID);
+      requestService.AcknowledgeReady(lobbyID);
       return;
     }
 
