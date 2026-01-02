@@ -6,6 +6,8 @@
  * @updated 2024-12-09
  */
 
+import p5 from "p5";
+
 export enum Screens {
   SCREEN_NUM,
   START_SCREEN,
@@ -26,4 +28,7 @@ export enum Screens {
 export default interface Menu {
   //Each Menu will need a draw funciton
   draw(): void;
+  
+  //Each Menu should be able to return their sketch instance
+  getSketch(): p5;
 }

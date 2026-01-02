@@ -100,6 +100,10 @@ export default class UsernameScreen implements Menu {
     this.keylistener.deactivate();
   }
 
+  public getSketch(): p5 {
+    return this.sketch;
+  }
+
   /**
    * @method transitionIn
    * @description Handles the transition in animation

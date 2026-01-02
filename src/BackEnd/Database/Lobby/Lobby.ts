@@ -27,7 +27,6 @@ interface LobbyData {
   creator: string;
   lobbyState: string;
   allowSpectators: boolean;
-  acknowledgedPlayers?: number; // Number of players who acknowledged LoadingScreen ready
 }
 
 /**
@@ -83,7 +82,6 @@ export class Lobby extends RedisHash<LobbyData> {
       creator: creatorId,
       lobbyState: "waiting",
       allowSpectators: lobbyData.allowSpectators,
-      acknowledgedPlayers: 0,
     };
 
     //Create the empty players list
@@ -132,7 +130,6 @@ export class Lobby extends RedisHash<LobbyData> {
           creator: "",
           lobbyState: "",
           allowSpectators: false,
-          acknowledgedPlayers: 0,
         },
         game,
         playerList
@@ -282,34 +279,6 @@ export class Lobby extends RedisHash<LobbyData> {
     return this.game;
   }
 
-  /**
-   * Acknowledge that a player's LoadingScreen is ready
-   * @returns true if all players have acknowledged, false otherwise
-   */
-  async acknowledgePlayerReady(): Promise<boolean> {
-    const currentAcknowledged = Number(this.get("acknowledgedPlayers") || 0);
-    const newAcknowledged = currentAcknowledged + 1;
-
-    await this.set("acknowledgedPlayers", newAcknowledged);
-
-    // Check if all players have acknowledged
-    const allPlayersAcknowledged = newAcknowledged >= Number(this.get("playerNum"));
-
-    console.info(
-      `[Lobby] Player acknowledged in lobby ${this.id}. ` +
-      `Acknowledged: ${newAcknowledged}/${this.get("playerNum")} ` +
-      `(All ready: ${allPlayersAcknowledged})`
-    );
-
-    return allPlayersAcknowledged;
-  }
-
-  /**
-   * Reset acknowledgment count (used when starting a new game)
-   */
-  async resetAcknowledgments(): Promise<void> {
-    await this.set("acknowledgedPlayers", 0);
-  }
 
   /**
    * Convert lobby data to a JSON-friendly format

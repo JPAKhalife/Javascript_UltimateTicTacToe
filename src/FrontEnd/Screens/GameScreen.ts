@@ -39,6 +39,10 @@ export default class GameScreen implements Menu {
     this.board = new TicTacBoard(this.sketch, this.game, 0.5, 0.5, 1);
   }
 
+  public getSketch(): p5 {
+    return this.sketch;
+  }
+
   public draw(): void {
     this.sketch.background(0);
 

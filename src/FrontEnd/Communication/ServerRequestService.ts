@@ -287,7 +287,7 @@ export default class ServerRequestService {
   public AcknowledgeReady(lobbyID: string): void {
     try {
       const message = {
-        type: FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_LOADING_SCREEN_READY,
+        type: FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_READY,
         sessionID: this.webManager.getSessionId(),
         parameters: {
           lobbyID,
@@ -295,7 +295,7 @@ export default class ServerRequestService {
       };
 
       // Fire and forget - send request but don't wait for response
-      this.webManager.sendRequest(message, FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_LOADING_SCREEN_READY)
+      this.webManager.sendRequest(message, FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_READY)
         .catch((error) => {
           console.error("[ServerRequestService] Acknowledge error:", error);
         });
@@ -314,7 +314,7 @@ export default class ServerRequestService {
     console.info("[ServerRequestService] Adding game listeners")
     this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE, listener);
     this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE, listener);
-    this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, listener);
+    // this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, listener);
     console.info("[ServerRequestService] Registered listeners for: GAME_UPDATE, GAME_STATE_UPDATE, ACKNOWLEDGMENT_REQUEST");
   }
 
@@ -327,7 +327,7 @@ export default class ServerRequestService {
     console.info("[ServerRequestService] Removing game listeners")
     this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE);
     this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE);
-    this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST);
+    // this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST);
   }
 
   /**

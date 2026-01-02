@@ -62,11 +62,10 @@ export async function handleLobbyAckTimeout(expiredKey: string) {
     return;
   }
 
-  const acknowledgedPlayers = Number(lobby.get("acknowledgedPlayers") || 0);
   const totalPlayers = Number(lobby.get("playerNum"));
 
   console.info(
-    `[InternalHandler] Starting game with ${acknowledgedPlayers}/${totalPlayers} players acknowledged`
+    `[InternalHandler] Starting game with ${totalPlayers} players.`
   );
 
   // Start the game with however many players have acknowledged

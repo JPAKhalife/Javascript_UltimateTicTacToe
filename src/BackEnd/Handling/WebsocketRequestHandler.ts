@@ -127,7 +127,7 @@ export async function handleWebsocketRequest(ws: any, req: any) {
     ) => {
       return createErrorResponse(data.type, ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
     },
-    [FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_LOADING_SCREEN_READY]: async (
+    [FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_READY]: async (
       data: any,
       sessionData: any,
     ) => {
@@ -276,6 +276,7 @@ async function handleSearchLobbies(
     ).then((lobbies) => lobbies.filter((lobby) => lobby !== null));
     const lobbySearchResults = allLobbies
       .filter((lobby) => {
+        //These conditions are for the filter
         if (params.playerNum && lobby.get("playerNum") !== params.playerNum)
           return false;
         if (params.levelSize && lobby.getGame().get("levelSize") !== params.levelSize)
@@ -296,6 +297,11 @@ async function handleSearchLobbies(
           lobby.get("allowSpectators") !== params.allowSpectators
         )
           return false;
+        //This condition prevents running lobbies that don't allow spectators from showing up to the joining clients.
+        if (Number(lobby.get("playersJoined")) >= Number(lobby.get("playerNum")
+          && Boolean(lobby.get("allowSpectators")) == false)) {
+          return false;
+        }
         return true;
       })
       .slice(0, params.maxListLength || params.searchListLength || 10);

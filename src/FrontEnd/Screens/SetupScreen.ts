@@ -86,6 +86,10 @@ export default class SetupScreen implements Menu {
     this.keylistener.deactivate(); // We don't want the user to be capable of inputs during the animation
   }
 
+  public getSketch(): p5 {
+    return this.sketch;
+  }
+
   private transitionIn(): void {
     if (!this.border.isTransitioning()) {
       for (let i = 0; i < this.multiplayer_MenuButton_list.getLength(); i++) {

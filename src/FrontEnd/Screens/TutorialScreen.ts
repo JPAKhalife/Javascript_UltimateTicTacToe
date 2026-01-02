@@ -96,6 +96,10 @@ export default class TutorialScreen implements Menu {
     this.startTransition();
   }
 
+  public getSketch(): p5 {
+    return this.sketch;
+  }
+
   private handleTransition(): void {
     if (this.transitioning) {
       if (this.transitionIn) {

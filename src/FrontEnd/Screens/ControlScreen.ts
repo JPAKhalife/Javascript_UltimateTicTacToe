@@ -35,6 +35,10 @@ export default class ControlScreen implements Menu {
     this.keylistener.deactivate();
   }
 
+  public getSketch(): p5 {
+    return this.sketch;
+  }
+
   private handleTransition(): void {
     if (this.transitioning) {
       if (this.transitioningIn) {

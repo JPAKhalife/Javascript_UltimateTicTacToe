@@ -21,6 +21,8 @@ export enum GAME_STATES {
   WAITING = "waiting",
   RUNNING = "running",
   PAUSED = "paused",
+  CANCELLED = "cancelled",
+  FINISHED = "finished",
 }
 
 // ============================================================================

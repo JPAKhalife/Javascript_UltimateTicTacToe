@@ -14,7 +14,6 @@ export enum FROM_SERVER_MESSAGE_TYPES {
   GAME_UPDATE = "game_update",
   GAME_STATE_UPDATE = "game_state_update",
   ACKNOWLEDGMENT_REQUEST = "acknowledgment_request",
-  GAME_CANCELLED = "game_cancelled",
 }
 
 // ============================================================================
@@ -133,7 +132,7 @@ export type GameUpdateMessage = z.infer<typeof GameUpdateMessage>;
  */
 export const GameStateUpdateMessage = z.object({
   type: z.literal("game_state_update"),
-  state: z.enum([GAME_STATES.WAITING, GAME_STATES.RUNNING, GAME_STATES.PAUSED]),
+  state: z.enum([GAME_STATES.WAITING, GAME_STATES.RUNNING, GAME_STATES.PAUSED, GAME_STATES.CANCELLED, GAME_STATES.FINISHED]),
   message: z.string().max(VALIDATION.MAX_STANDARD_LENGTH).optional(),
 });
 export type GameStateUpdateMessage = z.infer<typeof GameStateUpdateMessage>;
@@ -147,12 +146,3 @@ export const AcknowledgmentRequestMessage = z.object({
   message: z.string().max(VALIDATION.MAX_STANDARD_LENGTH).optional(),
 });
 export type AcknowledgmentRequestMessage = z.infer<typeof AcknowledgmentRequestMessage>;
-
-/**
- * Notification that the game has been cancelled (e.g., timeout waiting for acknowledgments)
- */
-export const GameCancelledMessage = z.object({
-  type: z.literal("game_cancelled"),
-  reason: z.string().max(VALIDATION.MAX_STANDARD_LENGTH),
-});
-export type GameCancelledMessage = z.infer<typeof GameCancelledMessage>;

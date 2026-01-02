@@ -153,6 +153,10 @@ export default class CreateLobbyScreen implements Menu {
     this.keylistener.deactivate(); // Disable input during transition
   }
 
+  public getSketch(): p5 {
+    return this.sketch;
+  }
+
   /**
    * @method startTransitionIn
    * @description Initializes the transition in animation

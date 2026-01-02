@@ -99,6 +99,10 @@ export default class LoadingScreen implements Menu {
     console.debug("[LoadingScreen] proceed is ", this.proceed);
   }
 
+  public getSketch(): p5 {
+    return this.sketch;
+  }
+
   private startTransitionIn(): void {
     console.debug("[LoadingScreen] Transitioning in...")
     this.titleOpacity = 0;

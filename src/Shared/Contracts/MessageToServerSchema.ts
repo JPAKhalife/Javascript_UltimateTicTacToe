@@ -20,7 +20,7 @@ export enum FROM_CLIENT_MESSAGE_TYPES {
   JOIN_LOBBY = "join_lobby",
   LEAVE_LOBBY = "leave_lobby",
   MAKE_MOVE = "make_move",
-  ACKNOWLEDGE_LOADING_SCREEN_READY = "ack_ready",
+  ACKNOWLEDGE_READY = "ack_ready",
   NONE = "None"
 }
 

@@ -58,6 +58,10 @@ export default class StartScreen implements Menu {
     this.s = 0;
   }
 
+  public getSketch(): p5 {
+    return this.sketch;
+  }
+
   public draw(): void {
     this.sketch.background(0);
 

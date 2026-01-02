@@ -26,6 +26,10 @@ export default class TestScreen implements Menu {
     this.lobbyNav = new MenuNav([], this.sketch);
   }
 
+  public getSketch(): p5 {
+    return this.sketch;
+  }
+
   public init(): void {}
 
   public draw(): void {
