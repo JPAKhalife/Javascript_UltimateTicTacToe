@@ -6,24 +6,29 @@
  * @updated 2024-12-09
  */
 
+import p5 from "p5";
+
 export enum Screens {
-    SCREEN_NUM,
-    START_SCREEN,
-    SETUP_SCREEN,
-    LOADING_SCREEN,
-    TUTORIAL_SCREEN,
-    CONTROL_SCREEN,
-    GAME_SCREEN,
-    MULTIPLAYER_SCREEN,
-    CREATE_LOBBY_SCREEN,
-    USERNAME_SCREEN, // New screen for entering username
-    TEST_SCREEN,
-};
+  SCREEN_NUM,
+  START_SCREEN,
+  SETUP_SCREEN,
+  LOADING_SCREEN,
+  TUTORIAL_SCREEN,
+  CONTROL_SCREEN,
+  GAME_SCREEN,
+  MULTIPLAYER_SCREEN,
+  CREATE_LOBBY_SCREEN,
+  USERNAME_SCREEN, // New screen for entering username
+  TEST_SCREEN,
+}
 
 /**
  * @Interface A class that contains all the attributes a screen should have.
  * */
 export default interface Menu {
-    //Each Menu will need a draw funciton
-    draw(): void;
+  //Each Menu will need a draw funciton
+  draw(): void;
+  
+  //Each Menu should be able to return their sketch instance
+  getSketch(): p5;
 }

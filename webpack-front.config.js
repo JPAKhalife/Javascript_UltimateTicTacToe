@@ -1,22 +1,22 @@
 // filepath: /Users/johnkhalife/Code/Javascript_UltimateTicTacToe/webpack-front.config.js
-const path = require('path');
-const webpack = require('webpack');
+const path = require("path");
+const webpack = require("webpack");
 
 module.exports = (env, argv) => {
-  const isDevelopment = argv.mode === 'development';
-  const remoteServerAddress = process.env.REMOTE_SERVER_ADDRESS || 'http://localhost:3000';
+  const isDevelopment = argv.mode === "development";
+  const logLevel = env?.LOG_LEVEL || process.env.LOG_LEVEL || 'INFO'
 
   return {
-    entry: './src/FrontEnd/sketch.ts',
+    entry: "./src/FrontEnd/sketch.ts",
     output: {
-      filename: 'front.bundle.js',
-      path: path.resolve(__dirname, 'dist/FrontEnd'),
+      filename: "front.bundle.js",
+      path: path.resolve(__dirname, "dist/FrontEnd"),
     },
     mode: argv.mode,
     devServer: isDevelopment
       ? {
           static: {
-            directory: path.join(__dirname, 'src/FrontEnd'),
+            directory: path.join(__dirname, "src/FrontEnd"),
           },
           compress: true,
           port: 9000,
@@ -29,10 +29,13 @@ module.exports = (env, argv) => {
         {
           test: /\.tsx?$/,
           use: {
-            loader: 'ts-loader',
+            loader: "ts-loader",
             options: {
-              configFile: 'tsconfig.front.json'  // Use the server-specific tsconfig
-            }
+              configFile: "tsconfig.front.json", // Use the frontend-specific tsconfig
+              compilerOptions: {
+                rootDir: path.resolve(__dirname, "src"),
+              },
+            },
           },
           exclude: /node_modules/,
         },
@@ -40,17 +43,21 @@ module.exports = (env, argv) => {
           test: /\.js$/,
           exclude: /node_modules/,
           use: {
-            loader: 'babel-loader',
+            loader: "babel-loader",
           },
         },
       ],
     },
     resolve: {
-      extensions: ['.tsx', '.ts', '.js'],
+      extensions: [".tsx", ".ts", ".js"],
     },
-    plugins: [new webpack.SourceMapDevToolPlugin({}),
+    plugins: [
+      new webpack.SourceMapDevToolPlugin({}),
       new webpack.DefinePlugin({
-        'process.env.REMOTE_SERVER_ADDRESS': JSON.stringify(process.env.REMOTE_SERVER_ADDRESS || 'ws://localhost:3000'),
+        "process.env.REMOTE_SERVER_ADDRESS": JSON.stringify(
+          process.env.REMOTE_SERVER_ADDRESS || "ws://localhost:3000"
+        ),
+        "process.env.LOG_LEVEL": JSON.stringify(logLevel),
       }),
     ],
   };

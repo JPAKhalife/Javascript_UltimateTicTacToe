@@ -1,0 +1,2 @@
+docker stop codebase_index
+docker rm codebase_index

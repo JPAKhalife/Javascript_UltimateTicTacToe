@@ -1,38 +1,48 @@
-const path = require('path');
-const nodeExternals = require('webpack-node-externals');
-const webpack = require('webpack');
+const path = require("path");
+const nodeExternals = require("webpack-node-externals");
+const webpack = require("webpack");
 
-module.exports = {
-  target: 'node', // Indicate this is for Node.js
-  entry: {
-    app: ['./src/BackEnd/server.ts'], // Your Node.js entry point
-  },
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: [
+module.exports = (env, argv) => {
+  const logLevel = env?.LOG_LEVEL || process.env.LOG_LEVEL || 'INFO'
+  
+  return {
+    target: "node", // Indicate this is for Node.js
+    entry: {
+      app: ["./src/BackEnd/server.ts"], // Your Node.js entry point
+    },
+    module: {
+      rules: [
+        {
+          test: /\.tsx?$/,
+          use: [
             {
-              loader: 'ts-loader',
+              loader: "ts-loader",
               options: {
-                configFile: 'tsconfig.back.json'  // Use the server-specific tsconfig
-              }
-            }
+                configFile: "tsconfig.back.json", // Use the server-specific tsconfig
+                compilerOptions: {
+                  rootDir: path.resolve(__dirname, "src"),
+                },
+              },
+            },
           ],
-        exclude: /node_modules/,
-      },
-    ],
-  },
-  resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
-  },
-  output: {
-    filename: 'back.bundle.js',
-    path: path.resolve(__dirname, 'dist'), // Output path for Node.js
-    libraryTarget: 'commonjs2', // CommonJS for Node.js
-  },
-  externals: [nodeExternals()], // Prevent bundling of node_modules for server-side code
-  devtool: false,
-  plugins: [new webpack.SourceMapDevToolPlugin({})],  //This is here for debugging purposes
+          exclude: /node_modules/,
+        },
+      ],
+    },
+    resolve: {
+      extensions: [".tsx", ".ts", ".js"],
+    },
+    output: {
+      filename: "back.bundle.js",
+      path: path.resolve(__dirname, "dist"), // Output path for Node.js
+      libraryTarget: "commonjs2", // CommonJS for Node.js
+    },
+    externals: [nodeExternals()], // Prevent bundling of node_modules for server-side code
+    devtool: false,
+    plugins: [
+      new webpack.SourceMapDevToolPlugin({}),
+      new webpack.DefinePlugin({
+            'process.env.LOG_LEVEL': JSON.stringify(logLevel)
+          })], //This is here for debugging purposes
+  }
 };
-

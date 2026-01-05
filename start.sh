@@ -15,8 +15,8 @@ cp -r ./src/FrontEnd/assets ./dist/FrontEnd/assets
 
 
 # Build the backend and frontend using webpack
-npx webpack --config webpack-back.config.js --mode production 
-npx webpack --config webpack-front.config.js --mode production 
+npx webpack --config webpack-back.config.js --mode production  --env LOG_LEVEL=DEBUG
+npx webpack --config webpack-front.config.js --mode production --env LOG_LEVEL=DEBUG
 
 # Show running containers
 docker ps
