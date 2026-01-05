@@ -30,7 +30,7 @@ import {
   AcknowledgeReadyRequest,
 } from "../../Shared/Contracts/MessageToServerSchema";
 import Session from "../Database/Session";
-import { ERROR_MESSAGES, GAME_STATES, SUCCESS_MESSAGES } from "../Contants";
+import { ERROR_MESSAGES, GAME_STATES, REDIS_KEYS, SUCCESS_MESSAGES } from "../Contants";
 import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
 import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout } from "./GameHandler";
@@ -267,7 +267,7 @@ async function handleSearchLobbies(
     // Get all active lobbies
     const lobbyList = await DatabaseManager.getInstance()
       .getRegularClient()
-      .lrange("LobbyList", 0, -1);
+      .lrange(REDIS_KEYS.LOBBY_LIST, 0, -1);
     const allLobbies = await Promise.all(
       lobbyList.map(async (id) => {
         const lobby = await Lobby.getById(id);
@@ -297,11 +297,25 @@ async function handleSearchLobbies(
           lobby.get("allowSpectators") !== params.allowSpectators
         )
           return false;
-        //This condition prevents running lobbies that don't allow spectators from showing up to the joining clients.
-        if (Number(lobby.get("playersJoined")) >= Number(lobby.get("playerNum")
-          && Boolean(lobby.get("allowSpectators")) == false)) {
+        // Filter out lobbies that users can't join:
+        // 1. Full lobbies that don't allow spectators
+        // 2. Running games that don't allow spectators
+        const playersJoined = Number(lobby.get("playersJoined"));
+        const playerNum = Number(lobby.get("playerNum"));
+        const lobbyState = lobby.get("lobbyState");
+        const allowSpectatorsValue = lobby.get("allowSpectators") as boolean | string;
+        const allowSpectators = allowSpectatorsValue === true || allowSpectatorsValue === "true";
+
+        // Hide full lobbies that don't allow spectators
+        if (playersJoined >= playerNum && !allowSpectators) {
           return false;
         }
+
+        // Hide running games that don't allow spectators
+        if (lobbyState === GAME_STATES.RUNNING && !allowSpectators) {
+          return false;
+        }
+
         return true;
       })
       .slice(0, params.maxListLength || params.searchListLength || 10);

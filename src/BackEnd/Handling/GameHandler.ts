@@ -10,6 +10,7 @@
 import { GAME_STATES, REDIS_KEYS } from "../Contants";
 import { Lobby } from "../Database/Lobby/Lobby";
 import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage, AcknowledgmentRequestMessage } from '../../Shared/Contracts/MessageToClientSchema';
+import { INTERNAL_MESSAGE_TYPES, LobbyStateChangedMessage } from '../../Shared/Contracts/ServerInternalMessageSchema';
 import { publishToLobby } from "./ServerRedisGameEventHandler";
 import { LobbyAcknowledgmentSet } from "../Database/Lobby/LobbyAcknowledgmentSet";
 import { DatabaseManager } from "../Database/DatabaseManager";
@@ -152,3 +153,39 @@ export async function handleEvaluateGame(lobby: Lobby) { }
  * @param lobby the lobby object that the game has been won in
  */
 export async function handleGameWon(lobby: Lobby) { }
+
+/**
+ * @function handleGameCancel
+ * @description This function handles the game being cancelled and sends the event to all players
+ * Sends two messages:
+ * 1. Client message (GameStateUpdateMessage) - notifies players the game was cancelled
+ * 2. Internal server message (LobbyStateChangedMessage) - triggers cleanup on all servers
+ * @param lobby - The lobby to cancel
+ * @param reason - Optional reason for cancellation
+ */
+export async function handleGameCancel(lobby: Lobby, reason?: string) {
+  const lobbyID = lobby.getId();
+
+  console.info(`[GameHandler] Cancelling game in lobby ${lobbyID}${reason ? `: ${reason}` : ''}`);
+
+  // Update lobby state to cancelled
+  lobby.set("lobbyState", GAME_STATES.CANCELLED);
+
+  // 1. Send client-forwarded message to notify all players
+  const clientMessage: GameStateUpdateMessage = {
+    type: FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE,
+    state: GAME_STATES.CANCELLED,
+    message: reason || "Game has been cancelled",
+  };
+  await publishToLobby(lobbyID, clientMessage);
+
+  // 2. Send internal server message to trigger cleanup on all servers
+  const internalMessage: LobbyStateChangedMessage = {
+    type: INTERNAL_MESSAGE_TYPES.LOBBY_STATE_CHANGED,
+    lobbyID: lobbyID,
+    newState: GAME_STATES.CANCELLED,
+  };
+  await publishToLobby(lobbyID, internalMessage);
+
+  console.info(`[GameHandler] Sent cancellation messages for lobby ${lobbyID}`);
+}

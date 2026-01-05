@@ -62,10 +62,10 @@ export const REDIS_KEYS = {
   LOBBY_PLAYERS: (lobbyID: string) => `lobbyplayers:${lobbyID}`, // playerlist of a given lobby
   LOBBY_SPECTATORS: (lobbyID: string) => `lobbyspectators:${lobbyID}`, // spectatorlist of a given lobby
   LOBBY_ACK_SET: (lobbyID: string) => `lobby_ack_set:${lobbyID}`, // Set of player IDs who acknowledged ready (expires in 5s)
-  LOBBY_ACK_SET_PREFIX: "lobby_ack_set:", // Prefix for acknowledgment set keys
   USERNAMES: "usernames", // Set of all active usernames
   BOARD: (lobbyID: string) => `board:${lobbyID}`, // The state of a board of a given lobby
-  LOBBY_NAMES: "lobby_names", // Set of all active lobby names
+  LOBBY_NAMES: "lobby_names", // Set of all active lobby names,
+  LOBBY_LIST: "LobbyList",
   GAME: (lobbyID: string) => `game:${lobbyID}`,
 
   //Player

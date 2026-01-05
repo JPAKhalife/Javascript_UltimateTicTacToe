@@ -8,6 +8,8 @@
 import { RedisSet } from "../RedisBase/RedisSet";
 import { REDIS_KEYS } from "../../Contants";
 import { DatabaseManager } from "../DatabaseManager";
+import { RedisEventManager, RedisEventType } from "../RedisEventManager";
+import { handleLobbyAckTimeout } from "../../Handling/InternalHandler";
 
 /**
  * LobbyAcknowledgmentSet - Redis set storing player IDs who have acknowledged
@@ -67,15 +69,27 @@ export class LobbyAcknowledgmentSet extends RedisSet<string> {
     const redisClient = DatabaseManager.getInstance().getRegularClient();
     const key = REDIS_KEYS.LOBBY_ACK_SET(lobbyID);
 
-    // Create the set with a placeholder value and set expiry in one atomic operation
-    // This ensures the key exists and can have an expiry set on it
+    // Create the set with a placeholder value and set expiry
+    // The placeholder prevents the key from being deleted when empty (which would lose the expiry)
     await redisClient.sadd(key, "__init__");
     const expireResult = await redisClient.expire(key, 5);
 
     console.info(`[LobbyAcknowledgmentSet] Created acknowledgment set for lobby ${lobbyID} with 5s expiry (expire result: ${expireResult})`);
 
-    // Now remove the placeholder so the set is effectively empty
-    await redisClient.srem(key, "__init__");
+    // Subscribe to this specific lobby_ack_set's expiry event
+    await RedisEventManager.subscribe(
+      key,
+      [RedisEventType.EXPIRED],
+      async (expiredKey: string, eventType: RedisEventType) => {
+        if (eventType === RedisEventType.EXPIRED) {
+          console.info(`[LobbyAcknowledgmentSet] Acknowledgment set expired (key: ${expiredKey})`);
+          await handleLobbyAckTimeout(expiredKey);
+        }
+      }
+    );
+
+    // IMPORTANT: Keep the __init__ placeholder to prevent Redis from deleting the key
+    // The size() method already filters it out when counting actual acknowledgments
 
     const ackSet = new LobbyAcknowledgmentSet(lobbyID);
     return ackSet;

@@ -126,7 +126,7 @@ export function handleGameMessages(message: any) {
 export function handleGameStateUpdates(message: GameStateUpdateMessage) {
   const requestService = ServerRequestService.getInstance();
   console.debug("[handleGameStateUpdates] Received game state update of state ", message.state || "UNKNOWN");
-  //Another switch statement for each respective state that can be given
+  //switch statement for each respective state that can be given
   switch (message.state) {
     case GAME_STATES.CANCELLED:
       //Cancel the game and return to the multiplayer Menu :/

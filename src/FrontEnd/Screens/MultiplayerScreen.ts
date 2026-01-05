@@ -65,6 +65,12 @@ export default class MultiplayerScreen implements Menu {
   private requestService: ServerRequestService;
   private lobbyList: LobbyInfo[];
 
+  // Error message display
+  private errorMessage: string | null = null;
+  private errorMessageOpacity: number = 0;
+  private errorMessageTimer: number = 0;
+  private errorMessageDuration: number = 3 * FRAMERATE; // 3 seconds
+
   constructor(sketch: p5) {
     this.sketch = sketch;
     this.keylistener = new KeyListener(sketch);
@@ -249,6 +255,11 @@ export default class MultiplayerScreen implements Menu {
     // If there's a transitioning LobbyDot, draw it again to ensure it's on top
     if (transitioningLobbyDot) {
       transitioningLobbyDot.draw(canvasSize);
+    }
+
+    // Draw error message if present
+    if (this.errorMessage) {
+      this.drawErrorMessage(canvasSize);
     }
 
     // Handle key navigation (always active)
@@ -624,11 +635,67 @@ export default class MultiplayerScreen implements Menu {
       lobbyID,
       this.sketch,
       selectedLobbyDot,
-      () => {
-        // If joining failed, re-enable input
+      (errorMsg?: string) => {
+        // If joining failed, re-enable input and show error
         this.keylistener.activate();
         this.showLoadingIcon = false;
+        if (errorMsg) {
+          this.showErrorMessage(errorMsg);
+        }
       }
     );
+  }
+
+  /**
+   * @method showErrorMessage
+   * @description Displays an error message with fade in/out animation
+   * @param message The error message to display
+   */
+  public showErrorMessage(message: string): void {
+    this.errorMessage = message;
+    this.errorMessageOpacity = 0;
+    this.errorMessageTimer = this.errorMessageDuration;
+  }
+
+  /**
+   * @method drawErrorMessage
+   * @description Draws the error message with fade in/out animation
+   * @param canvasSize The current canvas size
+   */
+  private drawErrorMessage(canvasSize: number): void {
+    // Fade in during first half, fade out during second half
+    const halfDuration = this.errorMessageDuration / 2;
+
+    if (this.errorMessageTimer > halfDuration) {
+      // Fade in
+      const progress = (this.errorMessageDuration - this.errorMessageTimer) / halfDuration;
+      this.errorMessageOpacity = Math.min(progress * 255, 255);
+    } else {
+      // Fade out
+      const progress = this.errorMessageTimer / halfDuration;
+      this.errorMessageOpacity = Math.max(progress * 255, 0);
+    }
+
+    // Draw error message at the bottom center of the screen
+    this.sketch.push();
+    this.sketch.fill(255, this.errorMessageOpacity); // White color
+    this.sketch.noStroke();
+    this.sketch.textAlign(this.sketch.CENTER, this.sketch.CENTER);
+    this.sketch.textSize(TEXT_SIZES.NORMAL * canvasSize);
+    this.sketch.text(
+      this.errorMessage || "",
+      canvasSize * 0.5,
+      canvasSize * 0.85 // Near bottom of screen
+    );
+    this.sketch.pop();
+
+    // Decrement timer
+    this.errorMessageTimer--;
+
+    // Clear message when timer reaches 0
+    if (this.errorMessageTimer <= 0) {
+      this.errorMessage = null;
+      this.errorMessageOpacity = 0;
+    }
   }
 }

@@ -17,6 +17,7 @@ import MenuNav from "./MenuNav";
 const DOT_ENTER_ANIMATION_TIME = FRAMERATE * 3;
 const PULSE_ANIMATION_TIME = FRAMERATE * 2;
 const SELECTION_TRANSITION_TIME = FRAMERATE * 3; // 3 seconds for selection transition
+const ERROR_ANIMATION_TIME = FRAMERATE * 1; // 1 second for error animation
 
 /**
  * This is an object that will contain all the neccessary information that should be displayed
@@ -64,6 +65,7 @@ export default class LobbyDot extends BaseMenuItem {
   private doTransitionIn: boolean = true;
   private doTransitionOut: boolean = false;
   private doSelectionTransition: boolean = false;
+  private doErrorAnimation: boolean = false;
   private lifeTime: number;
   private navMenu: MenuNav;
   //Box Coordinates
@@ -80,6 +82,11 @@ export default class LobbyDot extends BaseMenuItem {
   private selectionTransitionTime: number = SELECTION_TRANSITION_TIME;
   private selectionTransitionComplete: boolean = false;
   private onTransitionComplete: (() => void) | null = null;
+  //Error animation variables
+  private errorAnimationTime: number = ERROR_ANIMATION_TIME;
+  private errorShakeOffset: number = 0;
+  private errorShakeDirection: number = 1;
+  private errorFlashOpacity: number = 0;
 
   //TODO: Make a specific object for lobby info
   constructor(
@@ -112,14 +119,32 @@ export default class LobbyDot extends BaseMenuItem {
       return; // Skip other drawing when in selection transition
     }
 
+    // Calculate position with shake offset for error animation
+    const xPos = this.doErrorAnimation
+      ? this.getX(canvasSize) + this.errorShakeOffset
+      : this.getX(canvasSize);
+    const yPos = this.getY(canvasSize);
+
     //Draw the point on the x or y
     this.getSketch().push();
     this.getSketch().stroke(255, this.getOpacity());
     this.getSketch().strokeWeight(this.size * canvasSize);
-    this.getSketch().point(this.getX(canvasSize), this.getY(canvasSize));
+    this.getSketch().point(xPos, yPos);
     this.getSketch().pop();
 
-    if (this.doTransitionIn) {
+    // Draw error flash circle if error animation is active
+    if (this.doErrorAnimation && this.errorFlashOpacity > 0) {
+      this.getSketch().push();
+      this.getSketch().stroke(255, this.errorFlashOpacity);
+      this.getSketch().strokeWeight(4);
+      this.getSketch().noFill();
+      this.getSketch().circle(xPos, yPos, canvasSize * 0.03);
+      this.getSketch().pop();
+    }
+
+    if (this.doErrorAnimation) {
+      this.animateError();
+    } else if (this.doTransitionIn) {
       this.transitionIn();
     } else if (this.doTransitionOut && !this.isSelected()) {
       this.transitionOut();
@@ -128,7 +153,7 @@ export default class LobbyDot extends BaseMenuItem {
     }
 
     //This is the part that draws the info displayer on the menu.
-    if (this.isSelected() && !this.doSelectionTransition) {
+    if (this.isSelected() && !this.doSelectionTransition && !this.doErrorAnimation) {
       this.drawSelected(canvasSize);
     }
 
@@ -325,5 +350,45 @@ export default class LobbyDot extends BaseMenuItem {
    */
   public isSelectionTransitionActive(): boolean {
     return this.doSelectionTransition;
+  }
+
+  /**
+   * @method startErrorAnimation
+   * @description Starts the error animation (shake + red flash) and removes the dot after completion
+   */
+  public startErrorAnimation(): void {
+    this.doErrorAnimation = true;
+    this.errorAnimationTime = ERROR_ANIMATION_TIME;
+    this.errorShakeOffset = 0;
+    this.errorShakeDirection = 1;
+    this.errorFlashOpacity = 255;
+  }
+
+  /**
+   * @method animateError
+   * @description Animates the error state - shakes the dot horizontally and shows a red flash circle
+   */
+  private animateError(): void {
+    // Shake animation - oscillate horizontally
+    const shakeAmplitude = 10; // pixels
+    const shakeSpeed = 0.3; // how fast it shakes
+
+    this.errorShakeOffset = Math.sin(this.errorAnimationTime * shakeSpeed) * shakeAmplitude;
+
+    // Fade out the red flash
+    this.errorFlashOpacity -= 255 / ERROR_ANIMATION_TIME;
+    if (this.errorFlashOpacity < 0) {
+      this.errorFlashOpacity = 0;
+    }
+
+    // Decrement timer
+    this.errorAnimationTime--;
+
+    // When animation is complete, trigger fade out to remove the dot
+    if (this.errorAnimationTime <= 0) {
+      this.doErrorAnimation = false;
+      this.errorShakeOffset = 0;
+      this.doTransitionOut = true;
+    }
   }
 }

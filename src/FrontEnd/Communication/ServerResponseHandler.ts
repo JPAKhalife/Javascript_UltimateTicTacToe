@@ -116,60 +116,67 @@ export async function handleCreateLobbyResponse(
  * @param lobbyID - The ID of the lobby to join
  * @param sketch - The p5 sketch instance
  * @param selectedLobbyDot - The lobby dot that was selected
- * @param onJoinFailed - Callback to execute if joining fails
+ * @param onJoinFailed - Callback to execute if joining fails, receives error message as parameter
  */
 export async function handleJoinLobbyResponse(
     lobbyID: string,
     sketch: p5,
     selectedLobbyDot: LobbyDot,
-    onJoinFailed: () => void
+    onJoinFailed: (errorMessage?: string) => void
 ) {
     const requestService = ServerRequestService.getInstance();
 
     // Join the lobby
-    const lobbyInfo = await requestService.joinLobby(lobbyID);
+    const result = await requestService.joinLobby(lobbyID);
 
-    if (lobbyInfo) {
-        // Determine if this is a spectator joining a running game
-        const isSpectator = lobbyInfo.playersJoined > lobbyInfo.playerNum;
-        const isGameRunning = lobbyInfo.lobbyState === "running";
+    // Check if result is an error
+    if ("error" in result) {
+        // Trigger error animation on the lobby dot
+        selectedLobbyDot.startErrorAnimation();
+        // Execute callback with error message
+        onJoinFailed(result.error);
+        return;
+    }
 
-        // Set up game listener to trigger LoadingScreen transition when game starts
-        // This must happen BEFORE we transition to LoadingScreen
-        // For spectators joining running games, these listeners will receive ongoing game updates
-        setupGameStartListener(
-            requestService,
+    // Success - result is LobbyInfo
+    const lobbyInfo = result;
+
+    // Determine if this is a spectator joining a running game
+    const isSpectator = lobbyInfo.playersJoined > lobbyInfo.playerNum;
+    const isGameRunning = lobbyInfo.lobbyState === "running";
+
+    // Set up game listener to trigger LoadingScreen transition when game starts
+    // This must happen BEFORE we transition to LoadingScreen
+    // For spectators joining running games, these listeners will receive ongoing game updates
+    setupGameStartListener(
+        requestService,
+        sketch,
+        lobbyInfo.gridSize,
+        lobbyInfo.levelSize,
+        lobbyInfo.lobbyID
+    );
+
+    selectedLobbyDot.startSelectionTransition(async () => {
+        // Navigate to LoadingScreen
+        // For spectators joining running games, pass undefined to auto-transition
+        // For regular players, pass empty function to wait for game start event
+        const loadingProcess = (isSpectator && isGameRunning) ? undefined : () => {};
+        const titleText = (isSpectator && isGameRunning) ? "Joining game..." : "Waiting for game to start...";
+
+        if (isSpectator && isGameRunning) {
+            console.info("[ServerResponseHandler] Spectator joining running game, will auto-transition after loading screen");
+        }
+
+        GuiManager.changeScreen(
+            Screens.LOADING_SCREEN,
             sketch,
+            Screens.GAME_SCREEN,
+            titleText,
+            loadingProcess,
+            GameType.ONLINE,
             lobbyInfo.gridSize,
             lobbyInfo.levelSize,
-            lobbyInfo.lobbyID
+            lobbyInfo.lobbyID,
         );
-
-        selectedLobbyDot.startSelectionTransition(async () => {
-            // Navigate to LoadingScreen
-            // For spectators joining running games, pass undefined to auto-transition
-            // For regular players, pass empty function to wait for game start event
-            const loadingProcess = (isSpectator && isGameRunning) ? undefined : () => {};
-            const titleText = (isSpectator && isGameRunning) ? "Joining game..." : "Waiting for game to start...";
-
-            if (isSpectator && isGameRunning) {
-                console.info("[ServerResponseHandler] Spectator joining running game, will auto-transition after loading screen");
-            }
-
-            GuiManager.changeScreen(
-                Screens.LOADING_SCREEN,
-                sketch,
-                Screens.GAME_SCREEN,
-                titleText,
-                loadingProcess,
-                GameType.ONLINE,
-                lobbyInfo.gridSize,
-                lobbyInfo.levelSize,
-                lobbyInfo.lobbyID,
-            );
-        });
-    } else {
-        // If joining failed, execute callback
-        onJoinFailed();
-    }
+    });
 }

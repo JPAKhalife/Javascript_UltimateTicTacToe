@@ -205,9 +205,9 @@ export default class ServerRequestService {
    * @method joinLobby
    * @description Join an existing lobby
    * @param lobbyID The ID of the lobby to join
-   * @returns Promise resolving to lobby information if successful, null otherwise
+   * @returns Promise resolving to lobby information if successful, or an object with error property if failed
    */
-  public async joinLobby(lobbyID: string): Promise<LobbyInfo | null> {
+  public async joinLobby(lobbyID: string): Promise<LobbyInfo | { error: string }> {
     try {
       const message = {
         type: FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY,
@@ -220,6 +220,8 @@ export default class ServerRequestService {
       const response = await this.webManager.sendRequest<{
         success: boolean;
         lobby: any;
+        error?: string;
+        message?: string;
       }>(message, FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY);
 
       if (response && response.success && response.lobby) {
@@ -238,10 +240,13 @@ export default class ServerRequestService {
         };
       }
 
-      return null;
+      // Return error message from response
+      const errorMessage = response?.error || response?.message || "Failed to join lobby";
+      return { error: errorMessage };
     } catch (error) {
-      console.error("[ServerRequestService] Join lobby error:", error);
-      return null;
+      const errorMessage = error instanceof Error ? error.message : "Failed to join lobby";
+      console.error("[ServerRequestService] Join lobby error:", errorMessage);
+      return { error: errorMessage };
     }
   }
 
@@ -314,7 +319,7 @@ export default class ServerRequestService {
     console.info("[ServerRequestService] Adding game listeners")
     this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE, listener);
     this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE, listener);
-    // this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, listener);
+    this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, listener);
     console.info("[ServerRequestService] Registered listeners for: GAME_UPDATE, GAME_STATE_UPDATE, ACKNOWLEDGMENT_REQUEST");
   }
 
@@ -327,7 +332,7 @@ export default class ServerRequestService {
     console.info("[ServerRequestService] Removing game listeners")
     this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE);
     this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE);
-    // this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST);
+    this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST);
   }
 
   /**

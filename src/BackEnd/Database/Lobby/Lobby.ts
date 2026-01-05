@@ -92,7 +92,7 @@ export class Lobby extends RedisHash<LobbyData> {
 
     //Add to list of lobbies
     // Add to lobby list and names set
-    redisClient.rpush("LobbyList", lobbyId);
+    redisClient.rpush(REDIS_KEYS.LOBBY_LIST, lobbyId);
     redisClient.sadd(REDIS_KEYS.LOBBY_NAMES, lobbyData.lobbyName.toLowerCase());
 
     const lobby = new Lobby(lobbyId, data, game, playerList);
@@ -153,10 +153,13 @@ export class Lobby extends RedisHash<LobbyData> {
     }
 
     //Check if the capacity allows for a player to join
-    if (
-      Number(this.get("playersJoined")) >= Number(this.get("playerNum")) &&
-      !this.get("allowSpectators")
-    ) {
+    const playersJoined = Number(this.get("playersJoined"));
+    const playerNum = Number(this.get("playerNum"));
+    // Handle both boolean and string values from Redis (string 'true'/'false' or boolean true/false)
+    const allowSpectatorsValue = this.get("allowSpectators") as boolean | string;
+    const allowSpectators = allowSpectatorsValue === true || allowSpectatorsValue === "true";
+
+    if (playersJoined >= playerNum && !allowSpectators) {
       throw new Error(`Lobby ${this.id} is full`);
     }
 
@@ -196,20 +199,16 @@ export class Lobby extends RedisHash<LobbyData> {
    * Remove a player from the lobby
    * @param playerId The ID of the player to remove
    */
-  async removePlayer(playerId: string): Promise<void> {
-    if (!this.players.getItems().includes(playerId)) {
-      throw new Error(`Player ${playerId} is not in lobby ${this.id}`);
+  async removePlayer(playerID: string): Promise<void> {
+    if (!this.players.getItems().includes(playerID)) {
+      throw new Error(`Player ${playerID} is not in lobby ${this.id}`);
     }
 
-    const player = await Player.getById(playerId);
-    if (player) {
-      await player.leaveLobby();
-    }
-    //Unsubscribe
-    await unsubscribeFromLobby(this.id, playerId);
+    await this.removePlayerData(playerID);
+
     await this.withTransaction(async (multi) => {
       // Remove player from lobby's player list
-      multi.lrem(REDIS_KEYS.LOBBY_PLAYERS(this.id), 0, playerId);
+      multi.lrem(REDIS_KEYS.LOBBY_PLAYERS(this.id), 0, playerID);
 
       // Update lobby data
       const newPlayersJoined = Math.max(0, Number(this.get("playersJoined")) - 1);
@@ -219,28 +218,44 @@ export class Lobby extends RedisHash<LobbyData> {
       await this.set("lobbyState", newState);
     });
 
-    this.players.remove(playerId)
+    this.players.remove(playerID)
+  }
+
+  /**
+   * @method removePlayerData
+   * @description Only remove the player, don't worry about lobbystate changes. Called directly when a lobby will no longer be used.
+   * @param playerID 
+   */
+  async removePlayerData(playerID: string) {
+    const player = await Player.getById(playerID);
+    if (player) {
+      await player.leaveLobby();
+    }
+    //Unsubscribe
+    await unsubscribeFromLobby(this.id, playerID);
   }
 
   /**
    * Delete the lobby and clean up all related data
    */
   async delete(): Promise<void> {
-    // Remove all players first
+    // Remove all players from the lobby first
     for (const playerId of this.players.getItems()) {
       const player = await Player.getById(playerId);
       if (player) {
-        await this.removePlayer(playerId);
+        await this.removePlayerData(playerId);
       }
     }
-
+    //Remove the playerList
+    this.players.delete();
+    //Remove the game
+    this.game.delete();
     await this.withTransaction((multi) => {
-      // Remove all lobby data
-      multi.del(this.getRedisKey());
-      multi.del(REDIS_KEYS.BOARD(this.id));
-      multi.del(REDIS_KEYS.LOBBY_PLAYERS(this.id));
-      multi.lrem("LobbyList", 0, this.id);
+      // Remove all lobby data stored in retrieval hashes
+      multi.lrem(REDIS_KEYS.LOBBY_LIST, 0, this.id);
       multi.srem(REDIS_KEYS.LOBBY_NAMES, this.get("lobbyName").toLowerCase());
+      multi.del(this.getRedisKey());
+
     });
   }
 
