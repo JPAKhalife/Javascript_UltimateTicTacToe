@@ -15,6 +15,8 @@ export enum TicTacState {
   ERROR,
 }
 
+//This object is intended to convey the state of the tictac (whether there was a win or not) and 
+// Where the cursor is supposed to go next.
 export interface TictacStateObject {
   state: TicTacState;
   wonLevelSize: number;

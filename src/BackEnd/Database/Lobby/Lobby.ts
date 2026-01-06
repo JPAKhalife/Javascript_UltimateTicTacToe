@@ -19,7 +19,7 @@ import { Game } from "./Game";
 /**
  * Interface defining the structure of lobby data stored in Redis
  */
-interface LobbyData {
+export interface LobbyData {
   lobbyID: string;
   lobbyName: string;
   playerNum: number;

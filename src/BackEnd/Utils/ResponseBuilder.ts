@@ -14,6 +14,8 @@ import type {
   MakeMoveResponse,
   ReconnectResponse,
   LobbyInfo,
+  GameStateInfo,
+  PlayerInfo,
 } from "../../Shared/Contracts/MessageToClientSchema";
 
 /**
@@ -80,13 +82,13 @@ export class ResponseBuilder {
    * Create a join lobby response
    */
   static joinLobby(
-    lobby: LobbyInfo,
+    gameState: GameStateInfo,
     message?: string,
     messageID?: string,
   ): JoinLobbyResponse {
     return {
       success: true,
-      lobby,
+      gameState,
       message,
       messageID,
     };
@@ -133,6 +135,34 @@ export class ResponseBuilder {
       creator: lobby.get("creator"),
       lobbyState: lobby.get("lobbyState"),
       allowSpectators: lobby.get("allowSpectators"),
+    };
+  }
+
+  /**
+   * Convert a lobby database object to GameStateInfo schema
+   * Includes complete player list, current turn, and optional board state
+   * @param lobby The lobby object
+   * @param playerDetails Array of player objects with playerID and username
+   */
+  static async lobbyToGameState(lobby: any, playerDetails: PlayerInfo[]): Promise<GameStateInfo> {
+    const game = lobby.getGame();
+    const board = game.getBoard();
+    const boardState = await board.getBoardState();
+
+    // Check if the board is in the initial state (all zeros)
+    const isInitialState = boardState.every((cell: number) => cell === 0);
+
+    return {
+      lobbyID: lobby.get("lobbyID"),
+      lobbyName: lobby.get("lobbyName"),
+      playerNum: lobby.get("playerNum"),
+      levelSize: game.get("levelSize"),
+      gridSize: game.get("gridSize"),
+      lobbyState: lobby.get("lobbyState"),
+      allowSpectators: lobby.get("allowSpectators"),
+      playerList: playerDetails,
+      currentTurn: game.get("currentPlayerIndex") + 1,
+      board: isInitialState ? undefined : boardState,
     };
   }
 }

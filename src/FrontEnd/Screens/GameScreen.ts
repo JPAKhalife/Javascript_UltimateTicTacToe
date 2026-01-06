@@ -7,18 +7,23 @@
  */
 
 import p5 from "p5";
-import GameManager, { GameType } from "../GameManager";
+import LocalGameManager from "../GameManager/LocalGameManager";
+import OnlineGameManager from "../GameManager/OnlineGameManager";
+import { GameType } from "../GameManager/GameManager";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
 import Menu, { Screens } from "../Menu";
 import TicTacBoard from "../MenuObjects/TicTacBoard";
 import { getCanvasSize, fontmono, HEADER, fontOSDMONO } from "../sketch";
+import ScreenBorder from "../MenuObjects/ScreenBorder";
+import type { GameStateInfo } from "../../Shared/Contracts/MessageToClientSchema";
 
 export default class GameScreen implements Menu {
   private keylistener: KeyListener;
   private sketch: p5;
-  private game: GameManager;
+  private game: LocalGameManager | OnlineGameManager;
   private board: TicTacBoard;
   private gameType: GameType;
+  private border: ScreenBorder;
 
   constructor(
     sketch: p5,
@@ -34,9 +39,33 @@ export default class GameScreen implements Menu {
       "[GameScreen] Initializing game with mode: ",
       gameType === GameType.LOCAL ? "LOCAL" : "ONLINE",
     );
+
     // Create a game given the parameters passed to the function
-    this.game = new GameManager(gameType, gridSize, gridLevels, lobbyId);
-    this.board = new TicTacBoard(this.sketch, this.game, 0.5, 0.5, 1);
+    if (gameType === GameType.LOCAL) {
+      // Local game - use LocalGameManager
+      this.game = new LocalGameManager(gridSize, gridLevels);
+    } else {
+      // Online game - retrieve gameState from localStorage if available
+      let gameStateInfo: GameStateInfo | undefined = undefined;
+      const storedGameState = localStorage.getItem("gameState");
+      if (storedGameState) {
+        try {
+          gameStateInfo = JSON.parse(storedGameState);
+          console.info("[GameScreen] Retrieved game state from localStorage");
+          // Clean up localStorage
+          localStorage.removeItem("gameState");
+        } catch (error) {
+          console.error("[GameScreen] Failed to parse game state:", error);
+        }
+      }
+
+      // Use OnlineGameManager with game state
+      this.game = new OnlineGameManager(GameType.ONLINE, gridSize, gridLevels, lobbyId, gameStateInfo);
+    }
+
+    this.board = new TicTacBoard(this.sketch, this.game, 0.5, 0.5, 0.8);
+    this.border = new ScreenBorder(this.sketch, 0.01, 10, 255);
+    this.border.setTransitionIn(true);
   }
 
   public getSketch(): p5 {
@@ -55,6 +84,9 @@ export default class GameScreen implements Menu {
 
     // Render our board
     this.board.draw();
+
+    //Draw a border for the nice feel
+    this.border.draw();
 
     // Detect key presses that get put into the tictacboard
     let keyEvent = this.keylistener.listen();
@@ -99,7 +131,7 @@ export default class GameScreen implements Menu {
     this.sketch.textSize(canvasSize * 0.03);
     this.sketch.text("Current Player:", canvasSize / 2, (canvasSize / 20) * 17);
     this.sketch.text(
-      HEADER.PLAYER_NAMES[this.game.getTurn() - 1],
+      this.game.getTurnName(),
       canvasSize / 2,
       (canvasSize / 20) * 18,
     );

@@ -6,10 +6,7 @@
  * @updated 2024-06-23
  */
 
-import GameManager from "../GameManager";
 import Menu, { Screens } from "../Menu";
-import { GameType } from "../GameManager";
-import TicTacBoard from "../MenuObjects/TicTacBoard";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
 import p5 from "p5";
 import { getCanvasSize } from "../sketch";
@@ -30,7 +27,7 @@ export default class TestScreen implements Menu {
     return this.sketch;
   }
 
-  public init(): void {}
+  public init(): void { }
 
   public draw(): void {
     this.sketch.background(0);

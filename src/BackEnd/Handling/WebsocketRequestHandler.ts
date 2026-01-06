@@ -672,10 +672,23 @@ async function handleJoinLobby(
       console.info(`[joinLobby] Player ${playerID} joined as spectator to running game ${lobbyID}`);
     }
 
-    // All we need to return the player is whether or not the joining was a success, so they can move on to the loading screen.
-    // They will receive another message when the game actually starts.
-    const lobbyInfo = ResponseBuilder.lobbyToInfo(lobby);
-    return ResponseBuilder.joinLobby(lobbyInfo, SUCCESS_MESSAGES.OPERATION_SUCCESS);
+    // Build complete game state info with player list
+    const playerList = lobby.getPlayerList();
+    const playerIDs = playerList.getItems();
+
+    // Fetch player details (username) for each player in the lobby
+    const playerDetails = await Promise.all(
+      playerIDs.map(async (id: string) => {
+        const player = await Player.getById(id);
+        return {
+          playerID: id,
+          username: player ? player.get("username") : "Unknown",
+        };
+      })
+    );
+
+    const gameStateInfo = await ResponseBuilder.lobbyToGameState(lobby, playerDetails);
+    return ResponseBuilder.joinLobby(gameStateInfo, SUCCESS_MESSAGES.OPERATION_SUCCESS);
   } catch (error) {
     console.error("Error joining lobby:", error);
     return ResponseBuilder.error(ERROR_MESSAGES.INTERNAL_ERROR);

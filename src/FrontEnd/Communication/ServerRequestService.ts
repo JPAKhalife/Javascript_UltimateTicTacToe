@@ -10,6 +10,7 @@ import {
   type RegisterPlayerResponse,
   type CreateLobbyResponse,
   type LobbyInfo,
+  type GameStateInfo,
   FROM_SERVER_MESSAGE_TYPES,
 } from "../../Shared/Contracts/MessageToClientSchema";
 import { FROM_CLIENT_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToServerSchema";
@@ -205,9 +206,9 @@ export default class ServerRequestService {
    * @method joinLobby
    * @description Join an existing lobby
    * @param lobbyID The ID of the lobby to join
-   * @returns Promise resolving to lobby information if successful, or an object with error property if failed
+   * @returns Promise resolving to game state information if successful, or an object with error property if failed
    */
-  public async joinLobby(lobbyID: string): Promise<LobbyInfo | { error: string }> {
+  public async joinLobby(lobbyID: string): Promise<GameStateInfo | { error: string }> {
     try {
       const message = {
         type: FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY,
@@ -219,24 +220,25 @@ export default class ServerRequestService {
 
       const response = await this.webManager.sendRequest<{
         success: boolean;
-        lobby: any;
+        gameState: any;
         error?: string;
         message?: string;
       }>(message, FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY);
 
-      if (response && response.success && response.lobby) {
+      if (response && response.success && response.gameState) {
         console.info("[ServerRequestService] Joined lobby successfully:", lobbyID);
 
         return {
-          lobbyID: response.lobby.lobbyID,
-          lobbyName: response.lobby.lobbyName,
-          playerNum: response.lobby.playerNum,
-          levelSize: response.lobby.levelSize,
-          gridSize: response.lobby.gridSize,
-          playersJoined: response.lobby.playersJoined,
-          creator: response.lobby.creator,
-          lobbyState: response.lobby.lobbyState,
-          allowSpectators: response.lobby.allowSpectators,
+          lobbyID: response.gameState.lobbyID,
+          lobbyName: response.gameState.lobbyName,
+          playerNum: response.gameState.playerNum,
+          levelSize: response.gameState.levelSize,
+          gridSize: response.gameState.gridSize,
+          lobbyState: response.gameState.lobbyState,
+          allowSpectators: response.gameState.allowSpectators,
+          playerList: response.gameState.playerList,
+          currentTurn: response.gameState.currentTurn,
+          board: response.gameState.board,
         };
       }
 

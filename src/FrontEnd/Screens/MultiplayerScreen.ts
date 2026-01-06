@@ -17,7 +17,7 @@ import LobbyDot, { LobbyInfo } from "../MenuObjects/LobbyDot";
 import { FRAMERATE } from "../Constants";
 import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
-import { GameType } from "../GameManager";
+import { GameType } from "../GameManager/GameManager";
 import ServerRequestService from "../Communication/ServerRequestService";
 import { handleJoinLobbyResponse } from "../Communication/ServerResponseHandler";
 

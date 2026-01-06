@@ -142,7 +142,7 @@ export default class LoadingScreen implements Menu {
     ) {
       this.transitionOutActive = false;
       this.keylistener.activate();
-      GuiManager.changeScreen(this.nextScreen, this.sketch, this.args);
+      GuiManager.changeScreen(this.nextScreen, this.sketch, ...this.args);
     }
   }
 

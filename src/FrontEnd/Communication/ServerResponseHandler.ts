@@ -12,7 +12,7 @@ import ServerRequestService from "./ServerRequestService";
 import WebManager from "./WebManager";
 import { setupGameStartListener } from "./ServerEventHandler";
 import { Screens } from "../Menu";
-import { GameType } from "../GameManager";
+import { GameType } from "../GameManager/GameManager";
 import p5 from "p5";
 import type LobbyDot from "../MenuObjects/LobbyDot";
 
@@ -138,12 +138,12 @@ export async function handleJoinLobbyResponse(
         return;
     }
 
-    // Success - result is LobbyInfo
-    const lobbyInfo = result;
+    // Success - result is GameStateInfo
+    const gameState = result;
 
     // Determine if this is a spectator joining a running game
-    const isSpectator = lobbyInfo.playersJoined > lobbyInfo.playerNum;
-    const isGameRunning = lobbyInfo.lobbyState === "running";
+    const isSpectator = gameState.playerList.length > gameState.playerNum;
+    const isGameRunning = gameState.lobbyState === "running";
 
     // Set up game listener to trigger LoadingScreen transition when game starts
     // This must happen BEFORE we transition to LoadingScreen
@@ -151,21 +151,24 @@ export async function handleJoinLobbyResponse(
     setupGameStartListener(
         requestService,
         sketch,
-        lobbyInfo.gridSize,
-        lobbyInfo.levelSize,
-        lobbyInfo.lobbyID
+        gameState.gridSize,
+        gameState.levelSize,
+        gameState.lobbyID
     );
 
     selectedLobbyDot.startSelectionTransition(async () => {
         // Navigate to LoadingScreen
         // For spectators joining running games, pass undefined to auto-transition
         // For regular players, pass empty function to wait for game start event
-        const loadingProcess = (isSpectator && isGameRunning) ? undefined : () => {};
+        const loadingProcess = (isSpectator && isGameRunning) ? undefined : () => { };
         const titleText = (isSpectator && isGameRunning) ? "Joining game..." : "Waiting for game to start...";
 
         if (isSpectator && isGameRunning) {
             console.info("[ServerResponseHandler] Spectator joining running game, will auto-transition after loading screen");
         }
+
+        // Store gameState in localStorage for GameScreen to retrieve
+        localStorage.setItem("gameState", JSON.stringify(gameState));
 
         GuiManager.changeScreen(
             Screens.LOADING_SCREEN,
@@ -174,9 +177,9 @@ export async function handleJoinLobbyResponse(
             titleText,
             loadingProcess,
             GameType.ONLINE,
-            lobbyInfo.gridSize,
-            lobbyInfo.levelSize,
-            lobbyInfo.lobbyID,
+            gameState.gridSize,
+            gameState.levelSize,
+            gameState.lobbyID,
         );
     });
 }

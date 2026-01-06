@@ -11,7 +11,7 @@ import GuiManager from "../GuiManager";
 import { Screens } from "../Menu";
 import LoadingScreen from "../Screens/LoadingScreen";
 import ServerRequestService from "./ServerRequestService";
-import { GameType } from "../GameManager";
+import { GameType } from "../GameManager/GameManager";
 import p5 from "p5";
 
 /**
@@ -86,10 +86,10 @@ export function setupGameStartListener(
           currentScreen.setNextScreen(Screens.GAME_SCREEN); //Ensure screen is set to game screen.
           currentScreen.activateTransitionOut(); // Activate the transition out of the loading screen.
         }
-      //If we changed the gamestate to canceled, that means acknowlegement failed. Return to the Multiplayer Screen!
+        //If we changed the gamestate to canceled, that means acknowlegement failed. Return to the Multiplayer Screen!
       } else if (message.state === GAME_STATES.CANCELLED) {
         requestService.removeGameListeners();
-        GuiManager.changeScreen(Screens.LOADING_SCREEN,sketch,Screens.MULTIPLAYER_SCREEN);
+        GuiManager.changeScreen(Screens.LOADING_SCREEN, sketch, Screens.MULTIPLAYER_SCREEN);
       }
 
     }

@@ -54,7 +54,7 @@ export const CreateLobbyResponse = BaseResponse.extend({
 export type CreateLobbyResponse = z.infer<typeof CreateLobbyResponse>;
 
 /**
- * Lobby information object used in responses
+ * Lobby information object used in search responses
  */
 export const LobbyInfo = z.object({
   lobbyID: z.string().uuid(),
@@ -70,6 +70,33 @@ export const LobbyInfo = z.object({
 export type LobbyInfo = z.infer<typeof LobbyInfo>;
 
 /**
+ * Player information for game state
+ */
+export const PlayerInfo = z.object({
+  playerID: z.string(),
+  username: z.string().max(VALIDATION.MAX_USERNAME_LENGTH),
+});
+export type PlayerInfo = z.infer<typeof PlayerInfo>;
+
+/**
+ * Complete game state information used when joining a lobby or reconnecting
+ * Provides everything the client needs to set up the game state
+ */
+export const GameStateInfo = z.object({
+  lobbyID: z.string().uuid(),
+  lobbyName: z.string().max(VALIDATION.MAX_USERNAME_LENGTH),
+  playerNum: z.number().int().lte(GAME_CONSTANTS.MAX_PLAYER_CAP),
+  levelSize: z.number().int().lte(GAME_CONSTANTS.MAX_LEVELSIZE_CAP),
+  gridSize: z.number().int().lte(GAME_CONSTANTS.MAX_GRIDSIZE_CAP),
+  lobbyState: z.string().max(VALIDATION.MAX_STANDARD_LENGTH),
+  allowSpectators: z.boolean(),
+  playerList: z.array(PlayerInfo),
+  currentTurn: z.number().int().gte(1),
+  board: z.array(z.number()).optional(),
+});
+export type GameStateInfo = z.infer<typeof GameStateInfo>;
+
+/**
  * Response for lobby search
  */
 export const SearchLobbyResponse = BaseResponse.extend({
@@ -81,7 +108,7 @@ export type SearchLobbyResponse = z.infer<typeof SearchLobbyResponse>;
  * Response for joining a lobby
  */
 export const JoinLobbyResponse = BaseResponse.extend({
-  lobby: LobbyInfo,
+  gameState: GameStateInfo,
 });
 export type JoinLobbyResponse = z.infer<typeof JoinLobbyResponse>;
 
@@ -96,6 +123,7 @@ export type MakeMoveResponse = z.infer<typeof MakeMoveResponse>;
  */
 export const ReconnectResponse = BaseResponse.extend({
   playerID: z.string(),
+  gameState: GameStateInfo.optional(),
 });
 export type ReconnectResponse = z.infer<typeof ReconnectResponse>;
 

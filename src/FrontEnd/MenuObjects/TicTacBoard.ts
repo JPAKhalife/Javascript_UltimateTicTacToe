@@ -8,7 +8,7 @@
 
 import p5 from "p5";
 
-import GameManager from "../GameManager";
+import type { GameManager } from "../GameManager/GameManager";
 import TicTac, { TicTacState } from "../TicTac";
 import BaseMenuItem from "./BaseMenuItem";
 import { getCanvasSize } from "../sketch";
@@ -286,10 +286,10 @@ export default class TicTacBoard extends BaseMenuItem {
   private getCacheIndex(): number {
     return Math.floor(
       this.tictac.getSelectedIndex() /
-        Math.pow(
-          this.GRID_SIZE * this.GRID_SIZE,
-          this.tictac.getLevelSize() - this.tictac.getSelectedLevel(),
-        ),
+      Math.pow(
+        this.GRID_SIZE * this.GRID_SIZE,
+        this.tictac.getLevelSize() - this.tictac.getSelectedLevel(),
+      ),
     );
   }
 
@@ -376,10 +376,10 @@ export default class TicTacBoard extends BaseMenuItem {
     let c = this.getCacheIndex();
     this.getSketch().rect(
       this.cache[this.tictac.getSelectedLevel()][
-        c + this.cursorRow * this.GRID_SIZE + this.cursorCol
+      c + this.cursorRow * this.GRID_SIZE + this.cursorCol
       ][0],
       this.cache[this.tictac.getSelectedLevel()][
-        c + this.cursorRow * this.GRID_SIZE + this.cursorCol
+      c + this.cursorRow * this.GRID_SIZE + this.cursorCol
       ][1],
       this.calculateSize(this.tictac.getSelectedLevel(), currentCanvasSize),
       this.calculateSize(this.tictac.getSelectedLevel(), currentCanvasSize),
