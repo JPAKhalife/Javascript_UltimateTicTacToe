@@ -9,9 +9,10 @@
 import p5 from "p5";
 
 import type { GameManager } from "../GameManager/GameManager";
-import TicTac, { TicTacState } from "../TicTac";
+
 import BaseMenuItem from "./BaseMenuItem";
 import { getCanvasSize } from "../sketch";
+import TicTac, { TicTacState } from "../../Shared/Game/TicTac";
 
 //creating the object type smalltictac.
 export default class TicTacBoard extends BaseMenuItem {
@@ -297,7 +298,8 @@ export default class TicTacBoard extends BaseMenuItem {
    * This method moves the cursor up
    */
   public cursorUp() {
-    if (this.isSelected()) {
+    // Block movement only when at the exact playable level
+    if (this.isSelected() && this.tictac.getSelectedLevel() !== 0) {
       if (this.cursorRow <= 0) {
         this.cursorRow = this.GRID_SIZE - 1;
       } else {
@@ -310,7 +312,8 @@ export default class TicTacBoard extends BaseMenuItem {
    * This method moves the cursor down
    */
   public cursorDown() {
-    if (this.isSelected()) {
+    // Block movement only when at the exact playable level
+    if (this.isSelected() && this.tictac.getSelectedLevel() !== 0) {
       if (this.cursorRow >= this.GRID_SIZE - 1) {
         this.cursorRow = 0;
       } else {
@@ -323,7 +326,8 @@ export default class TicTacBoard extends BaseMenuItem {
    * This method moves the cursor left
    */
   public cursorLeft() {
-    if (this.isSelected()) {
+    // Block movement only when at the exact playable level
+    if (this.isSelected() && this.tictac.getSelectedLevel() !== 0) {
       if (this.cursorCol <= 0) {
         this.cursorCol = this.GRID_SIZE - 1;
       } else {
@@ -336,7 +340,8 @@ export default class TicTacBoard extends BaseMenuItem {
    * This method moves the cursor right
    */
   public cursorRight() {
-    if (this.isSelected()) {
+    // Block movement only when at the exact playable level
+    if (this.isSelected() && this.tictac.getSelectedLevel() !== 0) {
       if (this.cursorCol >= this.GRID_SIZE - 1) {
         this.cursorCol = 0;
       } else {

@@ -6,9 +6,9 @@
  * @updated 2024-06-23
  */
 
-import TicTac, { TictacStateObject } from "../TicTac";
-import { DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER } from "../TicTac";
-import { TicTacState } from "../TicTac";
+import TicTac, { TictacStateObject } from "../../Shared/Game/TicTac";
+import { DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER } from "../../Shared/Game/TicTac";
+import { TicTacState } from "../../Shared/Game/TicTac";
 import { HEADER } from "../sketch";
 import { GameManager, GameType } from "./GameManager";
 
@@ -20,7 +20,7 @@ export default class LocalGameManager implements GameManager {
 
   constructor(
     gridSize: number = DEFAULT_GRID_SIZE,
-    gridLevels: number = 2,
+    gridLevels: number = 1,
   ) {
     //The game manager will own a single tictac - which will hold all of the other tictacs and the lowest level slots
     //This is initialized with recursion

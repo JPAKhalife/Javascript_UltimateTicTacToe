@@ -6,9 +6,9 @@
  * @updated 2024-06-23
  */
 
-import TicTac, { TictacStateObject } from "../TicTac";
-import { DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER } from "../TicTac";
-import { TicTacState } from "../TicTac";
+import TicTac, { TictacStateObject } from "../../Shared/Game/TicTac";
+import { DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER } from "../../Shared/Game/TicTac";
+import { TicTacState } from "../../Shared/Game/TicTac";
 import type { GameUpdateMessage, GameStateUpdateMessage } from "../Communication/WebManager";
 import type { GameStateInfo, PlayerInfo } from "../../Shared/Contracts/MessageToClientSchema";
 import ServerRequestService from "../Communication/ServerRequestService";
@@ -35,9 +35,15 @@ export default class OnlineGameManager implements GameManager {
   ) {
     //The game manager should have a variable that keeps track of whether or not it is playing online or offline
     this.gameType = gameType;
+
+    // Determine actual grid size and level size based on game state info
+    const actualGridSize = gameStateInfo?.gridSize ?? gridSize;
+    const actualGridLevels = gameStateInfo?.levelSize ?? gridLevels;
+
     //The game manager will own a single tictac - which will hold all of the other tictacs and the lowest level slots
     //This is initialized with recursion
-    this.board = new TicTac(gridLevels, gridSize);
+    this.board = new TicTac(actualGridLevels, actualGridSize);
+
     //This is used to keep track of the current player's turn
     this.turn = 1;
     this.isWon = false;
@@ -70,6 +76,8 @@ export default class OnlineGameManager implements GameManager {
           lobbyID: gameStateInfo.lobbyID,
           playerCount: gameStateInfo.playerList.length,
           currentTurn: gameStateInfo.currentTurn,
+          gridSize: actualGridSize,
+          levelSize: actualGridLevels,
           hasBoardState: !!gameStateInfo.board,
         });
       }

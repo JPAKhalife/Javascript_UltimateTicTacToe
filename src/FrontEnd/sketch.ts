@@ -55,7 +55,7 @@ export const HEADER = {
   ],
   LOADING_SCREEN_TITLE_MESSAGES: ["Seaching for players", "Preparing Game"],
   DOTS: ["", ".", "..", "..."],
-  PLAYER_NAMES: ["PLAYER O", "PLAYER X"],
+  PLAYER_NAMES: ["PLAYER X", "PLAYER O"],
 };
 
 const ATIME = {
@@ -127,7 +127,7 @@ const sketch = (p5: P5) => {
     GuiManager.addScreen(MultiplayerScreen, Screens.MULTIPLAYER_SCREEN);
     GuiManager.addScreen(CreateLobbyScreen, Screens.CREATE_LOBBY_SCREEN);
     GuiManager.addScreen(UsernameScreen, Screens.USERNAME_SCREEN);
-    GuiManager.changeScreen(Screens.GAME_SCREEN, p5, GameType.ONLINE);
+    GuiManager.changeScreen(Screens.GAME_SCREEN, p5, GameType.LOCAL);
     p5.background(255);
   };
 

@@ -6,12 +6,12 @@
  * @updated 2024-06-23
  */
 
-import TicTac, { TictacStateObject } from "../TicTac";
+import TicTac, { TictacStateObject } from "../../Shared/Game/TicTac";
 
 //This is a constant that holds the types of games that can exist
 export enum GameType {
-  LOCAL,
-  ONLINE,
+    LOCAL,
+    ONLINE,
 }
 
 export interface GameManager {
@@ -38,8 +38,8 @@ export interface GameManager {
      * @returns A boolean representing whether or not a move was played
      */
     playMove(
-    cursorCol: number,
-    cursorRow: number,
+        cursorCol: number,
+        cursorRow: number,
     ): Promise<TictacStateObject>
 
     /**
