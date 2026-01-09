@@ -42,27 +42,6 @@ export function setupGameStartListener(
       const currentScreen = GuiManager.getCurrentScreen();
       const alreadyOnLoadingScreen = currentScreen instanceof LoadingScreen;
 
-      if (alreadyOnLoadingScreen) {
-        console.info("[ServerEventHandler] Already on LoadingScreen, not recreating screen");
-      } else {
-        // Transition to LoadingScreen with stored lobby info
-        if (sketch && gridSize !== null && levelSize !== null && lobbyID !== null) {
-          GuiManager.changeScreen(
-            Screens.LOADING_SCREEN,
-            sketch,
-            Screens.GAME_SCREEN,
-            "Waiting for game to start...",
-            () => { }, // Empty function - listener handles transition
-            GameType.ONLINE,
-            gridSize,
-            levelSize,
-            lobbyID,
-          );
-        } else {
-          console.error("[ServerEventHandler] Missing lobby information for LoadingScreen transition");
-        }
-      }
-
       // Send acknowledgment to server that we received the request and are ready
       console.info("[ServerEventHandler] Sending acknowledgment for lobby:", lobbyID);
       requestService.AcknowledgeReady(lobbyID);
@@ -75,17 +54,20 @@ export function setupGameStartListener(
       if (message.state === GAME_STATES.RUNNING) {
         console.info("[ServerEventHandler] Game state has been updated to running");
 
-
-        //Remove the game listeners, add new ones
-        requestService.removeGameListeners();
-        requestService.addGameListeners(handleGameMessages);
-
         // Trigger the callback (e.g., transition to game screen)
         const currentScreen = GuiManager.getCurrentScreen();
         if (currentScreen instanceof LoadingScreen) {
           currentScreen.setNextScreen(Screens.GAME_SCREEN); //Ensure screen is set to game screen.
           currentScreen.activateTransitionOut(); // Activate the transition out of the loading screen.
+        } else {
+          console.debug("[ServerEventHandler] Not on LoadingScreen when RUNNING state received, retrying in 2s");
+          setTimeout(() => onGameEvent(message), 2000);
+          return;
         }
+
+        //Remove the game listeners, add new ones
+        requestService.removeGameListeners();
+        requestService.addGameListeners(handleGameMessages);
         //If we changed the gamestate to canceled, that means acknowlegement failed. Return to the Multiplayer Screen!
       } else if (message.state === GAME_STATES.CANCELLED) {
         requestService.removeGameListeners();

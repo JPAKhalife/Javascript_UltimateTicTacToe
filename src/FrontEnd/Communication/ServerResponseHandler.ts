@@ -15,6 +15,8 @@ import { Screens } from "../Menu";
 import { GameType } from "../GameManager/GameManager";
 import p5 from "p5";
 import type LobbyDot from "../MenuObjects/LobbyDot";
+import { GameStateInfo } from "../../Shared/Contracts/MessageToClientSchema";
+import MultiplayerScreen from "../Screens/MultiplayerScreen";
 
 /**
  * Responsible for handling the response from attempting to connect to the server via websocket
@@ -139,7 +141,7 @@ export async function handleJoinLobbyResponse(
     }
 
     // Success - result is GameStateInfo
-    const gameState = result;
+    const gameState: GameStateInfo = result;
 
     // Determine if this is a spectator joining a running game
     const isSpectator = gameState.playerList.length > gameState.playerNum;
@@ -156,30 +158,16 @@ export async function handleJoinLobbyResponse(
         gameState.lobbyID
     );
 
+    console.debug("[ServerResponseHandler] Initiating selection transition animation");
     selectedLobbyDot.startSelectionTransition(async () => {
-        // Navigate to LoadingScreen
-        // For spectators joining running games, pass undefined to auto-transition
-        // For regular players, pass empty function to wait for game start event
-        const loadingProcess = (isSpectator && isGameRunning) ? undefined : () => { };
-        const titleText = (isSpectator && isGameRunning) ? "Joining game..." : "Waiting for game to start...";
+        console.debug("[ServerResponseHandler] Selection transition callback invoked, triggering MultiplayerScreen transition out");
 
-        if (isSpectator && isGameRunning) {
-            console.info("[ServerResponseHandler] Spectator joining running game, will auto-transition after loading screen");
-        }
-
-        // Store gameState in localStorage for GameScreen to retrieve
+        // Store gameState in localStorage for MultiplayerScreen to retrieve
         localStorage.setItem("gameState", JSON.stringify(gameState));
 
-        GuiManager.changeScreen(
-            Screens.LOADING_SCREEN,
-            sketch,
-            Screens.GAME_SCREEN,
-            titleText,
-            loadingProcess,
-            GameType.ONLINE,
-            gameState.gridSize,
-            gameState.levelSize,
-            gameState.lobbyID,
-        );
+        // Trigger the MultiplayerScreen's transition out animation
+        // The screen will handle navigating to LoadingScreen when the transition completes
+        const multiplayerScreen = GuiManager.getCurrentScreen() as MultiplayerScreen;
+        multiplayerScreen.beginTransitionOut();
     });
 }

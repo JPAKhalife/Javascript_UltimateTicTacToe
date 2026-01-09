@@ -127,7 +127,7 @@ const sketch = (p5: P5) => {
     GuiManager.addScreen(MultiplayerScreen, Screens.MULTIPLAYER_SCREEN);
     GuiManager.addScreen(CreateLobbyScreen, Screens.CREATE_LOBBY_SCREEN);
     GuiManager.addScreen(UsernameScreen, Screens.USERNAME_SCREEN);
-    GuiManager.changeScreen(Screens.GAME_SCREEN, p5, GameType.LOCAL);
+    GuiManager.changeScreen(Screens.SETUP_SCREEN, p5, GameType.LOCAL);
     p5.background(255);
   };
 
