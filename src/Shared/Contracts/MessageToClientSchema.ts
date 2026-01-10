@@ -13,6 +13,7 @@ import { VALIDATION, GAME_CONSTANTS, GAME_STATES } from "../Constants";
 export enum FROM_SERVER_MESSAGE_TYPES {
   GAME_UPDATE = "game_update",
   GAME_STATE_UPDATE = "game_state_update",
+  GAME_INFO = "game_info",
   ACKNOWLEDGMENT_REQUEST = "acknowledgment_request",
 }
 
@@ -83,6 +84,7 @@ export type PlayerInfo = z.infer<typeof PlayerInfo>;
  * Provides everything the client needs to set up the game state
  */
 export const GameStateInfo = z.object({
+  type: z.literal("game_info"),
   lobbyID: z.string().uuid(),
   lobbyName: z.string().max(VALIDATION.MAX_USERNAME_LENGTH),
   playerNum: z.number().int().lte(GAME_CONSTANTS.MAX_PLAYER_CAP),

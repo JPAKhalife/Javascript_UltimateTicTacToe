@@ -671,23 +671,7 @@ async function handleJoinLobby(
     } else if (isSpectator && isGameRunning) {
       console.info(`[joinLobby] Player ${playerID} joined as spectator to running game ${lobbyID}`);
     }
-
-    // Build complete game state info with player list
-    const playerList = lobby.getPlayerList();
-    const playerIDs = playerList.getItems();
-
-    // Fetch player details (username) for each player in the lobby
-    const playerDetails = await Promise.all(
-      playerIDs.map(async (id: string) => {
-        const player = await Player.getById(id);
-        return {
-          playerID: id,
-          username: player ? player.get("username") : "Unknown",
-        };
-      })
-    );
-
-    const gameStateInfo = await ResponseBuilder.lobbyToGameState(lobby, playerDetails);
+    const gameStateInfo = await ResponseBuilder.lobbyToGameState(lobby);
     return ResponseBuilder.joinLobby(gameStateInfo, SUCCESS_MESSAGES.OPERATION_SUCCESS);
   } catch (error) {
     console.error("Error joining lobby:", error);

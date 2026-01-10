@@ -5,7 +5,7 @@
  * @created 2025-12-23
  */
 
-import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage } from "../../Shared/Contracts/MessageToClientSchema";
+import { FROM_SERVER_MESSAGE_TYPES, GameStateInfo, GameStateUpdateMessage, GameUpdateMessage } from "../../Shared/Contracts/MessageToClientSchema";
 import { GAME_STATES } from "../Constants";
 import GuiManager from "../GuiManager";
 import { Screens } from "../Menu";
@@ -13,6 +13,9 @@ import LoadingScreen from "../Screens/LoadingScreen";
 import ServerRequestService from "./ServerRequestService";
 import { GameType } from "../GameManager/GameManager";
 import p5 from "p5";
+import { AcknowledgeReadyRequest } from "../../Shared/Contracts/MessageToServerSchema";
+import OnlineGameManager from "../GameManager/OnlineGameManager";
+import GameScreen from "../Screens/GameScreen";
 
 /**
  * @function setupGameStartListener
@@ -67,8 +70,9 @@ export function setupGameStartListener(
 
         //Remove the game listeners, add new ones
         requestService.removeGameListeners();
-        requestService.addGameListeners(handleGameMessages);
-        //If we changed the gamestate to canceled, that means acknowlegement failed. Return to the Multiplayer Screen!
+        requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE, handleGameUpdates);
+        requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE, handleGameStateUpdates);
+        requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, handleAcknowlegementRequests);        //If we changed the gamestate to canceled, that means acknowlegement failed. Return to the Multiplayer Screen!
       } else if (message.state === GAME_STATES.CANCELLED) {
         requestService.removeGameListeners();
         GuiManager.changeScreen(Screens.LOADING_SCREEN, sketch, Screens.MULTIPLAYER_SCREEN);
@@ -78,26 +82,36 @@ export function setupGameStartListener(
   };
 
   // Add listeners NOW, before joining/creating lobby
-  requestService.addGameListeners(onGameEvent);
+  requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE, onGameEvent);
+  requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, onGameEvent);
+  requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_INFO, handleResync);
+
 }
 
 /**
- * @function handleGameMessages
- * @description Responsible for handling online updates during the course of the game
- * @param message the message sent from the server
+ * @function handleAcknowlegementRequests
+ * @description handles an acknowlegement request
+ * @param message
  */
-export function handleGameMessages(message: any) {
-  const requestService = ServerRequestService.getInstance();
-  //Check the type of the message
-  switch (message.type) {
-    //If the user sends another acknowlegement request (for some reason)
-    case FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST:
-      console.debug("[handleGameMessages] Received acknowlegement request");
-      requestService.AcknowledgeReady(localStorage.getItem("lobbyID") || "");
-      break;
-    case FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE:
-      handleGameStateUpdates(message);
-  }
+export function handleAcknowlegementRequests(message: AcknowledgeReadyRequest) {
+  ServerRequestService.getInstance().AcknowledgeReady(localStorage.getItem("lobbyID") as string);
+}
+
+/**
+ * @function handleResync
+ * @description Handles a resync from the server
+ * @param message
+ */
+export function handleResync(message: GameStateInfo) {
+  // First, check if we are currently on the gamescreen. If not, initialize a new online game with the desired setup.
+  if (GuiManager.getCurrentScreen() instanceof GameScreen) {
+    const game = (GuiManager.getCurrentScreen() as GameScreen).getGameManager() as OnlineGameManager;
+    game.setGameStateInfo(message);
+    console.debug("[HandleResync] setting gamemanager state");
+  } else {
+    localStorage.setItem("gameState", JSON.stringify(message));
+    console.debug("[HandleResync] storing gamestate ", message);
+  } 
 }
 
 /**

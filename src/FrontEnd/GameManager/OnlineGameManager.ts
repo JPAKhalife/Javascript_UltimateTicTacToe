@@ -13,75 +13,67 @@ import type { GameUpdateMessage, GameStateUpdateMessage } from "../Communication
 import type { GameStateInfo, PlayerInfo } from "../../Shared/Contracts/MessageToClientSchema";
 import ServerRequestService from "../Communication/ServerRequestService";
 import { GameManager, GameType } from "./GameManager";
+import GuiManager from "../GuiManager";
+import StartScreen from '../Screens/StartScreen';
+import GameBoardState from "../../Shared/Game/GameBoardState";
 
 //This class activates as soon as a game is started
 export default class OnlineGameManager implements GameManager {
-  private gameType: GameType;
+  private gameType: GameType = GameType.ONLINE;
   private board: TicTac;
   private turn: number;
   private isWon: boolean;
   private playerNumber: number;
-  private requestService: ServerRequestService | null = null;
-  private lobbyId: string | null = null;
+  private requestService: ServerRequestService;
+  private lobbyID: string ;
   private playerList: PlayerInfo[] = [];
-  private gameState: GameStateInfo | null = null;
+  private gameState: GameStateInfo;
 
   constructor(
-    gameType: GameType = GameType.LOCAL,
-    gridSize: number = DEFAULT_GRID_SIZE,
-    gridLevels: number = 2,
-    lobbyId?: string,
-    gameStateInfo?: GameStateInfo
+    gameStateInfo: GameStateInfo
   ) {
-    //The game manager should have a variable that keeps track of whether or not it is playing online or offline
-    this.gameType = gameType;
+    this.isWon = false;
+    // this.requestService.addGameListeners(this.handleGameUpdate.bind(this));
 
-    // Determine actual grid size and level size based on game state info
-    const actualGridSize = gameStateInfo?.gridSize ?? gridSize;
-    const actualGridLevels = gameStateInfo?.levelSize ?? gridLevels;
-
+    // Store game state information if provided
+    if (!gameStateInfo) { 
+      throw Error("Online Game initialized without GameInfo");
+     }
+    console.debug("[OnlineGameManager] Initializing online game with gamestate: ", gameStateInfo);
+    //This is used to keep track of the current player's turn
+    this.turn = gameStateInfo.currentTurn as number;
+    this.playerNumber = gameStateInfo.playerNum as number;
+    this.lobbyID = gameStateInfo.lobbyID;
+    this.requestService = ServerRequestService.getInstance();
     //The game manager will own a single tictac - which will hold all of the other tictacs and the lowest level slots
     //This is initialized with recursion
-    this.board = new TicTac(actualGridLevels, actualGridSize);
+    this.board = new TicTac(gameStateInfo.levelSize, gameStateInfo.gridSize);
+    this.gameState = gameStateInfo;
+    this.playerList = gameStateInfo.playerList;
+    this.turn = gameStateInfo.currentTurn;
+    this.playerNumber = gameStateInfo.playerNum;
 
-    //This is used to keep track of the current player's turn
-    this.turn = 1;
-    this.isWon = false;
-    this.playerNumber = DEFAULT_PLAYER_NUMBER;
-
-    console.info(
-      "[GameManager] Initializing game with mode: ",
-      gameType === GameType.LOCAL ? "LOCAL" : "ONLINE",
-    );
-
-    if (gameType === GameType.ONLINE) {
-      this.lobbyId = lobbyId || null;
-      this.requestService = ServerRequestService.getInstance();
-      this.requestService.addGameListeners(this.handleGameUpdate.bind(this));
-
-      // Store game state information if provided
-      if (gameStateInfo) {
-        this.gameState = gameStateInfo;
-        this.playerList = gameStateInfo.playerList;
-        this.turn = gameStateInfo.currentTurn;
-        this.playerNumber = gameStateInfo.playerNum;
-
-        // If board state was provided (for reconnection or spectator joining running game), apply it
-        // TODO: Implement board state restoration when TicTac.setBoardState() is available
-        if (gameStateInfo.board) {
-          console.info("[GameManager] Board state received, restoration not yet implemented");
-        }
-
-        console.info("[GameManager] Initialized with game state:", {
-          lobbyID: gameStateInfo.lobbyID,
-          playerCount: gameStateInfo.playerList.length,
-          currentTurn: gameStateInfo.currentTurn,
-          gridSize: actualGridSize,
-          levelSize: actualGridLevels,
-          hasBoardState: !!gameStateInfo.board,
-        });
-      }
+    // If board state was provided (for reconnection or spectator joining running game), apply it
+    if (gameStateInfo.board) {
+      const boardState = GameBoardState.fromJSON({
+        grid: gameStateInfo.board,
+        gridSize: gameStateInfo.gridSize,
+        maxLevelSize: gameStateInfo.levelSize,
+        selectedLevel: 1,
+        selectedIndex: 0,
+      });
+      this.board.setBoardState(boardState);
+      console.info("[GameManager] Board state restored from server");
     }
+
+    console.info("[GameManager] Initialized with game state:", {
+      lobbyID: gameStateInfo.lobbyID,
+      playerCount: gameStateInfo.playerList.length,
+      currentTurn: gameStateInfo.currentTurn,
+      gridSize: gameStateInfo.gridSize,
+      levelSize: gameStateInfo.levelSize,
+      hasBoardState: !!gameStateInfo.board,
+    });
   }
 
   /**
@@ -125,21 +117,21 @@ export default class OnlineGameManager implements GameManager {
     cursorRow: number,
   ): Promise<TictacStateObject> {
     if (this.gameType === GameType.ONLINE) {
-      if (!this.requestService || !this.lobbyId) {
+      if (!this.requestService || !this.lobbyID) {
         console.error(
-          "Cannot make move: ServerRequestService or lobbyId not initialized",
+          "Cannot make move: ServerRequestService or lobbyID not initialized",
         );
         // return { state: TicTacState.INVALID };
       }
 
       // Send move to server
-      if (this.requestService && this.lobbyId) {
-        const success = await this.requestService.makeMove(this.lobbyId, {
+      if (this.requestService && this.lobbyID) {
+        const success = await this.requestService.makeMove(this.lobbyID, {
           col: cursorCol,
           row: cursorRow,
         });
       } else {
-        console.error("ServerRequestService or lobbyId is null");
+        console.error("ServerRequestService or lobbyID is null");
       }
 
       // Server will send game_update if move is valid
@@ -256,5 +248,38 @@ export default class OnlineGameManager implements GameManager {
    */
   getPlayerNumber(): number {
     return this.playerNumber;
+  }
+
+  /**
+   * @method setGameStateInfo
+   * @description Set the game info based on new incoming information
+   * @param gameStateInfo The new game state information from the server
+   */
+  setGameStateInfo(gameStateInfo: GameStateInfo): void {
+    this.gameState = gameStateInfo;
+    this.lobbyID = gameStateInfo.lobbyID;
+    this.playerList = gameStateInfo.playerList;
+    this.turn = gameStateInfo.currentTurn;
+    this.playerNumber = gameStateInfo.playerNum;
+
+    // Update board state if provided
+    if (gameStateInfo.board) {
+      const boardState = GameBoardState.fromJSON({
+        grid: gameStateInfo.board,
+        gridSize: gameStateInfo.gridSize,
+        maxLevelSize: gameStateInfo.levelSize,
+        selectedLevel: 1,
+        selectedIndex: 0,
+      });
+      this.board.setBoardState(boardState);
+      console.info("[GameManager] Board state updated from server");
+    }
+
+    console.info("[GameManager] Game state updated:", {
+      lobbyID: gameStateInfo.lobbyID,
+      playerCount: gameStateInfo.playerList.length,
+      currentTurn: gameStateInfo.currentTurn,
+      hasBoardState: !!gameStateInfo.board,
+    });
   }
 }

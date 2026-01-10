@@ -323,7 +323,7 @@ export default class LobbyDot extends BaseMenuItem {
     // Check if transition is complete
     if (
       (this.selectionTransitionTime <= 0 ||
-      this.selectionTransitionRadius >= currentCanvasSize * 2)
+        this.selectionTransitionRadius >= currentCanvasSize * 2)
       && !this.selectionTransitionComplete
     ) {
       console.debug("[LobbyDot] Selection transition complete, invoking callback");

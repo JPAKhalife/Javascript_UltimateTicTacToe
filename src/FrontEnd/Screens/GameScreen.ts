@@ -9,13 +9,14 @@
 import p5 from "p5";
 import LocalGameManager from "../GameManager/LocalGameManager";
 import OnlineGameManager from "../GameManager/OnlineGameManager";
-import { GameType } from "../GameManager/GameManager";
+import { GameManager, GameType } from "../GameManager/GameManager";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
 import Menu, { Screens } from "../Menu";
 import TicTacBoard from "../MenuObjects/TicTacBoard";
 import { getCanvasSize, fontmono, HEADER, fontOSDMONO } from "../sketch";
 import ScreenBorder from "../MenuObjects/ScreenBorder";
 import type { GameStateInfo } from "../../Shared/Contracts/MessageToClientSchema";
+import GuiManager from "../GuiManager";
 
 export default class GameScreen implements Menu {
   private keylistener: KeyListener;
@@ -30,7 +31,7 @@ export default class GameScreen implements Menu {
     gameType = GameType.LOCAL,
     gridSize = 3,
     gridLevels = 2,
-    lobbyId?: string,
+    lobbyID?: string,
   ) {
     this.keylistener = new KeyListener(sketch);
     this.sketch = sketch;
@@ -45,22 +46,11 @@ export default class GameScreen implements Menu {
       // Local game - use LocalGameManager
       this.game = new LocalGameManager(gridSize, gridLevels);
     } else {
-      // Online game - retrieve gameState from localStorage if available
-      let gameStateInfo: GameStateInfo | undefined = undefined;
       const storedGameState = localStorage.getItem("gameState");
-      if (storedGameState) {
-        try {
-          gameStateInfo = JSON.parse(storedGameState);
-          console.info("[GameScreen] Retrieved game state from localStorage");
-          // Clean up localStorage
-          localStorage.removeItem("gameState");
-        } catch (error) {
-          console.error("[GameScreen] Failed to parse game state:", error);
-        }
+      if (!storedGameState) {
+        throw new Error("Online game requires gameState in localStorage");
       }
-
-      // Use OnlineGameManager with game state
-      this.game = new OnlineGameManager(GameType.ONLINE, gridSize, gridLevels, lobbyId, gameStateInfo);
+      this.game = new OnlineGameManager(JSON.parse(storedGameState) as GameStateInfo);
     }
 
     this.board = new TicTacBoard(this.sketch, this.game, 0.5, 0.5, 0.8);
@@ -143,5 +133,9 @@ export default class GameScreen implements Menu {
       // - Number of spectators
       // - Opponent info
     }
+  }
+
+  public getGameManager(): GameManager {
+    return this.game;
   }
 }

@@ -197,7 +197,7 @@ export default class LoadingScreen implements Menu {
     // Get the current loading message
     const currentMessage =
       HEADER.LOADING_SCREEN_MESSAGES[
-        this.loadingMessageIndex % HEADER.LOADING_SCREEN_MESSAGES.length
+      this.loadingMessageIndex % HEADER.LOADING_SCREEN_MESSAGES.length
       ];
 
     // Define text box dimensions
@@ -257,5 +257,9 @@ export default class LoadingScreen implements Menu {
 
   public setNextScreen(nextScreen: Screens): void {
     this.nextScreen = nextScreen;
+  }
+
+  public getNextScreen(): Screens {
+    return this.nextScreen;
   }
 }

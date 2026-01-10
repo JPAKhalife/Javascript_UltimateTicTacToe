@@ -268,7 +268,7 @@ export default class MultiplayerScreen implements Menu {
       this.lobbyRefreshTime = LOBBY_REFRESH_TIME;
       if (this.lobbyList.length <= 0) {
         this.fetchLobbyList(DEFAULT_LOBBY_DISPLAY_NUM);
-      } 
+      }
     } else {
       this.lobbyRefreshTime--;
     }

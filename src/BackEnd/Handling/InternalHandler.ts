@@ -56,4 +56,4 @@ export async function handleLobbyAckTimeout(expiredKey: string) {
  * - Lobby acknowledgment timeouts: handled per-lobby when ack set is created
  * - Connection expiry: no longer used (connections are cleaned up via session expiry)
  */
-export async function registerInternalEventHandlers(): Promise<void> {}
+export async function registerInternalEventHandlers(): Promise<void> { }
