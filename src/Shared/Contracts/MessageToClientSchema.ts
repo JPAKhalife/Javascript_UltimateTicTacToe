@@ -42,6 +42,7 @@ export type BaseResponse = z.infer<typeof BaseResponse>;
  */
 export const RegisterPlayerResponse = BaseResponse.extend({
   sessionID: z.string(),
+  playerID: z.string().uuid(),
   message: z.string(),
 });
 export type RegisterPlayerResponse = z.infer<typeof RegisterPlayerResponse>;

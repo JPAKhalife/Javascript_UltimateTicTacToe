@@ -282,4 +282,57 @@ export default class OnlineGameManager implements GameManager {
       hasBoardState: !!gameStateInfo.board,
     });
   }
+
+  /**
+   * @method getMyPlayerIndex
+   * @description Get the current client's player index (0-based) in the player list
+   * @returns {number | undefined} The player's index, or undefined if not found/spectator
+   */
+  getMyPlayerIndex(): number | undefined {
+    const myPlayerID = this.requestService.getPlayerId();
+    if (!myPlayerID) {
+      return undefined;
+    }
+    const index = this.playerList.findIndex(p => p.playerID === myPlayerID);
+    return index === -1 ? undefined : index;
+  }
+
+  /**
+   * @method getMyPlayerNumber
+   * @description Get the current client's player number (1-based) for turn comparison
+   * @returns {number | undefined} The player's number (1-based), or undefined if not found/spectator
+   */
+  getMyPlayerNumber(): number | undefined {
+    const index = this.getMyPlayerIndex();
+    return index !== undefined ? index + 1 : undefined;
+  }
+
+  /**
+   * @method isMyTurn
+   * @description Check if it's the current client's turn
+   * @returns {boolean} True if it's this client's turn, false otherwise
+   */
+  isMyTurn(): boolean {
+    const myNumber = this.getMyPlayerNumber();
+    return myNumber !== undefined && this.turn === myNumber;
+  }
+
+  /**
+   * @method isSpectator
+   * @description Check if the current client is a spectator (not in the player list)
+   * @returns {boolean} True if spectator, false if player
+   */
+  isSpectator(): boolean {
+    return this.getMyPlayerIndex() === undefined;
+  }
+
+  /**
+   * @method getMyPlayerInfo
+   * @description Get the current client's player info
+   * @returns {PlayerInfo | undefined} The client's player info, or undefined if spectator
+   */
+  getMyPlayerInfo(): PlayerInfo | undefined {
+    const index = this.getMyPlayerIndex();
+    return index !== undefined ? this.playerList[index] : undefined;
+  }
 }

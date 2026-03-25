@@ -453,6 +453,7 @@ async function handleRegisterPlayer(
       console.debug("[WebsocketRequestHandler] Successfully registered player", username);
       return ResponseBuilder.registerPlayer(
         token,
+        playerID,
         SUCCESS_MESSAGES.REGISTRATION_SUCCESS
       );
     }

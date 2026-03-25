@@ -41,12 +41,14 @@ export class ResponseBuilder {
    */
   static registerPlayer(
     sessionID: string,
+    playerID: string,
     message: string,
     messageID?: string,
   ): RegisterPlayerResponse {
     return {
       success: true,
       sessionID,
+      playerID,
       message,
       messageID,
     };

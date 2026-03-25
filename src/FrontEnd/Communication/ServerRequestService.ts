@@ -87,8 +87,9 @@ export default class ServerRequestService {
         FROM_CLIENT_MESSAGE_TYPES.REGISTER_PLAYER
       );
 
-      if (response.success && response.sessionID) {
+      if (response.success && response.sessionID && response.playerID) {
         this.webManager.setSessionId(response.sessionID);
+        this.webManager.setPlayerId(response.playerID);
         console.info("[ServerRequestService] Player registered successfully");
         return response;
       }
@@ -381,10 +382,20 @@ export default class ServerRequestService {
   }
 
   /**
+   * @method getPlayerId
+   * @description Get the current player ID
+   * @returns The player ID or null if not set
+   */
+  public getPlayerId(): string | null {
+    return this.webManager.getPlayerId();
+  }
+
+  /**
    * @method clearSession
-   * @description Clear the current session
+   * @description Clear the current session and player identity
    */
   public clearSession(): void {
     this.webManager.clearSessionId();
+    this.webManager.clearPlayerId();
   }
 }

@@ -31,6 +31,7 @@ export default class WebManager {
   private maxReconnectAttempts: number = -1;
   private reconnectDelay: number = 1000; // Base delay in ms
   private sessionId: string | null = null;
+  private playerId: string | null = null;
 
   /**
    * Private constructor to enforce singleton pattern
@@ -38,6 +39,7 @@ export default class WebManager {
   private constructor() {
     // Private constructor to enforce singleton pattern
     this.sessionId = this.getStoredSessionId();
+    this.playerId = this.getStoredPlayerId();
   }
 
 
@@ -78,6 +80,44 @@ export default class WebManager {
    */
   public getSessionId(): string | null {
     return this.sessionId;
+  }
+
+  /**
+   * @method getStoredPlayerId
+   * @description Get the player ID from localStorage if it exists
+   * @returns {string|null} The player ID or null if it doesn't exist
+   * @private
+   */
+  private getStoredPlayerId(): string | null {
+    return localStorage.getItem("player_id");
+  }
+
+  /**
+   * @method setPlayerId
+   * @description Store the player ID in localStorage
+   * @param {string} playerId The player ID to store
+   */
+  public setPlayerId(playerId: string): void {
+    this.playerId = playerId;
+    localStorage.setItem("player_id", playerId);
+  }
+
+  /**
+   * @method clearPlayerId
+   * @description Clear the stored player ID
+   */
+  public clearPlayerId(): void {
+    this.playerId = null;
+    localStorage.removeItem("player_id");
+  }
+
+  /**
+   * @method getPlayerId
+   * @description Get the current player ID
+   * @returns {string|null} The player ID or null if not set
+   */
+  public getPlayerId(): string | null {
+    return this.playerId;
   }
 
   /**
