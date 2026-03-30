@@ -19,6 +19,8 @@ export interface GameData {
   levelSize: number;
   gridSize: number;
   currentPlayerIndex: number;
+  selectedLevel: number;
+  selectedIndex: number;
   winnerId?: string;
 }
 
@@ -85,6 +87,8 @@ export class Game extends RedisHash<GameData> {
       levelSize,
       gridSize,
       currentPlayerIndex: 0, // First player starts
+      selectedLevel: 1,
+      selectedIndex: 0,
       winnerId: undefined,
     };
 
@@ -140,6 +144,8 @@ export class Game extends RedisHash<GameData> {
         levelSize: parseInt(gameData.levelSize),
         gridSize: parseInt(gameData.gridSize),
         currentPlayerIndex: parseInt(gameData.currentPlayerIndex),
+        selectedLevel: parseInt(gameData.selectedLevel ?? "1"),
+        selectedIndex: parseInt(gameData.selectedIndex ?? "0"),
         winnerId: gameData.winnerId || undefined,
       };
 
@@ -189,6 +195,17 @@ export class Game extends RedisHash<GameData> {
     const players = this.playerList.getItems();
     this.data.currentPlayerIndex =
       (this.data.currentPlayerIndex + 1) % players.length;
+    await this.save();
+  }
+
+  /**
+   * Advance to the next player's turn and update the cursor state in one save
+   */
+  public async advanceTurn(selectedLevel: number, selectedIndex: number): Promise<void> {
+    const players = this.playerList.getItems();
+    this.data.currentPlayerIndex = (this.data.currentPlayerIndex + 1) % players.length;
+    this.data.selectedLevel = selectedLevel;
+    this.data.selectedIndex = selectedIndex;
     await this.save();
   }
 

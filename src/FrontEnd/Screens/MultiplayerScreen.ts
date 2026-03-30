@@ -185,7 +185,7 @@ export default class MultiplayerScreen implements Menu {
           const isSpectator = gameState.playerList.length > gameState.playerNum;
           const isGameRunning = gameState.lobbyState === "running";
           const loadingProcess = (isSpectator && isGameRunning) ? undefined : () => { };
-          const titleText = (isSpectator && isGameRunning) ? "Joining game..." : "Waiting for game to start...";
+          const titleText = (isSpectator && isGameRunning) ? "Joining game..." : "Waiting for game to start";
           GuiManager.changeScreen(
             Screens.LOADING_SCREEN,
             this.sketch,

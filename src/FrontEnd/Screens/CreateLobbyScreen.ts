@@ -217,7 +217,7 @@ export default class CreateLobbyScreen implements Menu {
           Screens.LOADING_SCREEN,
           this.sketch,
           Screens.GAME_SCREEN,
-          "Waiting for game to start...",
+          "Waiting for game to start",
           () => { }, // Empty function - listener handles transition
           GameType.ONLINE,
           gridSize,

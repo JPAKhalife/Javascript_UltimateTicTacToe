@@ -81,7 +81,7 @@ export default class OnlineGameManager implements GameManager {
    * @description Handle game updates from the server
    * @param update The game update from the server
    */
-  private handleGameUpdate(update: GameUpdateMessage | GameStateUpdateMessage): void {
+  public handleGameUpdate(update: GameUpdateMessage | GameStateUpdateMessage): void {
     // Handle game state updates
     if (update.type === "game_state_update") {
       // Handle game state changes (started, paused, ended)
@@ -89,11 +89,13 @@ export default class OnlineGameManager implements GameManager {
     } else if (update.type === "game_update") {
       // Handle game board updates
       if (update.board) {
-        const newGameState = GameBoardState.fromGrid(
-          update.board,
-          this.gameState.gridSize,
-          this.gameState.levelSize
-        );
+        const newGameState = GameBoardState.fromJSON({
+          grid: update.board,
+          gridSize: this.gameState.gridSize,
+          maxLevelSize: this.gameState.levelSize,
+          selectedLevel: update.selectedLevel ?? 1,
+          selectedIndex: update.selectedIndex ?? 0,
+        });
         this.board.setBoardState(newGameState);
       }
       if (update.turn) {

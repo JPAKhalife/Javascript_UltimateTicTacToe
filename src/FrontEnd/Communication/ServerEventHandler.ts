@@ -158,5 +158,9 @@ export function handleGameStateUpdates(message: GameStateUpdateMessage) {
  * @param message 
  */
 export function handleGameUpdates(message: GameUpdateMessage) {
-
+  const screen = GuiManager.getCurrentScreen();
+  if (screen instanceof GameScreen) {
+    const game = screen.getGameManager() as OnlineGameManager;
+    game.handleGameUpdate(message);
+  }
 }

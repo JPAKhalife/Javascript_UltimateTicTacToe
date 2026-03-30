@@ -28,12 +28,15 @@ import {
   AuthenticatedRequest,
   LobbyJoinRequest,
   AcknowledgeReadyRequest,
+  MakeMoveRequest,
 } from "../../Shared/Contracts/MessageToServerSchema";
 import Session from "../Database/Session";
 import { ERROR_MESSAGES, GAME_STATES, REDIS_KEYS, SUCCESS_MESSAGES } from "../Contants";
 import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
-import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout } from "./GameHandler";
+import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout, handlePlayerChange } from "./GameHandler";
+import GameRules, { TicTacState } from "../../Shared/Game/GameRules";
+import GameBoardState from "../../Shared/Game/GameBoardState";
 import { LobbyAcknowledgmentSet } from "../Database/Lobby/LobbyAcknowledgmentSet";
 const { v4: uuidv4 } = require("uuid");
 
@@ -119,13 +122,16 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       data: any,
       sessionData: any,
     ) => {
-      return createErrorResponse(data.type, ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
+      return handleMakeMove(ws, data, sessionData.get("playerID"));
     },
     [FROM_CLIENT_MESSAGE_TYPES.MAKE_MOVE]: async (
       data: any,
       sessionData: any,
     ) => {
-      return createErrorResponse(data.type, ERROR_MESSAGES.INTERNAL_ERROR); // Not implemented yet
+      const validation = MakeMoveRequest.safeParse(data);
+      return validation.success
+        ? handleMakeMove(ws, validation.data, sessionData.get("playerID"))
+        : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.ACKNOWLEDGE_READY]: async (
       data: any,
@@ -748,4 +754,64 @@ async function handleAcknowledgeReady(
     console.error("[AcknowledgeReady] Error:", error);
     return ResponseBuilder.error(ERROR_MESSAGES.INTERNAL_ERROR);
   }
+}
+
+/**
+ * Responsible for handling a make move request
+ * @param ws 
+ * @param data 
+ * @param playerID 
+ */
+async function handleMakeMove(ws: any,
+  data: MakeMoveRequest,
+  playerID: string,
+): Promise<object> {
+
+  //First get the lobby
+  const lobby = await Lobby.getById(data.parameters.lobbyID);
+  // Check lobby exists
+  if (!lobby) {
+    return ResponseBuilder.error(ERROR_MESSAGES.LOBBY_NOT_FOUND);
+  }
+
+  const game = lobby.getGame();
+
+  // Check if it is the player in question's turn. Also verifies the player is in the lobby.
+  if (game.getCurrentPlayerId() !== playerID) {
+    return ResponseBuilder.error(ERROR_MESSAGES.NOT_YOUR_TURN);
+  }
+
+  // Reconstruct the board state with cursor tracking for Ultimate TicTacToe rules
+  const boardState = GameBoardState.fromJSON({
+    grid: game.getBoardState(),
+    gridSize: game.get("gridSize"),
+    maxLevelSize: game.get("levelSize"),
+    selectedLevel: game.get("selectedLevel"),
+    selectedIndex: game.get("selectedIndex"),
+  });
+
+  // Player number is 1-based index in the player list
+  const players = game.getPlayerList().getItems();
+  const playerNumber = players.indexOf(playerID) + 1;
+
+  // Apply the move using shared game rules
+  const { col, row } = data.parameters.position;
+  const result = GameRules.applyMove(boardState, playerNumber, col, row);
+
+  if (result.state === TicTacState.ERROR) {
+    return ResponseBuilder.error(ERROR_MESSAGES.INVALID_MOVE);
+  }
+
+  // Save updated board to Redis (board is a separate Redis list, no version conflict)
+  await game.getBoard().resetBoard(boardState.toJSON().grid);
+
+  // Advance turn and persist cursor state in a single save (avoids concurrent modification)
+  if (result.state !== TicTacState.WIN) {
+    await game.advanceTurn(boardState.selectedLevel, boardState.selectedIndex);
+  }
+
+  // Broadcast the updated game state to all players in the lobby
+  await handlePlayerChange(lobby);
+
+  return { success: true };
 }

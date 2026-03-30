@@ -145,6 +145,8 @@ export const GameUpdateMessage = z.object({
   gameState: z.string().optional(),
   board: z.array(z.number()).optional(),
   turn: z.number().int().gte(1),
+  selectedLevel: z.number().int().gte(0).optional(),
+  selectedIndex: z.number().int().gte(0).optional(),
   lastMove: z
     .object({
       player: z.string(),

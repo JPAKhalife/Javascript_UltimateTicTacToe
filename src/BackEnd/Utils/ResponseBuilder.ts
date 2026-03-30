@@ -178,7 +178,7 @@ export class ResponseBuilder {
       lobbyState: lobby.get("lobbyState"),
       allowSpectators: lobby.get("allowSpectators"),
       playerList: playerDetails,
-      currentTurn: game.get("currentPlayerIndex"),
+      currentTurn: game.get("currentPlayerIndex") + 1,
       board: isInitialState ? undefined : boardState,
     };
   }

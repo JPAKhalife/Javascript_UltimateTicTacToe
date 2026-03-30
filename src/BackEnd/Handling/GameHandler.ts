@@ -134,6 +134,9 @@ export async function handlePlayerChange(lobby: Lobby) {
     type: FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE,
     turn: turn,
     gameState: lobby.get("lobbyState"),
+    board: boardState,
+    selectedLevel: game.get("selectedLevel"),
+    selectedIndex: game.get("selectedIndex"),
   };
 
   // Notify all clients of the player turn change
