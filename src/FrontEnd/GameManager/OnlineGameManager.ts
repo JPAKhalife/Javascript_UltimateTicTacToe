@@ -88,8 +88,13 @@ export default class OnlineGameManager implements GameManager {
       console.info("[GameManager] Game state update:", update.state);
     } else if (update.type === "game_update") {
       // Handle game board updates
-      if (update.gameState) {
-        // this.board.updateFromServer(update.gameState);
+      if (update.board) {
+        const newGameState = GameBoardState.fromGrid(
+          update.board,
+          this.gameState.gridSize,
+          this.gameState.levelSize
+        );
+        this.board.setBoardState(newGameState);
       }
       if (update.turn) {
         this.turn = update.turn;

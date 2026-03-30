@@ -11,6 +11,41 @@
       "skipFiles": ["<node_internals>/**"],
       "program": "${workspaceFolder}/sketch.ts",
       "outFiles": ["${workspaceFolder}/**/*.js"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Start Server (Docker)",
+      "runtimeArgs": ["-e", "console.log('Server started')"],
+      "preLaunchTask": "Start Server (Docker)"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Build, Start & Open 2 Clients",
+      "runtimeArgs": ["-e", "console.log('Done')"],
+      "preLaunchTask": "Build, Start & Open Clients"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Build, Start & Open N Clients",
+      "runtimeArgs": ["-e", "console.log('Done')"],
+      "preLaunchTask": "Build, Start & Open N Clients"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Open 2 Test Clients",
+      "runtimeArgs": ["-e", "console.log('Clients opened')"],
+      "preLaunchTask": "Open Test Clients"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Open N Test Clients",
+      "runtimeArgs": ["-e", "console.log('Clients opened')"],
+      "preLaunchTask": "Open N Test Clients"
     }
   ]
 }

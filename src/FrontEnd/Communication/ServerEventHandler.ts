@@ -41,13 +41,18 @@ export function setupGameStartListener(
     if (message.type === FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST) {
       console.info("[ServerEventHandler] Received ACKNOWLEDGMENT_REQUEST from server");
 
-      // Check if we're already on the LoadingScreen to avoid restarting it
-      const currentScreen = GuiManager.getCurrentScreen();
-      const alreadyOnLoadingScreen = currentScreen instanceof LoadingScreen;
-
-      // Send acknowledgment to server that we received the request and are ready
-      console.info("[ServerEventHandler] Sending acknowledgment for lobby:", lobbyID);
-      requestService.AcknowledgeReady(lobbyID);
+      const waitForLoadingScreen = () => {
+        const screen = GuiManager.getCurrentScreen();
+        if (screen instanceof LoadingScreen) {
+          screen.onTransitionInComplete(() => {
+            console.info("[ServerEventHandler] Entry animation done, sending acknowledgment for lobby:", lobbyID);
+            requestService.AcknowledgeReady(lobbyID);
+          });
+        } else {
+          setTimeout(waitForLoadingScreen, 100);
+        }
+      };
+      waitForLoadingScreen();
       return;
     }
 

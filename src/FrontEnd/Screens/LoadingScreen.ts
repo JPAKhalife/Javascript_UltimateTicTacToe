@@ -48,6 +48,7 @@ export default class LoadingScreen implements Menu {
   private loadingProcess?: () => void;
   private args: any[];
   private lobbyID?: string;
+  private transitionInCompleteCallback?: () => void;
 
   constructor(
     sketch: p5,
@@ -120,9 +121,27 @@ export default class LoadingScreen implements Menu {
       this.keylistener.activate();
       this.transitionInActive = false;
 
+      if (this.transitionInCompleteCallback) {
+        this.transitionInCompleteCallback();
+        this.transitionInCompleteCallback = undefined;
+      }
+
       if (this.loadingProcess) {
         this.loadingProcess();
       }
+    }
+  }
+
+  /**
+   * @method onTransitionInComplete
+   * @description Registers a callback to be fired when the entry animation finishes.
+   * If the animation is already done, the callback is called immediately.
+   */
+  public onTransitionInComplete(callback: () => void): void {
+    if (!this.transitionInActive) {
+      callback();
+    } else {
+      this.transitionInCompleteCallback = callback;
     }
   }
 
@@ -252,7 +271,7 @@ export default class LoadingScreen implements Menu {
   }
 
   public activateTransitionOut(): void {
-    this.proceed = true;
+    this.transitionOutActive = true;
   }
 
   public setNextScreen(nextScreen: Screens): void {

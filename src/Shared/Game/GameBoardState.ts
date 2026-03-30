@@ -202,6 +202,22 @@ export default class GameBoardState {
   }
 
   /**
+   * Creates a game state from a grid array
+   * @param grid - The grid as an array of numbers
+   * @param gridSize - Size of each tic-tac-toe grid
+   * @param maxLevelSize - Maximum nesting level
+   */
+  public static fromGrid(grid: number[], gridSize: number, maxLevelSize: number): GameBoardState {
+    return GameBoardState.fromJSON({
+      grid,
+      gridSize,
+      maxLevelSize,
+      selectedLevel: 1,
+      selectedIndex: 0,
+    });
+  }
+
+  /**
    * Creates a deep copy of this game state
    * Useful for optimistic updates on the client
    */
