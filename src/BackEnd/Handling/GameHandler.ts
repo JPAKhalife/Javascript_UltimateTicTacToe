@@ -111,7 +111,7 @@ export async function handleGameStart(lobby: Lobby) {
   await publishToLobby(lobby.getId(), gameStateUpdate);
 
   // Call the handlePlayerChange method to notify the correct player of the turn change.
-  handlePlayerChange(lobby);
+  await handlePlayerChange(lobby);
 }
 
 /**

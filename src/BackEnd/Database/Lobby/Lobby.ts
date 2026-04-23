@@ -88,7 +88,7 @@ export class Lobby extends RedisHash<LobbyData> {
     const playerList = await PlayerList.create(lobbyID);
 
     //Create the game object.
-    const game = await Game.create(lobbyID, lobbyData.levelSize, lobbyData.gridSize);
+    const game = await Game.create(lobbyID, lobbyData.levelSize, lobbyData.gridSize, lobbyData.playerNum);
 
     //Add to list of lobbies
     // Add to lobby list and names set
@@ -168,10 +168,7 @@ export class Lobby extends RedisHash<LobbyData> {
       throw new Error(ERROR_MESSAGES.ALREADY_IN_LOBBY);
     }
 
-    await this.withTransaction(async (multi) => {
-      // Add player to lobby's player list
-      multi.rpush(REDIS_KEYS.LOBBY_PLAYERS(this.id), playerId);
-
+    await this.withTransaction(async (_multi) => {
       // Update lobby data
       const newPlayersJoined = Number(this.get("playersJoined")) + 1;
       const currentState = this.get("lobbyState");
