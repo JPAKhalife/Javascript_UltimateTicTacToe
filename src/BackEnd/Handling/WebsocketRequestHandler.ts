@@ -794,8 +794,26 @@ async function handleMakeMove(ws: any,
   const players = game.getPlayerList().getItems();
   const playerNumber = players.indexOf(playerID) + 1;
 
+  // The client navigates sub-boards locally before making a move.
+  // clientSelectedIndex is where the client ended up after that navigation.
+  // Validate it falls within the server's currently allowed region.
+  const { col, row, selectedIndex: clientSelectedIndex } = data.parameters.position;
+  const serverBoardSize = boardState.getBoardSize(
+    boardState.maxLevelSize - boardState.selectedLevel + 1,
+  );
+  if (
+    clientSelectedIndex < boardState.selectedIndex ||
+    clientSelectedIndex >= boardState.selectedIndex + serverBoardSize
+  ) {
+    return ResponseBuilder.error(ERROR_MESSAGES.INVALID_MOVE);
+  }
+
+  // Use the client's navigated position so applyMove places the piece
+  // at the correct absolute index (clientSelectedIndex + col + row * gridSize).
+  boardState.selectedIndex = clientSelectedIndex;
+  boardState.selectedLevel = boardState.maxLevelSize;
+
   // Apply the move using shared game rules
-  const { col, row } = data.parameters.position;
   const result = GameRules.applyMove(boardState, playerNumber, col, row);
 
   if (result.state === TicTacState.ERROR) {

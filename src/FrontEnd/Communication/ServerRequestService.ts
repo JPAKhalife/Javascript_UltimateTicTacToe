@@ -36,6 +36,7 @@ export interface LobbySearchParams {
 export interface MovePosition {
   col: number;
   row: number;
+  selectedIndex: number;
 }
 
 /**

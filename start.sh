@@ -19,17 +19,17 @@ npx webpack --config webpack-back.config.js --mode production  --env LOG_LEVEL=D
 npx webpack --config webpack-front.config.js --mode production --env LOG_LEVEL=DEBUG
 
 # Show running containers
-docker ps
+podman ps
 # Stop any running containers from previous runs (|| true prevents script from failing if nothing to stop)
-docker-compose down || true
+podman-compose down || true
 
 # Clean up docker resources
-docker container prune -f  # Remove all stopped containers
-docker volume prune -f     # Remove all unused volumes
-docker image prune -f      # Remove all dangling images
+podman container prune -f  # Remove all stopped containers
+podman volume prune -f     # Remove all unused volumes
+podman image prune -f      # Remove all dangling images
 
 # Build fresh containers using cache
-docker-compose build 
+podman-compose build
 
 # Start the application
-docker-compose up
+podman-compose up

@@ -158,10 +158,12 @@ export default class GameRules {
       relativeSpots.push(state.getRelativeIndex(i, index));
     }
 
-    // Get the first spot of the level that was won
+    // Navigate from the top of the board — levelSize must not exceed maxLevelSize.
+    // wonLevelSize equals the loop counter i from checkForWinOrFull (not the won level directly),
+    // so the original formula overflows when wonLevelSize < maxLevelSize.
     let destination = state.getFirstSpot(
       index,
-      state.maxLevelSize - winResult.wonLevelSize + 2,
+      Math.min(state.maxLevelSize - winResult.wonLevelSize + 2, state.maxLevelSize),
     );
 
     // Navigate to the appropriate destination board

@@ -131,11 +131,14 @@ export default class OnlineGameManager implements GameManager {
         // return { state: TicTacState.INVALID };
       }
 
-      // Send move to server
+      // Send move to server. Include selectedIndex so the server knows which
+      // sub-board the player navigated to before placing (the client updates
+      // this locally via selectSlot before calling playMove).
       if (this.requestService && this.lobbyID) {
         const success = await this.requestService.makeMove(this.lobbyID, {
           col: cursorCol,
           row: cursorRow,
+          selectedIndex: this.board.getSelectedIndex(),
         });
       } else {
         console.error("ServerRequestService or lobbyID is null");
