@@ -9,11 +9,12 @@
 
 import { GAME_STATES, REDIS_KEYS } from "../Contants";
 import { Lobby } from "../Database/Lobby/Lobby";
-import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage, AcknowledgmentRequestMessage } from '../../Shared/Contracts/MessageToClientSchema';
+import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage, AcknowledgmentRequestMessage, GameStateInfo } from '../../Shared/Contracts/MessageToClientSchema';
 import { INTERNAL_MESSAGE_TYPES, LobbyStateChangedMessage } from '../../Shared/Contracts/ServerInternalMessageSchema';
 import { publishToLobby } from "./ServerRedisGameEventHandler";
 import { LobbyAcknowledgmentSet } from "../Database/Lobby/LobbyAcknowledgmentSet";
 import { DatabaseManager } from "../Database/DatabaseManager";
+import { ResponseBuilder } from "../Utils/ResponseBuilder";
 
 /**
  * @function handleGameReadyCheck
@@ -97,6 +98,10 @@ export async function handleGameStart(lobby: Lobby) {
   const game = lobby.getGame();
   await game.initializeGame();
 
+  //Send a GameInfo message'
+  const gameStateInfoMessage: GameStateInfo = await ResponseBuilder.lobbyToGameState(lobby);
+  await publishToLobby(lobby.getId(),gameStateInfoMessage);
+
   // Notify all clients that the game has begun
   const gameStateUpdate: GameStateUpdateMessage = {
     type: FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE,
@@ -106,7 +111,7 @@ export async function handleGameStart(lobby: Lobby) {
   await publishToLobby(lobby.getId(), gameStateUpdate);
 
   // Call the handlePlayerChange method to notify the correct player of the turn change.
-  handlePlayerChange(lobby);
+  await handlePlayerChange(lobby);
 }
 
 /**
@@ -129,6 +134,9 @@ export async function handlePlayerChange(lobby: Lobby) {
     type: FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE,
     turn: turn,
     gameState: lobby.get("lobbyState"),
+    board: boardState,
+    selectedLevel: game.get("selectedLevel"),
+    selectedIndex: game.get("selectedIndex"),
   };
 
   // Notify all clients of the player turn change

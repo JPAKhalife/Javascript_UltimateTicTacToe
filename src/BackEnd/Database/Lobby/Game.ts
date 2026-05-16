@@ -18,7 +18,10 @@ import { DatabaseManager } from "../DatabaseManager";
 export interface GameData {
   levelSize: number;
   gridSize: number;
+  playerNum: number;
   currentPlayerIndex: number;
+  selectedLevel: number;
+  selectedIndex: number;
   winnerId?: string;
 }
 
@@ -67,7 +70,8 @@ export class Game extends RedisHash<GameData> {
   public static async create(
     lobbyID: string,
     levelSize: number,
-    gridSize: number
+    gridSize: number,
+    playerNum: number
   ): Promise<Game> {
     // Load the player list (should already exist from lobby creation)
     const playerList = await PlayerList.getById(lobbyID);
@@ -84,7 +88,10 @@ export class Game extends RedisHash<GameData> {
     const gameData: GameData = {
       levelSize,
       gridSize,
+      playerNum,
       currentPlayerIndex: 0, // First player starts
+      selectedLevel: 1,
+      selectedIndex: 0,
       winnerId: undefined,
     };
 
@@ -139,7 +146,10 @@ export class Game extends RedisHash<GameData> {
       const parsedData: GameData = {
         levelSize: parseInt(gameData.levelSize),
         gridSize: parseInt(gameData.gridSize),
+        playerNum: parseInt(gameData.playerNum),
         currentPlayerIndex: parseInt(gameData.currentPlayerIndex),
+        selectedLevel: parseInt(gameData.selectedLevel ?? "1"),
+        selectedIndex: parseInt(gameData.selectedIndex ?? "0"),
         winnerId: gameData.winnerId || undefined,
       };
 
@@ -186,9 +196,17 @@ export class Game extends RedisHash<GameData> {
    * Advance to the next player's turn
    */
   public async nextTurn(): Promise<void> {
-    const players = this.playerList.getItems();
-    this.data.currentPlayerIndex =
-      (this.data.currentPlayerIndex + 1) % players.length;
+    this.data.currentPlayerIndex = (this.data.currentPlayerIndex + 1) % this.data.playerNum;
+    await this.save();
+  }
+
+  /**
+   * Advance to the next player's turn and update the cursor state in one save
+   */
+  public async advanceTurn(selectedLevel: number, selectedIndex: number): Promise<void> {
+    this.data.currentPlayerIndex = (this.data.currentPlayerIndex + 1) % this.data.playerNum;
+    this.data.selectedLevel = selectedLevel;
+    this.data.selectedIndex = selectedIndex;
     await this.save();
   }
 

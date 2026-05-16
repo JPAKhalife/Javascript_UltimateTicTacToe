@@ -10,6 +10,7 @@ import {
   type RegisterPlayerResponse,
   type CreateLobbyResponse,
   type LobbyInfo,
+  type GameStateInfo,
   FROM_SERVER_MESSAGE_TYPES,
 } from "../../Shared/Contracts/MessageToClientSchema";
 import { FROM_CLIENT_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToServerSchema";
@@ -35,6 +36,7 @@ export interface LobbySearchParams {
 export interface MovePosition {
   col: number;
   row: number;
+  selectedIndex: number;
 }
 
 /**
@@ -86,8 +88,9 @@ export default class ServerRequestService {
         FROM_CLIENT_MESSAGE_TYPES.REGISTER_PLAYER
       );
 
-      if (response.success && response.sessionID) {
+      if (response.success && response.sessionID && response.playerID) {
         this.webManager.setSessionId(response.sessionID);
+        this.webManager.setPlayerId(response.playerID);
         console.info("[ServerRequestService] Player registered successfully");
         return response;
       }
@@ -205,9 +208,9 @@ export default class ServerRequestService {
    * @method joinLobby
    * @description Join an existing lobby
    * @param lobbyID The ID of the lobby to join
-   * @returns Promise resolving to lobby information if successful, or an object with error property if failed
+   * @returns Promise resolving to game state information if successful, or an object with error property if failed
    */
-  public async joinLobby(lobbyID: string): Promise<LobbyInfo | { error: string }> {
+  public async joinLobby(lobbyID: string): Promise<GameStateInfo | { error: string }> {
     try {
       const message = {
         type: FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY,
@@ -219,24 +222,26 @@ export default class ServerRequestService {
 
       const response = await this.webManager.sendRequest<{
         success: boolean;
-        lobby: any;
+        gameState: any;
         error?: string;
         message?: string;
       }>(message, FROM_CLIENT_MESSAGE_TYPES.JOIN_LOBBY);
 
-      if (response && response.success && response.lobby) {
+      if (response && response.success && response.gameState) {
         console.info("[ServerRequestService] Joined lobby successfully:", lobbyID);
 
         return {
-          lobbyID: response.lobby.lobbyID,
-          lobbyName: response.lobby.lobbyName,
-          playerNum: response.lobby.playerNum,
-          levelSize: response.lobby.levelSize,
-          gridSize: response.lobby.gridSize,
-          playersJoined: response.lobby.playersJoined,
-          creator: response.lobby.creator,
-          lobbyState: response.lobby.lobbyState,
-          allowSpectators: response.lobby.allowSpectators,
+          type: FROM_SERVER_MESSAGE_TYPES.GAME_INFO,
+          lobbyID: response.gameState.lobbyID,
+          lobbyName: response.gameState.lobbyName,
+          playerNum: response.gameState.playerNum,
+          levelSize: response.gameState.levelSize,
+          gridSize: response.gameState.gridSize,
+          lobbyState: response.gameState.lobbyState,
+          allowSpectators: response.gameState.allowSpectators,
+          playerList: response.gameState.playerList,
+          currentTurn: response.gameState.currentTurn,
+          board: response.gameState.board,
         };
       }
 
@@ -311,28 +316,34 @@ export default class ServerRequestService {
   }
 
   /**
-   * @method addGameListeners
+   * @method addGameListener
    * @description Add a listener for game updates
    * @param listener Function to be called when a game update is received
    */
-  public addGameListeners(listener: (update: GameUpdateMessage | GameStateUpdateMessage) => void): void {
-    console.info("[ServerRequestService] Adding game listeners")
-    this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE, listener);
-    this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE, listener);
-    this.webManager.registerTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, listener);
-    console.info("[ServerRequestService] Registered listeners for: GAME_UPDATE, GAME_STATE_UPDATE, ACKNOWLEDGMENT_REQUEST");
+  public addGameListener(type: FROM_SERVER_MESSAGE_TYPES, listener: (message: any) => void): void {
+    this.webManager.registerTypeCallback(type, listener);
+    console.info("[ServerRequestService] Registered listener for: ", type);
+  }
+
+  /**
+   * @method removeGameListener
+   * @description Remove a specific game update listener
+   * @param listener The listener function to remove
+   */
+  public removeGameListener(type: FROM_SERVER_MESSAGE_TYPES): void {
+    console.info("[ServerRequestService] Removing game listeners")
+    this.webManager.removeTypeCallback(type);
   }
 
   /**
    * @method removeGameListeners
-   * @description Remove a specific game update listener
-   * @param listener The listener function to remove
+   * @description remove all game listeners
    */
   public removeGameListeners(): void {
-    console.info("[ServerRequestService] Removing game listeners")
-    this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE);
-    this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE);
-    this.webManager.removeTypeCallback(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST);
+    for (const type of Object.values(FROM_SERVER_MESSAGE_TYPES)) {
+      this.webManager.removeTypeCallback(type);
+    }
+    console.info("[ServerRequestService] Removed all game listeners");
   }
 
   /**
@@ -372,10 +383,20 @@ export default class ServerRequestService {
   }
 
   /**
+   * @method getPlayerId
+   * @description Get the current player ID
+   * @returns The player ID or null if not set
+   */
+  public getPlayerId(): string | null {
+    return this.webManager.getPlayerId();
+  }
+
+  /**
    * @method clearSession
-   * @description Clear the current session
+   * @description Clear the current session and player identity
    */
   public clearSession(): void {
     this.webManager.clearSessionId();
+    this.webManager.clearPlayerId();
   }
 }

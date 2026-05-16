@@ -7,25 +7,31 @@
  */
 
 import p5 from "p5";
-import GameManager, { GameType } from "../GameManager";
+import LocalGameManager from "../GameManager/LocalGameManager";
+import OnlineGameManager from "../GameManager/OnlineGameManager";
+import { GameManager, GameType } from "../GameManager/GameManager";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
 import Menu, { Screens } from "../Menu";
 import TicTacBoard from "../MenuObjects/TicTacBoard";
 import { getCanvasSize, fontmono, HEADER, fontOSDMONO } from "../sketch";
+import ScreenBorder from "../MenuObjects/ScreenBorder";
+import type { GameStateInfo } from "../../Shared/Contracts/MessageToClientSchema";
+import GuiManager from "../GuiManager";
 
 export default class GameScreen implements Menu {
   private keylistener: KeyListener;
   private sketch: p5;
-  private game: GameManager;
+  private game: LocalGameManager | OnlineGameManager;
   private board: TicTacBoard;
   private gameType: GameType;
+  private border: ScreenBorder;
 
   constructor(
     sketch: p5,
     gameType = GameType.LOCAL,
     gridSize = 3,
     gridLevels = 2,
-    lobbyId?: string,
+    lobbyID?: string,
   ) {
     this.keylistener = new KeyListener(sketch);
     this.sketch = sketch;
@@ -34,9 +40,22 @@ export default class GameScreen implements Menu {
       "[GameScreen] Initializing game with mode: ",
       gameType === GameType.LOCAL ? "LOCAL" : "ONLINE",
     );
+
     // Create a game given the parameters passed to the function
-    this.game = new GameManager(gameType, gridSize, gridLevels, lobbyId);
-    this.board = new TicTacBoard(this.sketch, this.game, 0.5, 0.5, 1);
+    if (gameType === GameType.LOCAL) {
+      // Local game - use LocalGameManager
+      this.game = new LocalGameManager(gridSize, gridLevels);
+    } else {
+      const storedGameState = localStorage.getItem("gameState");
+      if (!storedGameState) {
+        throw new Error("Online game requires gameState in localStorage");
+      }
+      this.game = new OnlineGameManager(JSON.parse(storedGameState) as GameStateInfo);
+    }
+
+    this.board = new TicTacBoard(this.sketch, this.game, 0.5, 0.5, 0.8);
+    this.border = new ScreenBorder(this.sketch, 0.01, 10, 255);
+    this.border.setTransitionIn(true);
   }
 
   public getSketch(): p5 {
@@ -55,6 +74,9 @@ export default class GameScreen implements Menu {
 
     // Render our board
     this.board.draw();
+
+    //Draw a border for the nice feel
+    this.border.draw();
 
     // Detect key presses that get put into the tictacboard
     let keyEvent = this.keylistener.listen();
@@ -99,7 +121,7 @@ export default class GameScreen implements Menu {
     this.sketch.textSize(canvasSize * 0.03);
     this.sketch.text("Current Player:", canvasSize / 2, (canvasSize / 20) * 17);
     this.sketch.text(
-      HEADER.PLAYER_NAMES[this.game.getTurn() - 1],
+      this.game.getTurnName(),
       canvasSize / 2,
       (canvasSize / 20) * 18,
     );
@@ -111,5 +133,9 @@ export default class GameScreen implements Menu {
       // - Number of spectators
       // - Opponent info
     }
+  }
+
+  public getGameManager(): GameManager {
+    return this.game;
   }
 }

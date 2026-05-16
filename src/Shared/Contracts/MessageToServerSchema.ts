@@ -140,6 +140,7 @@ export const MakeMoveRequest = AuthenticatedRequest.extend({
     position: z.object({
       col: z.number().int().gte(0),
       row: z.number().int().gte(0),
+      selectedIndex: z.number().int().gte(0),
     }),
   }),
 });

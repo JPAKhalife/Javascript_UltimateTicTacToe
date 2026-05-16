@@ -72,9 +72,9 @@ export class LobbyAcknowledgmentSet extends RedisSet<string> {
     // Create the set with a placeholder value and set expiry
     // The placeholder prevents the key from being deleted when empty (which would lose the expiry)
     await redisClient.sadd(key, "__init__");
-    const expireResult = await redisClient.expire(key, 5);
+    const expireResult = await redisClient.expire(key, 10);
 
-    console.info(`[LobbyAcknowledgmentSet] Created acknowledgment set for lobby ${lobbyID} with 5s expiry (expire result: ${expireResult})`);
+    console.info(`[LobbyAcknowledgmentSet] Created acknowledgment set for lobby ${lobbyID} with 10s expiry (expire result: ${expireResult})`);
 
     // Subscribe to this specific lobby_ack_set's expiry event
     await RedisEventManager.subscribe(

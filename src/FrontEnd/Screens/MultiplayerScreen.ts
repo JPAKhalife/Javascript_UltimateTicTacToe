@@ -17,9 +17,10 @@ import LobbyDot, { LobbyInfo } from "../MenuObjects/LobbyDot";
 import { FRAMERATE } from "../Constants";
 import { LobbyInfo as LobbyDotInfo } from "../MenuObjects/LobbyDot";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
-import { GameType } from "../GameManager";
 import ServerRequestService from "../Communication/ServerRequestService";
 import { handleJoinLobbyResponse } from "../Communication/ServerResponseHandler";
+import { GameStateInfo } from "../../Shared/Contracts/MessageToClientSchema";
+import { GameType } from "../GameManager/GameManager";
 
 const LOBBY_REFRESH_TIME = 7 * FRAMERATE; // 3 seconds
 const DEFAULT_LOBBY_DISPLAY_NUM = 5; // Default number of lobbies to display at a time
@@ -163,17 +164,51 @@ export default class MultiplayerScreen implements Menu {
   private handleTransitionOut(): void {
     // Only change screen when transition is complete
     if (this.transitionTimer >= this.transitionDuration) {
-      const selectedPhrase = (
-        this.lobbyNav.getCurrentlySelected() as MenuButton
-      ).getText();
-      if (selectedPhrase === "Return") {
-        GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
-      } else if (selectedPhrase === "Create Lobby") {
-        GuiManager.changeScreen(Screens.CREATE_LOBBY_SCREEN, this.sketch);
-      } else {
-        GuiManager.changeScreen(Screens.START_SCREEN, this.sketch);
+      const selected = this.lobbyNav.getCurrentlySelected();
+
+      // Handle LobbyDot selection (doesn't have getText method)
+      if (selected instanceof LobbyDot) {
+        const lobby = selected;
+        //In the event we've pressed a lobby dot.
+        if (lobby.isSelectionTransitionComplete()) {
+          // Success - result is GameStateInfo
+          const gameStateStr = localStorage.getItem("gameState");
+          if (!gameStateStr) {
+            // Trigger error animation on the lobby dot
+            (this.lobbyNav.getCurrentlySelected() as LobbyDot).startErrorAnimation();
+            return;
+          }
+
+          const gameState: GameStateInfo = JSON.parse(gameStateStr);
+
+          // Determine if this is a spectator joining a running game
+          const isSpectator = gameState.playerList.length > gameState.playerNum;
+          const isGameRunning = gameState.lobbyState === "running";
+          const loadingProcess = (isSpectator && isGameRunning) ? undefined : () => { };
+          const titleText = (isSpectator && isGameRunning) ? "Joining game..." : "Waiting for game to start";
+          GuiManager.changeScreen(
+            Screens.LOADING_SCREEN,
+            this.sketch,
+            Screens.GAME_SCREEN,
+            titleText,
+            loadingProcess,
+            GameType.ONLINE,
+            gameState.gridSize,
+            gameState.levelSize,
+            gameState.lobbyID,
+          );
+          this.transitionComplete = true;
+
+        }
+      } else if (selected instanceof MenuButton) {
+        // Handle MenuButton selections
+        const selectedPhrase = selected.getText();
+        if (selectedPhrase === "Return") {
+          GuiManager.changeScreen(Screens.SETUP_SCREEN, this.sketch);
+        } else if (selectedPhrase === "Create Lobby") {
+          GuiManager.changeScreen(Screens.CREATE_LOBBY_SCREEN, this.sketch);
+        }
       }
-      this.transitionComplete = true;
     }
   }
 
@@ -204,6 +239,12 @@ export default class MultiplayerScreen implements Menu {
   }
 
   public draw(): void {
+    // Stop drawing once LobbyDot transition is complete
+    if (this.transitionComplete) {
+      this.sketch.background(0);
+      return;
+    }
+
     // Clear background
     this.sketch.background(0);
     const canvasSize = getCanvasSize();
@@ -697,5 +738,11 @@ export default class MultiplayerScreen implements Menu {
       this.errorMessage = null;
       this.errorMessageOpacity = 0;
     }
+  }
+
+  public beginTransitionOut() {
+    this.transition_out_active = true;
+    this.transitionTimer = 0;
+    this.transitionComplete = false;
   }
 }

@@ -18,7 +18,7 @@ import Field from "../MenuObjects/Field";
 import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import Toggle from "../MenuObjects/Toggle";
 import { handleCreateLobbyResponse } from "../Communication/ServerResponseHandler";
-import { GameType } from "../GameManager";
+import { GameType } from "../GameManager/GameManager";
 
 export default class CreateLobbyScreen implements Menu {
   private sketch: p5;
@@ -217,8 +217,8 @@ export default class CreateLobbyScreen implements Menu {
           Screens.LOADING_SCREEN,
           this.sketch,
           Screens.GAME_SCREEN,
-          "Waiting for game to start...",
-          () => {}, // Empty function - listener handles transition
+          "Waiting for game to start",
+          () => { }, // Empty function - listener handles transition
           GameType.ONLINE,
           gridSize,
           levelSize,

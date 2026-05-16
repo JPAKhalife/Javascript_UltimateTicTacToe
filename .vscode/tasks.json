@@ -1,0 +1,80 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Server (Docker)",
+      "type": "shell",
+      "command": "./start.sh",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Open Test Clients",
+      "type": "shell",
+      "command": "open -na 'Google Chrome' --args --new-window http://localhost:3000 && open -na 'Google Chrome' --args --new-window http://localhost:3000",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Open Test Clients (Separate Sessions)",
+      "type": "shell",
+      "command": "open -na 'Google Chrome' --args --new-window http://localhost:3000 && open -na 'Google Chrome' --args --incognito --new-window http://localhost:3000",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Open N Test Clients",
+      "type": "shell",
+      "command": "for i in $(seq 1 ${input:numClients}); do open -na 'Google Chrome' --args --new-window http://localhost:3000; done",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build, Start & Open Clients",
+      "type": "shell",
+      "command": "nohup ./start.sh > /tmp/start-server.log 2>&1 & sleep 20 && open -na 'Google Chrome' --args --new-window http://localhost:3000 && open -na 'Google Chrome' --args --new-window http://localhost:3000",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build, Start & Open N Clients",
+      "type": "shell",
+      "command": "nohup ./start.sh > /tmp/start-server.log 2>&1 & sleep 20 && for i in $(seq 1 ${input:numClients}); do open -na 'Google Chrome' --args --new-window http://localhost:3000; done",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "numClients",
+      "type": "pickString",
+      "description": "Number of test clients to open",
+      "options": ["1", "2", "3", "4", "5", "6"],
+      "default": "2"
+    }
+  ]
+}

@@ -42,7 +42,7 @@ export class Board extends RedisList<number> {
         await board.save();
         return board;
     }
-    
+
     /**
      * Get an existing board by lobby ID
      * @param lobbyID The ID of the lobby to get the board for

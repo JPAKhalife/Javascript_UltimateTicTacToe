@@ -287,6 +287,7 @@ export default class LobbyDot extends BaseMenuItem {
    * @param callback - Optional callback function to be called when the transition is complete
    */
   public startSelectionTransition(callback?: () => void): void {
+    console.debug("[LobbyDot] Starting selection transition animation");
     this.doSelectionTransition = true;
     this.selectionTransitionRadius = 0;
     this.selectionTransitionStrokeWeight = 2;
@@ -321,10 +322,12 @@ export default class LobbyDot extends BaseMenuItem {
 
     // Check if transition is complete
     if (
-      this.selectionTransitionTime <= 0 ||
-      this.selectionTransitionRadius >= currentCanvasSize * 2
+      (this.selectionTransitionTime <= 0 ||
+        this.selectionTransitionRadius >= currentCanvasSize * 2)
+      && !this.selectionTransitionComplete
     ) {
-      this.doSelectionTransition = false;
+      console.debug("[LobbyDot] Selection transition complete, invoking callback");
+      // this.doSelectionTransition = false;
       this.selectionTransitionComplete = true;
 
       // Call the callback if provided

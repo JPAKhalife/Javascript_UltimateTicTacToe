@@ -11,3 +11,6 @@ export { DEFAULT_PLAYER_NUMBER, GAME_CONSTANTS, GAME_STATES, VALIDATION } from "
 
 // Frontend-specific constants
 export const FRAMERATE = 60;
+
+//The maximum number of times a draw will be attempted
+export const MAX_DRAW_ATTEMPS = 5;

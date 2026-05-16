@@ -19,7 +19,7 @@ import { Game } from "./Game";
 /**
  * Interface defining the structure of lobby data stored in Redis
  */
-interface LobbyData {
+export interface LobbyData {
   lobbyID: string;
   lobbyName: string;
   playerNum: number;
@@ -48,7 +48,7 @@ export class Lobby extends RedisHash<LobbyData> {
   private game: Game;
 
   constructor(lobbyID: string, lobbyData: LobbyData, game: Game, playerList: PlayerList) {
-    super(lobbyID,lobbyData);
+    super(lobbyID, lobbyData);
     this.players = playerList;
     this.game = game;
   }
@@ -73,9 +73,9 @@ export class Lobby extends RedisHash<LobbyData> {
       throw new Error(ERROR_MESSAGES.LOBBY_NAME_EXISTS);
     }
 
-    const lobbyId = uuidv4();
+    const lobbyID = uuidv4();
     const data: LobbyData = {
-      lobbyID: lobbyId,
+      lobbyID: lobbyID,
       lobbyName: lobbyData.lobbyName,
       playerNum: lobbyData.playerNum,
       playersJoined: 0,
@@ -85,17 +85,17 @@ export class Lobby extends RedisHash<LobbyData> {
     };
 
     //Create the empty players list
-    const playerList = await PlayerList.create(lobbyId);
+    const playerList = await PlayerList.create(lobbyID);
 
     //Create the game object.
-    const game = await Game.create(lobbyId, lobbyData.levelSize, lobbyData.gridSize);
+    const game = await Game.create(lobbyID, lobbyData.levelSize, lobbyData.gridSize, lobbyData.playerNum);
 
     //Add to list of lobbies
     // Add to lobby list and names set
-    redisClient.rpush(REDIS_KEYS.LOBBY_LIST, lobbyId);
+    redisClient.rpush(REDIS_KEYS.LOBBY_LIST, lobbyID);
     redisClient.sadd(REDIS_KEYS.LOBBY_NAMES, lobbyData.lobbyName.toLowerCase());
 
-    const lobby = new Lobby(lobbyId, data, game, playerList);
+    const lobby = new Lobby(lobbyID, data, game, playerList);
     //Save the new values
     lobby.save();
 
@@ -110,20 +110,20 @@ export class Lobby extends RedisHash<LobbyData> {
 
   /**
    * Get a lobby by its ID
-   * @param lobbyId The ID of the lobby to retrieve
+   * @param lobbyID The ID of the lobby to retrieve
    */
-  static async getById(lobbyId: string): Promise<Lobby | null> {
+  static async getById(lobbyID: string): Promise<Lobby | null> {
     try {
-      const game = await Game.getById(lobbyId);
-      const playerList = await PlayerList.getById(lobbyId);
+      const game = await Game.getById(lobbyID);
+      const playerList = await PlayerList.getById(lobbyID);
       if (!game || !playerList) {
         return null;
       }
 
       const lobby = new Lobby(
-        lobbyId,
+        lobbyID,
         {
-          lobbyID: lobbyId,
+          lobbyID: lobbyID,
           lobbyName: "",
           playerNum: 0,
           playersJoined: 0,
@@ -168,10 +168,7 @@ export class Lobby extends RedisHash<LobbyData> {
       throw new Error(ERROR_MESSAGES.ALREADY_IN_LOBBY);
     }
 
-    await this.withTransaction(async (multi) => {
-      // Add player to lobby's player list
-      multi.rpush(REDIS_KEYS.LOBBY_PLAYERS(this.id), playerId);
-
+    await this.withTransaction(async (_multi) => {
       // Update lobby data
       const newPlayersJoined = Number(this.get("playersJoined")) + 1;
       const currentState = this.get("lobbyState");

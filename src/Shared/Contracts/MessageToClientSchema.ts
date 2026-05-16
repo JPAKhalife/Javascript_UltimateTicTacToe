@@ -13,6 +13,7 @@ import { VALIDATION, GAME_CONSTANTS, GAME_STATES } from "../Constants";
 export enum FROM_SERVER_MESSAGE_TYPES {
   GAME_UPDATE = "game_update",
   GAME_STATE_UPDATE = "game_state_update",
+  GAME_INFO = "game_info",
   ACKNOWLEDGMENT_REQUEST = "acknowledgment_request",
 }
 
@@ -41,6 +42,7 @@ export type BaseResponse = z.infer<typeof BaseResponse>;
  */
 export const RegisterPlayerResponse = BaseResponse.extend({
   sessionID: z.string(),
+  playerID: z.string().uuid(),
   message: z.string(),
 });
 export type RegisterPlayerResponse = z.infer<typeof RegisterPlayerResponse>;
@@ -54,7 +56,7 @@ export const CreateLobbyResponse = BaseResponse.extend({
 export type CreateLobbyResponse = z.infer<typeof CreateLobbyResponse>;
 
 /**
- * Lobby information object used in responses
+ * Lobby information object used in search responses
  */
 export const LobbyInfo = z.object({
   lobbyID: z.string().uuid(),
@@ -70,6 +72,34 @@ export const LobbyInfo = z.object({
 export type LobbyInfo = z.infer<typeof LobbyInfo>;
 
 /**
+ * Player information for game state
+ */
+export const PlayerInfo = z.object({
+  playerID: z.string(),
+  username: z.string().max(VALIDATION.MAX_USERNAME_LENGTH),
+});
+export type PlayerInfo = z.infer<typeof PlayerInfo>;
+
+/**
+ * Complete game state information used when joining a lobby or reconnecting
+ * Provides everything the client needs to set up the game state
+ */
+export const GameStateInfo = z.object({
+  type: z.literal("game_info"),
+  lobbyID: z.string().uuid(),
+  lobbyName: z.string().max(VALIDATION.MAX_USERNAME_LENGTH),
+  playerNum: z.number().int().lte(GAME_CONSTANTS.MAX_PLAYER_CAP),
+  levelSize: z.number().int().lte(GAME_CONSTANTS.MAX_LEVELSIZE_CAP),
+  gridSize: z.number().int().lte(GAME_CONSTANTS.MAX_GRIDSIZE_CAP),
+  lobbyState: z.string().max(VALIDATION.MAX_STANDARD_LENGTH),
+  allowSpectators: z.boolean(),
+  playerList: z.array(PlayerInfo),
+  currentTurn: z.number().int().gte(1),
+  board: z.array(z.number()).optional(),
+});
+export type GameStateInfo = z.infer<typeof GameStateInfo>;
+
+/**
  * Response for lobby search
  */
 export const SearchLobbyResponse = BaseResponse.extend({
@@ -81,7 +111,7 @@ export type SearchLobbyResponse = z.infer<typeof SearchLobbyResponse>;
  * Response for joining a lobby
  */
 export const JoinLobbyResponse = BaseResponse.extend({
-  lobby: LobbyInfo,
+  gameState: GameStateInfo,
 });
 export type JoinLobbyResponse = z.infer<typeof JoinLobbyResponse>;
 
@@ -96,6 +126,7 @@ export type MakeMoveResponse = z.infer<typeof MakeMoveResponse>;
  */
 export const ReconnectResponse = BaseResponse.extend({
   playerID: z.string(),
+  gameState: GameStateInfo.optional(),
 });
 export type ReconnectResponse = z.infer<typeof ReconnectResponse>;
 
@@ -114,6 +145,8 @@ export const GameUpdateMessage = z.object({
   gameState: z.string().optional(),
   board: z.array(z.number()).optional(),
   turn: z.number().int().gte(1),
+  selectedLevel: z.number().int().gte(0).optional(),
+  selectedIndex: z.number().int().gte(0).optional(),
   lastMove: z
     .object({
       player: z.string(),
