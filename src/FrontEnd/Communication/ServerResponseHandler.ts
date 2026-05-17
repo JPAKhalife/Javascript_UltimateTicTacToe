@@ -22,6 +22,7 @@ import MultiplayerScreen from "../Screens/MultiplayerScreen";
  * Responsible for handling the response from attempting to connect to the server via websocket
  */
 export async function handleWebsocketConnectionInitiation() {
+    console.debug("[ServerResponseHandler] Attempting to initiate websocket connection")
     //Initiate the websocket connection
     while (!(await WebManager.getInstance().initiateConnectionIfNotEstablished()));
     //Once this has completed, signal the loading screen to change
