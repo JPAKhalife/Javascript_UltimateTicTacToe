@@ -127,6 +127,11 @@ export default class GameScreen implements Menu {
       return;
     }
 
+    // Spectators and players who are not yet on their turn cannot move the cursor
+    if (this.game.isSpectator() || !this.game.isMyTurn()) {
+      return;
+    }
+
     // Detect key presses that get put into the tictacboard
     let keyEvent = this.keylistener.listen();
     if (keyEvent == KEY_EVENTS.UP) {

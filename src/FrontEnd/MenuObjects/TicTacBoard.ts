@@ -375,20 +375,22 @@ export default class TicTacBoard extends BaseMenuItem {
    * @param currentCanvasSize The current canvas size
    */
   private renderCursor(currentCanvasSize: number) {
-    this.getSketch().rectMode(this.getSketch().CORNER);
-    this.getSketch().noFill();
-    this.getSketch().strokeWeight(5);
-    let c = this.getCacheIndex();
-    this.getSketch().rect(
-      this.cache[this.tictac.getSelectedLevel()][
-      c + this.cursorRow * this.GRID_SIZE + this.cursorCol
-      ][0],
-      this.cache[this.tictac.getSelectedLevel()][
-      c + this.cursorRow * this.GRID_SIZE + this.cursorCol
-      ][1],
-      this.calculateSize(this.tictac.getSelectedLevel(), currentCanvasSize),
-      this.calculateSize(this.tictac.getSelectedLevel(), currentCanvasSize),
-    );
+    const sketch = this.getSketch();
+    sketch.rectMode(sketch.CORNER);
+    sketch.noFill();
+    sketch.strokeWeight(5);
+
+    const c = this.getCacheIndex();
+    const x = this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow * this.GRID_SIZE + this.cursorCol][0];
+    const y = this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow * this.GRID_SIZE + this.cursorCol][1];
+    const size = this.calculateSize(this.tictac.getSelectedLevel(), currentCanvasSize);
+
+    const ctx = sketch.drawingContext as CanvasRenderingContext2D;
+    if (!this.game.isMyTurn()) {
+      ctx.setLineDash([8, 8]);
+    }
+    sketch.rect(x, y, size, size);
+    ctx.setLineDash([]);
   }
 
   /**

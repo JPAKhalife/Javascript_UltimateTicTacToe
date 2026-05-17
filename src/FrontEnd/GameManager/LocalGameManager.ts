@@ -98,4 +98,12 @@ export default class LocalGameManager implements GameManager {
   changeTurn(): void {
     this.turn = (this.turn % this.playerNumber) + 1;
   }
+
+  isSpectator(): boolean {
+    return false;
+  }
+
+  isMyTurn(): boolean {
+    return true;
+  }
 }

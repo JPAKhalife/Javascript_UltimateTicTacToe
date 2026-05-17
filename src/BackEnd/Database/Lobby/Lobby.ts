@@ -189,7 +189,7 @@ export class Lobby extends RedisHash<LobbyData> {
 
     // Update player's lobby reference
     await player.joinLobby(this.id);
-    this.players.push(playerId);
+    await this.players.push(playerId);
   }
 
   /**

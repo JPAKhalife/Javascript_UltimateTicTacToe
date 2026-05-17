@@ -68,4 +68,16 @@ export interface GameManager {
      * @description This method moves the turn to the next player
      */
     changeTurn(): void;
+
+    /**
+     * @method isSpectator
+     * @description Returns true if the current client is only watching and should not control the cursor
+     */
+    isSpectator(): boolean;
+
+    /**
+     * @method isMyTurn
+     * @description Returns true if it is currently this client's turn to move
+     */
+    isMyTurn(): boolean;
 }
