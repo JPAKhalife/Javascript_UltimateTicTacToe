@@ -33,7 +33,6 @@ app.use(cors());
 app.options("*", cors()); // Pre-flight requests for all routes
 
 //!P5.js conflicts with helmet because it has unsafe evals inside it.
-app.use(ratelimiter); // Use the rate limiter to limit the number of requests a client can make (avoiding DDOS attacks)
 app.use(cors()); // Use cors to allow resources to be shared across different domains
 
 //Typescript's .ts can be interpreted as a video format based on MIME type.
@@ -65,10 +64,10 @@ registerInternalEventHandlers()
 app.use(express.static(process.cwd() + "/FrontEnd"));
 console.info("Local directory is: " + process.cwd());
 
-app.get("/favicon.ico", (req: any, res: any) => res.status(204));
+app.get("/favicon.ico", (_req: any, res: any) => res.status(204));
 //*HTTP REQUESTS
 //* This is the default route for the server. It sends the index.html file to the client.
-app.get("/", (req: any, res: any) => {
+app.get("/", ratelimiter, (req: any, res: any) => {
   //Send the index.html file to the client (any files included in the html file will be sent automatically)
   res.sendFile(process.cwd() + "/FrontEnd/index.html");
 });

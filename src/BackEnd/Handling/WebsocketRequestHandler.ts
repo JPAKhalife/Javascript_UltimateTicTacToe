@@ -84,8 +84,12 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       const lobbyID = player?.get("lobbyID");
       if (lobbyID) {
         const lobby = await Lobby.getById(lobbyID);
-        if (lobby && lobby.get("lobbyState") === GAME_STATES.RUNNING) {
-          await handlePlayerDisconnect(lobby, playerID);
+        if (lobby) {
+          if (lobby.isSpectator(playerID)) {
+            await lobby.removeSpectator(playerID);
+          } else if (lobby.get("lobbyState") === GAME_STATES.RUNNING) {
+            await handlePlayerDisconnect(lobby, playerID);
+          }
         }
       }
     }

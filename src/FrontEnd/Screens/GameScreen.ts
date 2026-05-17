@@ -28,6 +28,10 @@ export default class GameScreen implements Menu {
   private border: ScreenBorder;
   private winnerPopup: Popup | null = null;
   private pausePopup: Popup | null = null;
+  private fadeOutActive: boolean = false;
+  private fadeOutAlpha: number = 0;
+  private fadeInAlpha: number = 255;
+  private static readonly FADE_SPEED = 255 / 30;
 
   constructor(
     sketch: p5,
@@ -81,6 +85,17 @@ export default class GameScreen implements Menu {
     //Draw a border for the nice feel
     this.border.draw();
 
+    // Fade-in overlay
+    if (this.fadeInAlpha > 0) {
+      this.sketch.push();
+      this.sketch.noStroke();
+      this.sketch.fill(0, this.fadeInAlpha);
+      this.sketch.rect(0, 0, this.sketch.width, this.sketch.height);
+      this.sketch.pop();
+      this.fadeInAlpha = Math.max(this.fadeInAlpha - GameScreen.FADE_SPEED, 0);
+      return;
+    }
+
     // Render pause popup on top if a player disconnected
     if (this.pausePopup) {
       this.pausePopup.draw();
@@ -90,9 +105,24 @@ export default class GameScreen implements Menu {
     // Render win popup on top if game is over
     if (this.winnerPopup) {
       this.winnerPopup.draw();
+
+      if (this.fadeOutActive) {
+        this.fadeOutAlpha = Math.min(this.fadeOutAlpha + GameScreen.FADE_SPEED, 255);
+        this.sketch.push();
+        this.sketch.noStroke();
+        this.sketch.fill(0, this.fadeOutAlpha);
+        this.sketch.rect(0, 0, this.sketch.width, this.sketch.height);
+        this.sketch.pop();
+        if (this.fadeOutAlpha >= 255) {
+          GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.MULTIPLAYER_SCREEN, "Returning to lobby");
+        }
+        return;
+      }
+
       const keyEvent = this.keylistener.listen();
       if (keyEvent === KEY_EVENTS.ENTER) {
-        GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.MULTIPLAYER_SCREEN, "Returning to lobby");
+        this.fadeOutActive = true;
+        this.border.setTransitionOut(true);
       }
       return;
     }
