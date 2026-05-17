@@ -159,7 +159,7 @@ export default class WebManager {
 
       console.info(`[Connection] Connecting to: ${serverAddress}`);
 
-      this.socket = new WebSocket(connectionUrl);
+      this.socket = new WebSocket(serverAddress);
 
       this.socket.onopen = async () => {
         console.info(

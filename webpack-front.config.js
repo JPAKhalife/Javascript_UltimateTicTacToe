@@ -55,7 +55,7 @@ module.exports = (env, argv) => {
       new webpack.SourceMapDevToolPlugin({}),
       new webpack.DefinePlugin({
         "process.env.REMOTE_SERVER_ADDRESS": JSON.stringify(
-          process.env.REMOTE_SERVER_ADDRESS || "ws://localhost:3000"
+          process.env.REMOTE_SERVER_ADDRESS || ""
         ),
         "process.env.LOG_LEVEL": JSON.stringify(logLevel),
       }),
