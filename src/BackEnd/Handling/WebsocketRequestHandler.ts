@@ -29,10 +29,12 @@ import {
   LobbyJoinRequest,
   AcknowledgeReadyRequest,
   MakeMoveRequest,
+  CursorMoveRequest,
 } from "../../Shared/Contracts/MessageToServerSchema";
 import Session from "../Database/Session";
 import { ERROR_MESSAGES, GAME_STATES, REDIS_KEYS, SUCCESS_MESSAGES } from "../Contants";
-import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
+import { FROM_SERVER_MESSAGE_TYPES, CursorUpdateMessage } from "../../Shared/Contracts/MessageToClientSchema";
+import { publishToLobby } from "./ServerRedisGameEventHandler";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
 import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout, handlePlayerChange, handleGameWon, handlePlayerDisconnect, handlePlayerReconnect } from "./GameHandler";
 import { LobbyIdleTimeout } from "../Database/Lobby/LobbyIdleTimeout";
@@ -87,7 +89,10 @@ export async function handleWebsocketRequest(ws: any, req: any) {
         if (lobby) {
           if (lobby.isSpectator(playerID)) {
             await lobby.removeSpectator(playerID);
-          } else if (lobby.get("lobbyState") === GAME_STATES.RUNNING) {
+          } else if (
+            lobby.get("lobbyState") === GAME_STATES.RUNNING ||
+            lobby.get("lobbyState") === GAME_STATES.PAUSED
+          ) {
             await handlePlayerDisconnect(lobby, playerID);
           }
         }
@@ -156,6 +161,15 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       const validation = AcknowledgeReadyRequest.safeParse(data);
       return validation.success
         ? handleAcknowledgeReady(ws, validation.data, sessionData.get("playerID"))
+        : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
+    },
+    [FROM_CLIENT_MESSAGE_TYPES.CURSOR_MOVE]: async (
+      data: any,
+      sessionData: any,
+    ) => {
+      const validation = CursorMoveRequest.safeParse(data);
+      return validation.success
+        ? handleCursorMove(validation.data, sessionData.get("playerID"))
         : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.NONE]: async (data: any, sessionData: any) => {
@@ -870,5 +884,36 @@ async function handleMakeMove(ws: any,
     await LobbyIdleTimeout.reset(data.parameters.lobbyID);
   }
 
+  return { success: true };
+}
+
+async function handleCursorMove(
+  data: CursorMoveRequest,
+  playerID: string,
+): Promise<object> {
+  const { lobbyID, position } = data.parameters;
+
+  const lobby = await Lobby.getById(lobbyID);
+  if (!lobby) {
+    return ResponseBuilder.error(ERROR_MESSAGES.LOBBY_NOT_FOUND);
+  }
+
+  if (lobby.get("lobbyState") !== GAME_STATES.RUNNING) {
+    return { success: true };
+  }
+
+  const players = lobby.getPlayerList().getItems();
+  const playerNumber = players.indexOf(playerID) + 1;
+  if (playerNumber <= 0) {
+    return { success: true };
+  }
+
+  const cursorUpdate: CursorUpdateMessage = {
+    type: FROM_SERVER_MESSAGE_TYPES.CURSOR_UPDATE,
+    playerNumber,
+    position,
+  };
+
+  await publishToLobby(lobbyID, cursorUpdate);
   return { success: true };
 }

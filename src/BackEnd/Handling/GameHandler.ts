@@ -18,6 +18,7 @@ import { LobbyIdleTimeout } from "../Database/Lobby/LobbyIdleTimeout";
 import { DatabaseManager } from "../Database/DatabaseManager";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
 import { Player } from "../Database/Player";
+import { isPlayerConnected } from "../Database/ClientConnections";
 
 /**
  * @function handleGameReadyCheck
@@ -221,6 +222,15 @@ export async function handlePlayerDisconnect(lobby: Lobby, playerID: string): Pr
       playerName = player.get("username").substring(0, 20);
     }
   } catch (_) { /* fall through */ }
+
+  // If no other players are still connected, cancel immediately
+  const otherPlayerIDs = lobby.getPlayerList().getItems().filter(id => id !== playerID);
+  const connectedFlags = await Promise.all(otherPlayerIDs.map(isPlayerConnected));
+  if (!connectedFlags.some(Boolean)) {
+    await LobbyPauseTimeout.cancel(lobbyID);
+    await handleGameCancel(lobby, "All players disconnected");
+    return;
+  }
 
   lobby.set("lobbyState", GAME_STATES.PAUSED);
 

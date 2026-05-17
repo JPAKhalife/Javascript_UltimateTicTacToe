@@ -298,13 +298,13 @@ export default class TicTacBoard extends BaseMenuItem {
    * This method moves the cursor up
    */
   public cursorUp() {
-    // Block movement only when at the exact playable level
     if (this.isSelected() && this.tictac.getSelectedLevel() !== 0) {
       if (this.cursorRow <= 0) {
         this.cursorRow = this.GRID_SIZE - 1;
       } else {
         this.cursorRow -= 1;
       }
+      this.game.sendCursorMove({ col: this.cursorCol, row: this.cursorRow, selectedLevel: this.tictac.getSelectedLevel(), selectedIndex: this.tictac.getSelectedIndex() });
     }
   }
 
@@ -312,13 +312,13 @@ export default class TicTacBoard extends BaseMenuItem {
    * This method moves the cursor down
    */
   public cursorDown() {
-    // Block movement only when at the exact playable level
     if (this.isSelected() && this.tictac.getSelectedLevel() !== 0) {
       if (this.cursorRow >= this.GRID_SIZE - 1) {
         this.cursorRow = 0;
       } else {
         this.cursorRow += 1;
       }
+      this.game.sendCursorMove({ col: this.cursorCol, row: this.cursorRow, selectedLevel: this.tictac.getSelectedLevel(), selectedIndex: this.tictac.getSelectedIndex() });
     }
   }
 
@@ -326,13 +326,13 @@ export default class TicTacBoard extends BaseMenuItem {
    * This method moves the cursor left
    */
   public cursorLeft() {
-    // Block movement only when at the exact playable level
     if (this.isSelected() && this.tictac.getSelectedLevel() !== 0) {
       if (this.cursorCol <= 0) {
         this.cursorCol = this.GRID_SIZE - 1;
       } else {
         this.cursorCol -= 1;
       }
+      this.game.sendCursorMove({ col: this.cursorCol, row: this.cursorRow, selectedLevel: this.tictac.getSelectedLevel(), selectedIndex: this.tictac.getSelectedIndex() });
     }
   }
 
@@ -340,13 +340,13 @@ export default class TicTacBoard extends BaseMenuItem {
    * This method moves the cursor right
    */
   public cursorRight() {
-    // Block movement only when at the exact playable level
     if (this.isSelected() && this.tictac.getSelectedLevel() !== 0) {
       if (this.cursorCol >= this.GRID_SIZE - 1) {
         this.cursorCol = 0;
       } else {
         this.cursorCol += 1;
       }
+      this.game.sendCursorMove({ col: this.cursorCol, row: this.cursorRow, selectedLevel: this.tictac.getSelectedLevel(), selectedIndex: this.tictac.getSelectedIndex() });
     }
   }
 
@@ -371,19 +371,38 @@ export default class TicTacBoard extends BaseMenuItem {
   }
 
   /**
-   * This method renders the cursor on the tictac
-   * @param currentCanvasSize The current canvas size
+   * This method renders the cursor on the tictac.
+   * On your turn: renders your local cursor position.
+   * On another player's turn: renders that player's last known cursor position.
    */
   private renderCursor(currentCanvasSize: number) {
     const sketch = this.getSketch();
     sketch.rectMode(sketch.CORNER);
     sketch.noFill();
     sketch.strokeWeight(5);
+    sketch.stroke(255);
 
-    const c = this.getCacheIndex();
-    const x = this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow * this.GRID_SIZE + this.cursorCol][0];
-    const y = this.cache[this.tictac.getSelectedLevel()][c + this.cursorRow * this.GRID_SIZE + this.cursorCol][1];
-    const size = this.calculateSize(this.tictac.getSelectedLevel(), currentCanvasSize);
+    let selectedLevel: number;
+    let cacheIdx: number;
+
+    if (this.game.isMyTurn()) {
+      selectedLevel = this.tictac.getSelectedLevel();
+      const c = this.getCacheIndex();
+      cacheIdx = c + this.cursorRow * this.GRID_SIZE + this.cursorCol;
+    } else {
+      const pos = this.game.getRemoteCursors().get(this.game.getTurn());
+      if (!pos || pos.selectedLevel <= 0 || pos.selectedLevel > this.maxLevelSize) return;
+      selectedLevel = pos.selectedLevel;
+      const cacheBase = Math.floor(
+        pos.selectedIndex / Math.pow(this.GRID_SIZE * this.GRID_SIZE, this.maxLevelSize - pos.selectedLevel),
+      );
+      cacheIdx = cacheBase + pos.row * this.GRID_SIZE + pos.col;
+    }
+
+    if (selectedLevel <= 0 || cacheIdx >= this.cache[selectedLevel].length) return;
+    const x = this.cache[selectedLevel][cacheIdx][0];
+    const y = this.cache[selectedLevel][cacheIdx][1];
+    const size = this.calculateSize(selectedLevel, currentCanvasSize);
 
     const ctx = sketch.drawingContext as CanvasRenderingContext2D;
     if (!this.game.isMyTurn()) {
@@ -403,6 +422,7 @@ export default class TicTacBoard extends BaseMenuItem {
       this.tictac.selectSlot(this.cursorCol, this.cursorRow);
       this.cursorCol = 0;
       this.cursorRow = 0;
+      this.game.sendCursorMove({ col: 0, row: 0, selectedLevel: this.tictac.getSelectedLevel(), selectedIndex: this.tictac.getSelectedIndex() });
     }
   }
 

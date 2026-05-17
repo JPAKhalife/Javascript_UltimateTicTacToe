@@ -181,8 +181,10 @@ export default class MultiplayerScreen implements Menu {
 
           const gameState: GameStateInfo = JSON.parse(gameStateStr);
 
-          // Determine if this is a spectator joining a running game
-          const isSpectator = gameState.playerList.length > gameState.playerNum;
+          // Determine spectator status using own player ID — more reliable than length check
+          const myPlayerID = this.requestService.getPlayerId();
+          const myIndex = gameState.playerList.findIndex(p => p.playerID === myPlayerID);
+          const isSpectator = myIndex >= 0 && myIndex >= Number(gameState.playerNum);
           const isGameRunning = gameState.lobbyState === "running";
           const loadingProcess = (isSpectator && isGameRunning) ? undefined : () => { };
           const titleText = (isSpectator && isGameRunning) ? "Joining game..." : "Waiting for game to start";

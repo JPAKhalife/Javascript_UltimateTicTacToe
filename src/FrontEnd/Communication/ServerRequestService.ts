@@ -316,6 +316,22 @@ export default class ServerRequestService {
   }
 
   /**
+   * @method sendCursorMove
+   * @description Fire-and-forget: send cursor position to server for broadcast to other players
+   */
+  public sendCursorMove(
+    lobbyID: string,
+    position: { col: number; row: number; selectedLevel: number; selectedIndex: number },
+  ): void {
+    const message = {
+      type: FROM_CLIENT_MESSAGE_TYPES.CURSOR_MOVE,
+      sessionID: this.webManager.getSessionId(),
+      parameters: { lobbyID, position },
+    };
+    this.webManager.sendRequest(message, FROM_CLIENT_MESSAGE_TYPES.CURSOR_MOVE).catch(() => {});
+  }
+
+  /**
    * @method addGameListener
    * @description Add a listener for game updates
    * @param listener Function to be called when a game update is received

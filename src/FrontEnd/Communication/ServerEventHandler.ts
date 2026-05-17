@@ -5,7 +5,7 @@
  * @created 2025-12-23
  */
 
-import { FROM_SERVER_MESSAGE_TYPES, GameStateInfo, GameStateUpdateMessage, GameUpdateMessage } from "../../Shared/Contracts/MessageToClientSchema";
+import { FROM_SERVER_MESSAGE_TYPES, GameStateInfo, GameStateUpdateMessage, GameUpdateMessage, CursorUpdateMessage } from "../../Shared/Contracts/MessageToClientSchema";
 import { GAME_STATES } from "../Constants";
 import GuiManager from "../GuiManager";
 import { Screens } from "../Menu";
@@ -77,6 +77,7 @@ export function setupGameStartListener(
         requestService.removeGameListeners();
         requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE, handleGameUpdates);
         requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE, handleGameStateUpdates);
+        requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.CURSOR_UPDATE, handleCursorUpdate);
         requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, handleAcknowlegementRequests);        //If we changed the gamestate to canceled, that means acknowlegement failed. Return to the Multiplayer Screen!
       } else if (message.state === GAME_STATES.CANCELLED) {
         requestService.removeGameListeners();
@@ -104,6 +105,7 @@ export function setupRejoinListeners(): void {
   requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE, handleGameUpdates);
   requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE, handleGameStateUpdates);
   requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_INFO, handleResync);
+  requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.CURSOR_UPDATE, handleCursorUpdate);
   requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, handleAcknowlegementRequests);
 }
 
@@ -187,12 +189,25 @@ export function handleGameStateUpdates(message: GameStateUpdateMessage) {
 /**
  * @function handleGameUpdates
  * @description Responsible for handling GameUpdate messages during the course of the game.
- * @param message 
+ * @param message
  */
 export function handleGameUpdates(message: GameUpdateMessage) {
   const screen = GuiManager.getCurrentScreen();
   if (screen instanceof GameScreen) {
     const game = screen.getGameManager() as OnlineGameManager;
     game.handleGameUpdate(message);
+  }
+}
+
+/**
+ * @function handleCursorUpdate
+ * @description Receives another player's cursor position and stores it for rendering.
+ * @param message
+ */
+export function handleCursorUpdate(message: CursorUpdateMessage) {
+  const screen = GuiManager.getCurrentScreen();
+  if (screen instanceof GameScreen) {
+    const game = screen.getGameManager() as OnlineGameManager;
+    game.updateRemoteCursor(message.playerNumber, message.position);
   }
 }
