@@ -153,9 +153,9 @@ export default class WebManager {
     return new Promise((resolve) => {
       console.info("[Connection] Initiating WebSocket connection");
 
-      const serverAddress =
-        process.env.REMOTE_SERVER_ADDRESS || "ws://localhost:3000";
-      const connectionUrl = serverAddress;
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const defaultAddress = `${protocol}//${window.location.host}`;
+      const serverAddress = process.env.REMOTE_SERVER_ADDRESS || defaultAddress;
 
       console.info(`[Connection] Connecting to: ${serverAddress}`);
 
