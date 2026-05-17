@@ -15,6 +15,8 @@ cp -r ./src/FrontEnd/assets ./dist/FrontEnd/assets
 
 
 # Build the backend and frontend using webpack
+# Unset REMOTE_SERVER_ADDRESS so the frontend bundle always uses window.location.host at runtime
+unset REMOTE_SERVER_ADDRESS
 npx webpack --config webpack-back.config.js --mode production  --env LOG_LEVEL=DEBUG
 npx webpack --config webpack-front.config.js --mode production --env LOG_LEVEL=DEBUG
 
