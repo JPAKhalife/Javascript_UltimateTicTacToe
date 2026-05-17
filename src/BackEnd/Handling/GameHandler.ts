@@ -13,8 +13,12 @@ import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage, A
 import { INTERNAL_MESSAGE_TYPES, LobbyStateChangedMessage } from '../../Shared/Contracts/ServerInternalMessageSchema';
 import { publishToLobby } from "./ServerRedisGameEventHandler";
 import { LobbyAcknowledgmentSet } from "../Database/Lobby/LobbyAcknowledgmentSet";
+import { LobbyPauseTimeout } from "../Database/Lobby/LobbyPauseTimeout";
+import { LobbyIdleTimeout } from "../Database/Lobby/LobbyIdleTimeout";
 import { DatabaseManager } from "../Database/DatabaseManager";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
+import { Player } from "../Database/Player";
+import { isPlayerConnected } from "../Database/ClientConnections";
 
 /**
  * @function handleGameReadyCheck
@@ -112,6 +116,9 @@ export async function handleGameStart(lobby: Lobby) {
 
   // Call the handlePlayerChange method to notify the correct player of the turn change.
   await handlePlayerChange(lobby);
+
+  // Start the idle timer — cancelled on game end, reset on every move
+  await LobbyIdleTimeout.create(lobby.getId());
 }
 
 /**
@@ -160,7 +167,127 @@ export async function handleEvaluateGame(lobby: Lobby) { }
  * @description This function handles the end of the game when a player has won
  * @param lobby the lobby object that the game has been won in
  */
-export async function handleGameWon(lobby: Lobby) { }
+export async function handleGameWon(lobby: Lobby) {
+  const lobbyID = lobby.getId();
+
+  // Update the lobby state to finished
+  lobby.set("lobbyState", GAME_STATES.FINISHED);
+
+  let winner: Player | null = null;
+  try {
+    winner = await Player.getById(lobby.getGame().getCurrentPlayerId());
+  } catch (e) {
+    console.warn("[GameHandler] Failed to fetch winning player, cancelling instead.");
+    await handleGameCancel(lobby);
+    return;
+  }
+
+  const winnerName = winner?.get("username") ?? "Unknown";
+
+  await LobbyIdleTimeout.cancel(lobbyID);
+
+  // 1. Notify all clients that the game is finished
+  const clientMessage: GameStateUpdateMessage = {
+    type: FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE,
+    state: GAME_STATES.FINISHED,
+    message: winnerName + " wins!",
+  };
+  await publishToLobby(lobbyID, clientMessage);
+
+  // 2. Trigger cleanup on all servers
+  const internalMessage: LobbyStateChangedMessage = {
+    type: INTERNAL_MESSAGE_TYPES.LOBBY_STATE_CHANGED,
+    lobbyID: lobbyID,
+    newState: GAME_STATES.FINISHED,
+  };
+  await publishToLobby(lobbyID, internalMessage);
+
+  console.info(`[GameHandler] Game won by "${winnerName}" in lobby ${lobbyID}`);
+}
+
+/**
+ * @function handlePlayerDisconnect
+ * @description Pauses the game and starts a reconnect timer when a player drops mid-game.
+ * If the lobby is already paused (edge case: second disconnect), resets the timer.
+ * @param lobby - The lobby the player was in
+ * @param playerID - The ID of the player who disconnected
+ */
+export async function handlePlayerDisconnect(lobby: Lobby, playerID: string): Promise<void> {
+  const lobbyID = lobby.getId();
+
+  let playerName = "A player";
+  try {
+    const player = await Player.getById(playerID);
+    if (player) {
+      playerName = player.get("username").substring(0, 20);
+    }
+  } catch (_) { /* fall through */ }
+
+  // If no other players are still connected, cancel immediately
+  const otherPlayerIDs = lobby.getPlayerList().getItems().filter(id => id !== playerID);
+  const connectedFlags = await Promise.all(otherPlayerIDs.map(isPlayerConnected));
+  if (!connectedFlags.some(Boolean)) {
+    await LobbyPauseTimeout.cancel(lobbyID);
+    await handleGameCancel(lobby, "All players disconnected");
+    return;
+  }
+
+  lobby.set("lobbyState", GAME_STATES.PAUSED);
+
+  const pauseMessage: GameStateUpdateMessage = {
+    type: FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE,
+    state: GAME_STATES.PAUSED,
+    message: playerName + " disconnected",
+  };
+  await publishToLobby(lobbyID, pauseMessage);
+
+  // Stop the idle timer while paused — the reconnect timer takes over
+  await LobbyIdleTimeout.cancel(lobbyID);
+  await LobbyPauseTimeout.create(lobbyID);
+
+  console.info(`[GameHandler] Lobby ${lobbyID} paused — player ${playerID} disconnected`);
+}
+
+/**
+ * @function handlePlayerReconnect
+ * @description Resumes a paused game when the disconnected player reconnects in time.
+ * Cancels the reconnect timer and broadcasts the RUNNING state to all clients.
+ * @param lobby - The paused lobby
+ * @param playerID - The ID of the player who reconnected
+ */
+export async function handlePlayerReconnect(lobby: Lobby, playerID: string): Promise<void> {
+  if (lobby.get("lobbyState") !== GAME_STATES.PAUSED) {
+    return;
+  }
+
+  const lobbyID = lobby.getId();
+
+  await LobbyPauseTimeout.cancel(lobbyID);
+
+  lobby.set("lobbyState", GAME_STATES.RUNNING);
+
+  let playerName = "A player";
+  try {
+    const player = await Player.getById(playerID);
+    if (player) {
+      playerName = player.get("username").substring(0, 20);
+    }
+  } catch (_) { /* fall through */ }
+
+  const resumeMessage: GameStateUpdateMessage = {
+    type: FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE,
+    state: GAME_STATES.RUNNING,
+    message: playerName + " reconnected!",
+  };
+  await publishToLobby(lobbyID, resumeMessage);
+
+  await handlePlayerChange(lobby);
+
+  // Restart the idle timer now that the game is live again
+  await LobbyIdleTimeout.create(lobbyID);
+
+  console.info(`[GameHandler] Lobby ${lobbyID} resumed — player ${playerID} reconnected`);
+}
 
 /**
  * @function handleGameCancel
@@ -175,6 +302,8 @@ export async function handleGameCancel(lobby: Lobby, reason?: string) {
   const lobbyID = lobby.getId();
 
   console.info(`[GameHandler] Cancelling game in lobby ${lobbyID}${reason ? `: ${reason}` : ''}`);
+
+  await LobbyIdleTimeout.cancel(lobbyID);
 
   // Update lobby state to cancelled
   lobby.set("lobbyState", GAME_STATES.CANCELLED);

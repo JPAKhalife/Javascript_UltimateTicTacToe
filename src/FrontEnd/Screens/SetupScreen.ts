@@ -217,6 +217,7 @@ export default class SetupScreen implements Menu {
         this.opacity = 255;
         this.multiplayer_MenuButton_list.confirm();
         this.transition_out_active = true;
+        this.border.setTransitionOut(true);
         this.keylistener.deactivate();
       }
     }

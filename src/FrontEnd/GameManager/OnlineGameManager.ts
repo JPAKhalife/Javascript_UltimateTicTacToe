@@ -12,7 +12,7 @@ import { TicTacState } from "../../Shared/Game/TicTac";
 import type { GameUpdateMessage, GameStateUpdateMessage } from "../Communication/WebManager";
 import type { GameStateInfo, PlayerInfo } from "../../Shared/Contracts/MessageToClientSchema";
 import ServerRequestService from "../Communication/ServerRequestService";
-import { GameManager, GameType } from "./GameManager";
+import { GameManager, GameType, CursorPosition } from "./GameManager";
 import GuiManager from "../GuiManager";
 import StartScreen from '../Screens/StartScreen';
 import GameBoardState from "../../Shared/Game/GameBoardState";
@@ -28,6 +28,7 @@ export default class OnlineGameManager implements GameManager {
   private lobbyID: string ;
   private playerList: PlayerInfo[] = [];
   private gameState: GameStateInfo;
+  private remoteCursors: Map<number, CursorPosition> = new Map();
 
   constructor(
     gameStateInfo: GameStateInfo
@@ -344,5 +345,20 @@ export default class OnlineGameManager implements GameManager {
   getMyPlayerInfo(): PlayerInfo | undefined {
     const index = this.getMyPlayerIndex();
     return index !== undefined ? this.playerList[index] : undefined;
+  }
+
+  updateRemoteCursor(playerNumber: number, position: CursorPosition): void {
+    if (playerNumber !== this.getMyPlayerNumber()) {
+      this.remoteCursors.set(playerNumber, position);
+    }
+  }
+
+  getRemoteCursors(): Map<number, CursorPosition> {
+    return this.remoteCursors;
+  }
+
+  sendCursorMove(position: CursorPosition): void {
+    if (!this.isMyTurn()) return;
+    this.requestService.sendCursorMove(this.lobbyID, position);
   }
 }

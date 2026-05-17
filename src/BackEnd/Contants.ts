@@ -27,6 +27,9 @@ export const SERVER_ID = process.env.SERVER_ID || `server_${os.hostname()}_${uui
 // ============================================================================
 
 // Token expiration and refresh settings
+export const RECONNECT_TIMEOUT_SECONDS = 180;
+export const IDLE_TIMEOUT_SECONDS = 600; // 10 minutes
+
 export const AUTH_CONSTANTS = {
   // Token lifetimes (in milliseconds)
   TOKEN_EXPIRY: 24 * 60 * 60 * 1000, // 24 hours
@@ -67,6 +70,8 @@ export const REDIS_KEYS = {
   LOBBY_NAMES: "lobby_names", // Set of all active lobby names,
   LOBBY_LIST: "LobbyList",
   GAME: (lobbyID: string) => `game:${lobbyID}`,
+  LOBBY_PAUSE_TIMEOUT: (lobbyID: string) => `lobby_pause_timeout:${lobbyID}`,
+  LOBBY_IDLE_TIMEOUT: (lobbyID: string) => `lobby_idle_timeout:${lobbyID}`,
 
   //Player
   PLAYER: (playerID: string) => `player:${playerID}`, //player object

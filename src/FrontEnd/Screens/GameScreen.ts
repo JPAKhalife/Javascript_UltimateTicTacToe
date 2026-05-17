@@ -17,6 +17,7 @@ import { getCanvasSize, fontmono, HEADER, fontOSDMONO } from "../sketch";
 import ScreenBorder from "../MenuObjects/ScreenBorder";
 import type { GameStateInfo } from "../../Shared/Contracts/MessageToClientSchema";
 import GuiManager from "../GuiManager";
+import Popup from "../MenuObjects/Popup";
 
 export default class GameScreen implements Menu {
   private keylistener: KeyListener;
@@ -25,6 +26,12 @@ export default class GameScreen implements Menu {
   private board: TicTacBoard;
   private gameType: GameType;
   private border: ScreenBorder;
+  private winnerPopup: Popup | null = null;
+  private pausePopup: Popup | null = null;
+  private fadeOutActive: boolean = false;
+  private fadeOutAlpha: number = 0;
+  private fadeInAlpha: number = 255;
+  private static readonly FADE_SPEED = 255 / 30;
 
   constructor(
     sketch: p5,
@@ -78,6 +85,53 @@ export default class GameScreen implements Menu {
     //Draw a border for the nice feel
     this.border.draw();
 
+    // Fade-in overlay
+    if (this.fadeInAlpha > 0) {
+      this.sketch.push();
+      this.sketch.noStroke();
+      this.sketch.fill(0, this.fadeInAlpha);
+      this.sketch.rect(0, 0, this.sketch.width, this.sketch.height);
+      this.sketch.pop();
+      this.fadeInAlpha = Math.max(this.fadeInAlpha - GameScreen.FADE_SPEED, 0);
+      return;
+    }
+
+    // Render pause popup on top if a player disconnected
+    if (this.pausePopup) {
+      this.pausePopup.draw();
+      return;
+    }
+
+    // Render win popup on top if game is over
+    if (this.winnerPopup) {
+      this.winnerPopup.draw();
+
+      if (this.fadeOutActive) {
+        this.fadeOutAlpha = Math.min(this.fadeOutAlpha + GameScreen.FADE_SPEED, 255);
+        this.sketch.push();
+        this.sketch.noStroke();
+        this.sketch.fill(0, this.fadeOutAlpha);
+        this.sketch.rect(0, 0, this.sketch.width, this.sketch.height);
+        this.sketch.pop();
+        if (this.fadeOutAlpha >= 255) {
+          GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.MULTIPLAYER_SCREEN, "Returning to lobby");
+        }
+        return;
+      }
+
+      const keyEvent = this.keylistener.listen();
+      if (keyEvent === KEY_EVENTS.ENTER) {
+        this.fadeOutActive = true;
+        this.border.setTransitionOut(true);
+      }
+      return;
+    }
+
+    // Spectators and players who are not yet on their turn cannot move the cursor
+    if (this.game.isSpectator() || !this.game.isMyTurn()) {
+      return;
+    }
+
     // Detect key presses that get put into the tictacboard
     let keyEvent = this.keylistener.listen();
     if (keyEvent == KEY_EVENTS.UP) {
@@ -91,6 +145,35 @@ export default class GameScreen implements Menu {
     } else if (keyEvent == KEY_EVENTS.SELECT) {
       this.board.selectTicTac();
     }
+  }
+
+  /**
+   * Show the pause overlay when a player disconnects. Dismissed automatically via hidePause().
+   */
+  public showPause(message: string): void {
+    this.pausePopup = new Popup(this.sketch, 0.5, 0.5, {
+      title: "Game Paused",
+      message: message + "\n\nWaiting to reconnect...",
+    });
+    this.pausePopup.activateTransitionIn();
+  }
+
+  /**
+   * Hide the pause overlay when the disconnected player reconnects.
+   */
+  public hidePause(): void {
+    this.pausePopup = null;
+  }
+
+  /**
+   * Show the win overlay with a message. Press SELECT to return to multiplayer.
+   */
+  public showWinner(message: string): void {
+    this.winnerPopup = new Popup(this.sketch, 0.5, 0.5, {
+      title: "Game Over",
+      message: message + "\n\nPress ENTER to continue",
+    });
+    this.winnerPopup.activateTransitionIn();
   }
 
   /**

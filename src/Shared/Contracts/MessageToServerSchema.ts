@@ -21,6 +21,7 @@ export enum FROM_CLIENT_MESSAGE_TYPES {
   LEAVE_LOBBY = "leave_lobby",
   MAKE_MOVE = "make_move",
   ACKNOWLEDGE_READY = "ack_ready",
+  CURSOR_MOVE = "cursor_move",
   NONE = "None"
 }
 
@@ -153,3 +154,17 @@ export const AcknowledgeReadyRequest = AuthenticatedRequest.extend({
   }),
 });
 export type AcknowledgeReadyRequest = z.infer<typeof AcknowledgeReadyRequest>;
+
+//This request is used when a player moves their cursor so other clients can see it
+export const CursorMoveRequest = AuthenticatedRequest.extend({
+  parameters: z.object({
+    lobbyID: z.string().uuid({ version: "v4" }),
+    position: z.object({
+      col: z.number().int().gte(0),
+      row: z.number().int().gte(0),
+      selectedLevel: z.number().int().gte(0),
+      selectedIndex: z.number().int().gte(0),
+    }),
+  }),
+});
+export type CursorMoveRequest = z.infer<typeof CursorMoveRequest>;

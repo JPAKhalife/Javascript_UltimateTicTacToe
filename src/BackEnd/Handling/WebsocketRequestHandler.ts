@@ -29,12 +29,15 @@ import {
   LobbyJoinRequest,
   AcknowledgeReadyRequest,
   MakeMoveRequest,
+  CursorMoveRequest,
 } from "../../Shared/Contracts/MessageToServerSchema";
 import Session from "../Database/Session";
 import { ERROR_MESSAGES, GAME_STATES, REDIS_KEYS, SUCCESS_MESSAGES } from "../Contants";
-import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
+import { FROM_SERVER_MESSAGE_TYPES, CursorUpdateMessage } from "../../Shared/Contracts/MessageToClientSchema";
+import { publishToLobby } from "./ServerRedisGameEventHandler";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
-import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout, handlePlayerChange } from "./GameHandler";
+import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout, handlePlayerChange, handleGameWon, handlePlayerDisconnect, handlePlayerReconnect } from "./GameHandler";
+import { LobbyIdleTimeout } from "../Database/Lobby/LobbyIdleTimeout";
 import GameRules, { TicTacState } from "../../Shared/Game/GameRules";
 import GameBoardState from "../../Shared/Game/GameBoardState";
 import { LobbyAcknowledgmentSet } from "../Database/Lobby/LobbyAcknowledgmentSet";
@@ -75,8 +78,26 @@ export async function handleWebsocketRequest(ws: any, req: any) {
   }
 
   // Handle cleanup when the connection is closed
-  ws.on("close", () => {
+  ws.on("close", async () => {
     console.info(`[WebSocket] Connection ${ws.id} closed`);
+    const playerID = await getPlayerID(ws.id);
+    if (playerID) {
+      const player = await Player.getById(playerID);
+      const lobbyID = player?.get("lobbyID");
+      if (lobbyID) {
+        const lobby = await Lobby.getById(lobbyID);
+        if (lobby) {
+          if (lobby.isSpectator(playerID)) {
+            await lobby.removeSpectator(playerID);
+          } else if (
+            lobby.get("lobbyState") === GAME_STATES.RUNNING ||
+            lobby.get("lobbyState") === GAME_STATES.PAUSED
+          ) {
+            await handlePlayerDisconnect(lobby, playerID);
+          }
+        }
+      }
+    }
     removeConnection(ws.id);
   });
 
@@ -140,6 +161,15 @@ export async function handleWebsocketRequest(ws: any, req: any) {
       const validation = AcknowledgeReadyRequest.safeParse(data);
       return validation.success
         ? handleAcknowledgeReady(ws, validation.data, sessionData.get("playerID"))
+        : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
+    },
+    [FROM_CLIENT_MESSAGE_TYPES.CURSOR_MOVE]: async (
+      data: any,
+      sessionData: any,
+    ) => {
+      const validation = CursorMoveRequest.safeParse(data);
+      return validation.success
+        ? handleCursorMove(validation.data, sessionData.get("playerID"))
         : createErrorResponse(data.type, ERROR_MESSAGES.INVALID_SCHEMA);
     },
     [FROM_CLIENT_MESSAGE_TYPES.NONE]: async (data: any, sessionData: any) => {
@@ -566,6 +596,23 @@ async function handleReconnect(
     const registrationTime = Date.now() - startRegistration;
     console.debug(`[Reconnect] Player registration took ${registrationTime}ms`);
 
+    // If the player was in a paused game, resume it; also capture gameState for active games
+    let gameState = undefined;
+    const reconnectingPlayer = await Player.getById(sessionData.get("playerID"));
+    const lobbyID = reconnectingPlayer?.get("lobbyID");
+    if (lobbyID) {
+      const lobby = await Lobby.getById(lobbyID);
+      if (lobby) {
+        const lobbyState = lobby.get("lobbyState");
+        if (lobbyState === GAME_STATES.PAUSED) {
+          await handlePlayerReconnect(lobby, sessionData.get("playerID"));
+        }
+        if (lobbyState === GAME_STATES.RUNNING || lobbyState === GAME_STATES.PAUSED) {
+          gameState = await ResponseBuilder.lobbyToGameState(lobby);
+        }
+      }
+    }
+
     // Verify the WebSocket is still valid
     console.debug(`[Reconnect] Verifying WebSocket state: ${ws.readyState}`);
     if (ws.readyState !== 1) {
@@ -580,6 +627,7 @@ async function handleReconnect(
       success: true,
       message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
       playerID: sessionData.get("playerID"),
+      gameState: gameState,
       messageID: data.messageID,
     };
 
@@ -601,6 +649,7 @@ async function handleReconnect(
       success: true,
       message: SUCCESS_MESSAGES.OPERATION_SUCCESS,
       playerID: sessionData.get("playerID"),
+      gameState: gameState,
     };
   } catch (error) {
     console.error("[Reconnect] Error handling reconnect:", error);
@@ -774,6 +823,10 @@ async function handleMakeMove(ws: any,
     return ResponseBuilder.error(ERROR_MESSAGES.LOBBY_NOT_FOUND);
   }
 
+  if (lobby.get("lobbyState") !== GAME_STATES.RUNNING) {
+    return ResponseBuilder.error(ERROR_MESSAGES.INVALID_MOVE);
+  }
+
   const game = lobby.getGame();
 
   // Check if it is the player in question's turn. Also verifies the player is in the lobby.
@@ -823,13 +876,44 @@ async function handleMakeMove(ws: any,
   // Save updated board to Redis (board is a separate Redis list, no version conflict)
   await game.getBoard().resetBoard(boardState.toJSON().grid);
 
-  // Advance turn and persist cursor state in a single save (avoids concurrent modification)
-  if (result.state !== TicTacState.WIN) {
+  if (result.state === TicTacState.WIN) {
+    await handleGameWon(lobby);
+  } else {
     await game.advanceTurn(boardState.selectedLevel, boardState.selectedIndex);
+    await handlePlayerChange(lobby);
+    await LobbyIdleTimeout.reset(data.parameters.lobbyID);
   }
 
-  // Broadcast the updated game state to all players in the lobby
-  await handlePlayerChange(lobby);
+  return { success: true };
+}
 
+async function handleCursorMove(
+  data: CursorMoveRequest,
+  playerID: string,
+): Promise<object> {
+  const { lobbyID, position } = data.parameters;
+
+  const lobby = await Lobby.getById(lobbyID);
+  if (!lobby) {
+    return ResponseBuilder.error(ERROR_MESSAGES.LOBBY_NOT_FOUND);
+  }
+
+  if (lobby.get("lobbyState") !== GAME_STATES.RUNNING) {
+    return { success: true };
+  }
+
+  const players = lobby.getPlayerList().getItems();
+  const playerNumber = players.indexOf(playerID) + 1;
+  if (playerNumber <= 0) {
+    return { success: true };
+  }
+
+  const cursorUpdate: CursorUpdateMessage = {
+    type: FROM_SERVER_MESSAGE_TYPES.CURSOR_UPDATE,
+    playerNumber,
+    position,
+  };
+
+  await publishToLobby(lobbyID, cursorUpdate);
   return { success: true };
 }

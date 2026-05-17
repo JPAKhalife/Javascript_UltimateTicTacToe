@@ -10,7 +10,7 @@ import LoadingScreen from "../Screens/LoadingScreen";
 import UsernameScreen from "../Screens/UsernameScreen";
 import ServerRequestService from "./ServerRequestService";
 import WebManager from "./WebManager";
-import { setupGameStartListener } from "./ServerEventHandler";
+import { setupGameStartListener, setupRejoinListeners } from "./ServerEventHandler";
 import { Screens } from "../Menu";
 import { GameType } from "../GameManager/GameManager";
 import p5 from "p5";
@@ -143,20 +143,25 @@ export async function handleJoinLobbyResponse(
     // Success - result is GameStateInfo
     const gameState: GameStateInfo = result;
 
-    // Determine if this is a spectator joining a running game
-    const isSpectator = gameState.playerList.length > gameState.playerNum;
+    // Determine if this is a spectator joining a running game using player ID
+    const myPlayerID = requestService.getPlayerId();
+    const myIndex = gameState.playerList.findIndex(p => p.playerID === myPlayerID);
+    const isSpectator = myIndex >= 0 && myIndex >= Number(gameState.playerNum);
     const isGameRunning = gameState.lobbyState === "running";
 
-    // Set up game listener to trigger LoadingScreen transition when game starts
-    // This must happen BEFORE we transition to LoadingScreen
-    // For spectators joining running games, these listeners will receive ongoing game updates
-    setupGameStartListener(
-        requestService,
-        sketch,
-        gameState.gridSize,
-        gameState.levelSize,
-        gameState.lobbyID
-    );
+    // For spectators joining an already-running game, wire up in-game listeners directly.
+    // setupGameStartListener waits for a RUNNING state change that will never come.
+    if (isSpectator && isGameRunning) {
+        setupRejoinListeners();
+    } else {
+        setupGameStartListener(
+            requestService,
+            sketch,
+            gameState.gridSize,
+            gameState.levelSize,
+            gameState.lobbyID
+        );
+    }
 
     console.debug("[ServerResponseHandler] Initiating selection transition animation");
     selectedLobbyDot.startSelectionTransition(async () => {

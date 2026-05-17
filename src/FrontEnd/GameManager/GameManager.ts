@@ -14,6 +14,13 @@ export enum GameType {
     ONLINE,
 }
 
+export interface CursorPosition {
+    col: number;
+    row: number;
+    selectedLevel: number;
+    selectedIndex: number;
+}
+
 export interface GameManager {
     /**
      * @method cleanup
@@ -68,4 +75,28 @@ export interface GameManager {
      * @description This method moves the turn to the next player
      */
     changeTurn(): void;
+
+    /**
+     * @method isSpectator
+     * @description Returns true if the current client is only watching and should not control the cursor
+     */
+    isSpectator(): boolean;
+
+    /**
+     * @method isMyTurn
+     * @description Returns true if it is currently this client's turn to move
+     */
+    isMyTurn(): boolean;
+
+    /**
+     * @method sendCursorMove
+     * @description Fire-and-forget: broadcast this client's cursor position to other players
+     */
+    sendCursorMove(position: CursorPosition): void;
+
+    /**
+     * @method getRemoteCursors
+     * @description Returns a map of playerNumber → cursor position for all other players
+     */
+    getRemoteCursors(): Map<number, CursorPosition>;
 }

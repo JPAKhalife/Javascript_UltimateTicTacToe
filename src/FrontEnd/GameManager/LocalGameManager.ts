@@ -10,7 +10,7 @@ import TicTac, { TictacStateObject } from "../../Shared/Game/TicTac";
 import { DEFAULT_GRID_SIZE, DEFAULT_PLAYER_NUMBER } from "../../Shared/Game/TicTac";
 import { TicTacState } from "../../Shared/Game/TicTac";
 import { HEADER } from "../sketch";
-import { GameManager, GameType } from "./GameManager";
+import { GameManager, GameType, CursorPosition } from "./GameManager";
 
 //This class activates as soon as a game is started
 export default class LocalGameManager implements GameManager {
@@ -97,5 +97,19 @@ export default class LocalGameManager implements GameManager {
    */
   changeTurn(): void {
     this.turn = (this.turn % this.playerNumber) + 1;
+  }
+
+  isSpectator(): boolean {
+    return false;
+  }
+
+  isMyTurn(): boolean {
+    return true;
+  }
+
+  sendCursorMove(_position: CursorPosition): void {}
+
+  getRemoteCursors(): Map<number, CursorPosition> {
+    return new Map();
   }
 }

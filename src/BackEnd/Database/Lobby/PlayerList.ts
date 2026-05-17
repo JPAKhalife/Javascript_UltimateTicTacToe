@@ -7,6 +7,7 @@
  */
 
 import { REDIS_KEYS } from "../../Contants";
+import { Player } from "../Player";
 import { RedisList } from "../RedisBase/RedisList";
 
 /**

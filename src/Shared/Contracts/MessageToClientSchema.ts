@@ -15,6 +15,7 @@ export enum FROM_SERVER_MESSAGE_TYPES {
   GAME_STATE_UPDATE = "game_state_update",
   GAME_INFO = "game_info",
   ACKNOWLEDGMENT_REQUEST = "acknowledgment_request",
+  CURSOR_UPDATE = "cursor_update",
 }
 
 // ============================================================================
@@ -179,3 +180,18 @@ export const AcknowledgmentRequestMessage = z.object({
   message: z.string().max(VALIDATION.MAX_STANDARD_LENGTH).optional(),
 });
 export type AcknowledgmentRequestMessage = z.infer<typeof AcknowledgmentRequestMessage>;
+
+/**
+ * Broadcast from the server to all lobby members when a player moves their cursor
+ */
+export const CursorUpdateMessage = z.object({
+  type: z.literal("cursor_update"),
+  playerNumber: z.number().int().gte(1),
+  position: z.object({
+    col: z.number().int().gte(0),
+    row: z.number().int().gte(0),
+    selectedLevel: z.number().int().gte(0),
+    selectedIndex: z.number().int().gte(0),
+  }),
+});
+export type CursorUpdateMessage = z.infer<typeof CursorUpdateMessage>;

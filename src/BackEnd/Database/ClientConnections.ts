@@ -208,6 +208,18 @@ export function disconnect(key: string): void {
   removeConnection(connectionID);
 }
 
+/**
+ * @method isPlayerConnected
+ * @description Returns true if the player has an open WebSocket connection on this server
+ * @param playerID Player ID to check
+ */
+export async function isPlayerConnected(playerID: string): Promise<boolean> {
+  const connectionID = await getConnectionID(playerID);
+  if (!connectionID) return false;
+  const ws = activeWebsockets.get(connectionID);
+  return ws != null && ws.readyState === 1;
+}
+
 export function getWebsocketObject(connectionID: string) {
   console.info(
     `[Connections] Getting WebSocket object for connection ID: ${connectionID}`,
