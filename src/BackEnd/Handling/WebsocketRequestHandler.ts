@@ -34,7 +34,7 @@ import Session from "../Database/Session";
 import { ERROR_MESSAGES, GAME_STATES, REDIS_KEYS, SUCCESS_MESSAGES } from "../Contants";
 import { FROM_SERVER_MESSAGE_TYPES } from "../../Shared/Contracts/MessageToClientSchema";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
-import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout, handlePlayerChange } from "./GameHandler";
+import { handleGameReadyCheck, handleGameStart, cancelGameStartTimeout, handlePlayerChange, handleGameWon } from "./GameHandler";
 import GameRules, { TicTacState } from "../../Shared/Game/GameRules";
 import GameBoardState from "../../Shared/Game/GameBoardState";
 import { LobbyAcknowledgmentSet } from "../Database/Lobby/LobbyAcknowledgmentSet";
@@ -823,13 +823,12 @@ async function handleMakeMove(ws: any,
   // Save updated board to Redis (board is a separate Redis list, no version conflict)
   await game.getBoard().resetBoard(boardState.toJSON().grid);
 
-  // Advance turn and persist cursor state in a single save (avoids concurrent modification)
-  if (result.state !== TicTacState.WIN) {
+  if (result.state === TicTacState.WIN) {
+    await handleGameWon(lobby);
+  } else {
     await game.advanceTurn(boardState.selectedLevel, boardState.selectedIndex);
+    await handlePlayerChange(lobby);
   }
-
-  // Broadcast the updated game state to all players in the lobby
-  await handlePlayerChange(lobby);
 
   return { success: true };
 }

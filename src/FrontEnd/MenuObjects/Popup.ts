@@ -66,25 +66,27 @@ export default class Popup extends BaseMenuItem {
       this.getSketch().CENTER,
       this.getSketch().CENTER,
     );
-    this.getSketch().textSize(32);
+    const canvasSize = getCanvasSize();
+    this.getSketch().textSize(canvasSize * 0.055);
     //The text should be constrained to the popup box
     this.getSketch().text(
-      "Popup Title",
-      this.getXPercent() * getCanvasSize(),
-      this.getYPercent() * getCanvasSize() -
-        50 +
-        this.transitionY * getCanvasSize(),
-      getCanvasSize() / 2 - 20,
-      50,
+      this.titleText,
+      this.getXPercent() * canvasSize,
+      this.getYPercent() * canvasSize -
+        canvasSize * 0.13 +
+        this.transitionY * canvasSize,
+      canvasSize / 2 - 20,
+      canvasSize * 0.08,
     );
-    this.getSketch().textSize(16);
+    this.getSketch().textSize(canvasSize * 0.028);
     this.getSketch().text(
-      "This is a popup message. It can contain useful information for the user.",
-      this.getXPercent() * getCanvasSize(),
-      this.getYPercent() * getCanvasSize() +
-        +this.transitionY * getCanvasSize(),
-      getCanvasSize() / 2 - 20,
-      getCanvasSize() / 4,
+      this.messageText,
+      this.getXPercent() * canvasSize,
+      this.getYPercent() * canvasSize +
+        canvasSize * 0.04 +
+        this.transitionY * canvasSize,
+      canvasSize / 2 - 40,
+      canvasSize / 4,
     );
     this.getSketch().pop();
 

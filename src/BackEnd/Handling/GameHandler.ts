@@ -15,6 +15,7 @@ import { publishToLobby } from "./ServerRedisGameEventHandler";
 import { LobbyAcknowledgmentSet } from "../Database/Lobby/LobbyAcknowledgmentSet";
 import { DatabaseManager } from "../Database/DatabaseManager";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
+import { Player } from "../Database/Player";
 
 /**
  * @function handleGameReadyCheck
@@ -160,7 +161,41 @@ export async function handleEvaluateGame(lobby: Lobby) { }
  * @description This function handles the end of the game when a player has won
  * @param lobby the lobby object that the game has been won in
  */
-export async function handleGameWon(lobby: Lobby) { }
+export async function handleGameWon(lobby: Lobby) {
+  const lobbyID = lobby.getId();
+
+  // Update the lobby state to finished
+  lobby.set("lobbyState", GAME_STATES.FINISHED);
+
+  let winner: Player | null = null;
+  try {
+    winner = await Player.getById(lobby.getGame().getCurrentPlayerId());
+  } catch (e) {
+    console.warn("[GameHandler] Failed to fetch winning player, cancelling instead.");
+    await handleGameCancel(lobby);
+    return;
+  }
+
+  const winnerName = winner?.get("username") ?? "Unknown";
+
+  // 1. Notify all clients that the game is finished
+  const clientMessage: GameStateUpdateMessage = {
+    type: FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE,
+    state: GAME_STATES.FINISHED,
+    message: winnerName + " wins!",
+  };
+  await publishToLobby(lobbyID, clientMessage);
+
+  // 2. Trigger cleanup on all servers
+  const internalMessage: LobbyStateChangedMessage = {
+    type: INTERNAL_MESSAGE_TYPES.LOBBY_STATE_CHANGED,
+    lobbyID: lobbyID,
+    newState: GAME_STATES.FINISHED,
+  };
+  await publishToLobby(lobbyID, internalMessage);
+
+  console.info(`[GameHandler] Game won by "${winnerName}" in lobby ${lobbyID}`);
+}
 
 /**
  * @function handleGameCancel

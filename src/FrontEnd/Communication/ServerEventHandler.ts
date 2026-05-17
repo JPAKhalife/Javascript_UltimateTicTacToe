@@ -134,6 +134,16 @@ export function handleGameStateUpdates(message: GameStateUpdateMessage) {
       requestService.removeGameListeners();
       GuiManager.changeScreen(Screens.LOADING_SCREEN, GuiManager.getCurrentScreen().getSketch(), Screens.MULTIPLAYER_SCREEN);
       break;
+    case GAME_STATES.FINISHED: {
+      // Stop listening for further game events - the lobby is being cleaned up
+      requestService.removeGameListeners();
+      // Show the winner overlay on the game screen
+      const screen = GuiManager.getCurrentScreen();
+      if (screen instanceof GameScreen) {
+        screen.showWinner(message.message ?? "Game over!");
+      }
+      break;
+    }
     case GAME_STATES.PAUSED:
       //TODO: Add a pause screen that slides over the gamescreen and disappears nicely as well.
       break;
@@ -145,9 +155,6 @@ export function handleGameStateUpdates(message: GameStateUpdateMessage) {
       //? Maybe consider going back to waiting if a user disconnects - either have a timeout until a cancel event if the same user doesn't rejoin or open the lobby again to joiners?
       console.error("[HandleGameUpdates] Received a waiting event change. This shouldn't happen.");
       break;
-    // Note: GAME_STATES.FINISHED is not currently part of GameStateUpdateMessage schema
-    // If you need to handle FINISHED state, add it to the schema in MessageToClientSchema.ts:
-    // state: z.enum([GAME_STATES.WAITING, GAME_STATES.RUNNING, GAME_STATES.PAUSED, GAME_STATES.CANCELLED, GAME_STATES.FINISHED])
   }
 }
 

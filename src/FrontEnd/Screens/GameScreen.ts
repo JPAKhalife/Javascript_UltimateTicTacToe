@@ -17,6 +17,7 @@ import { getCanvasSize, fontmono, HEADER, fontOSDMONO } from "../sketch";
 import ScreenBorder from "../MenuObjects/ScreenBorder";
 import type { GameStateInfo } from "../../Shared/Contracts/MessageToClientSchema";
 import GuiManager from "../GuiManager";
+import Popup from "../MenuObjects/Popup";
 
 export default class GameScreen implements Menu {
   private keylistener: KeyListener;
@@ -25,6 +26,7 @@ export default class GameScreen implements Menu {
   private board: TicTacBoard;
   private gameType: GameType;
   private border: ScreenBorder;
+  private winnerPopup: Popup | null = null;
 
   constructor(
     sketch: p5,
@@ -78,6 +80,16 @@ export default class GameScreen implements Menu {
     //Draw a border for the nice feel
     this.border.draw();
 
+    // Render win popup on top if game is over
+    if (this.winnerPopup) {
+      this.winnerPopup.draw();
+      const keyEvent = this.keylistener.listen();
+      if (keyEvent === KEY_EVENTS.ENTER) {
+        GuiManager.changeScreen(Screens.LOADING_SCREEN, this.sketch, Screens.MULTIPLAYER_SCREEN, "Returning to lobby");
+      }
+      return;
+    }
+
     // Detect key presses that get put into the tictacboard
     let keyEvent = this.keylistener.listen();
     if (keyEvent == KEY_EVENTS.UP) {
@@ -91,6 +103,17 @@ export default class GameScreen implements Menu {
     } else if (keyEvent == KEY_EVENTS.SELECT) {
       this.board.selectTicTac();
     }
+  }
+
+  /**
+   * Show the win overlay with a message. Press SELECT to return to multiplayer.
+   */
+  public showWinner(message: string): void {
+    this.winnerPopup = new Popup(this.sketch, 0.5, 0.5, {
+      title: "Game Over",
+      message: message + "\n\nPress ENTER to continue",
+    });
+    this.winnerPopup.activateTransitionIn();
   }
 
   /**
