@@ -94,6 +94,20 @@ export function setupGameStartListener(
 }
 
 /**
+ * @function setupRejoinListeners
+ * @description Wires up game event listeners when rejoining an active game after reconnecting.
+ * Called instead of setupGameStartListener because the game is already running.
+ */
+export function setupRejoinListeners(): void {
+  const requestService = ServerRequestService.getInstance();
+  requestService.removeGameListeners();
+  requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_UPDATE, handleGameUpdates);
+  requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE, handleGameStateUpdates);
+  requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.GAME_INFO, handleResync);
+  requestService.addGameListener(FROM_SERVER_MESSAGE_TYPES.ACKNOWLEDGMENT_REQUEST, handleAcknowlegementRequests);
+}
+
+/**
  * @function handleAcknowlegementRequests
  * @description handles an acknowlegement request
  * @param message
@@ -132,11 +146,13 @@ export function handleGameStateUpdates(message: GameStateUpdateMessage) {
     case GAME_STATES.CANCELLED:
       //Cancel the game and return to the multiplayer Menu :/
       requestService.removeGameListeners();
+      localStorage.removeItem("gameState");
       GuiManager.changeScreen(Screens.LOADING_SCREEN, GuiManager.getCurrentScreen().getSketch(), Screens.MULTIPLAYER_SCREEN);
       break;
     case GAME_STATES.FINISHED: {
       // Stop listening for further game events - the lobby is being cleaned up
       requestService.removeGameListeners();
+      localStorage.removeItem("gameState");
       // Show the winner overlay on the game screen
       const screen = GuiManager.getCurrentScreen();
       if (screen instanceof GameScreen) {
@@ -144,12 +160,21 @@ export function handleGameStateUpdates(message: GameStateUpdateMessage) {
       }
       break;
     }
-    case GAME_STATES.PAUSED:
-      //TODO: Add a pause screen that slides over the gamescreen and disappears nicely as well.
+    case GAME_STATES.PAUSED: {
+      const screen = GuiManager.getCurrentScreen();
+      if (screen instanceof GameScreen) {
+        screen.showPause(message.message ?? "A player disconnected");
+      }
       break;
-    case GAME_STATES.RUNNING:
-      //TODO: The only time we should get this event (since we are already running is when we are unpausing)
+    }
+    case GAME_STATES.RUNNING: {
+      // Unpausing — hide the pause overlay if present
+      const screen = GuiManager.getCurrentScreen();
+      if (screen instanceof GameScreen) {
+        screen.hidePause();
+      }
       break;
+    }
     case GAME_STATES.WAITING:
       //!We should never receive this gamestate in the current implementation. After the game starts, it doesn't go back to waiting
       //? Maybe consider going back to waiting if a user disconnects - either have a timeout until a cancel event if the same user doesn't rejoin or open the lobby again to joiners?

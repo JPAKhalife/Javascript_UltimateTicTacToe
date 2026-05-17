@@ -18,6 +18,8 @@ import LoadingSpinner from "../MenuObjects/LoadingSpinner";
 import ScreenBorder from "../MenuObjects/ScreenBorder";
 import ServerRequestService from "../Communication/ServerRequestService";
 import { handleRegisterPlayerResponse } from "../Communication/ServerResponseHandler";
+import { setupRejoinListeners } from "../Communication/ServerEventHandler";
+import { GameType } from "../GameManager/GameManager";
 
 // Animation constants
 const ANIMATION_TIME = 60; // 1 second at 60fps
@@ -164,7 +166,12 @@ export default class UsernameScreen implements Menu {
       !this.showLoadingIcon &&
       !this.transitionOutActive
     ) {
-      GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
+      if (localStorage.getItem("gameState")) {
+        setupRejoinListeners();
+        GuiManager.changeScreen(Screens.GAME_SCREEN, this.sketch, GameType.ONLINE);
+      } else {
+        GuiManager.changeScreen(Screens.MULTIPLAYER_SCREEN, this.sketch);
+      }
       return;
     }
 

@@ -236,23 +236,16 @@ export class Lobby extends RedisHash<LobbyData> {
    * Delete the lobby and clean up all related data
    */
   async delete(): Promise<void> {
-    // Remove all players from the lobby first
+    // Remove all players — removePlayerData handles missing players gracefully
     for (const playerId of this.players.getItems()) {
-      const player = await Player.getById(playerId);
-      if (player) {
-        await this.removePlayerData(playerId);
-      }
+      await this.removePlayerData(playerId);
     }
-    //Remove the playerList
-    this.players.delete();
-    //Remove the game
-    this.game.delete();
+    await this.players.delete();
+    await this.game.delete();
     await this.withTransaction((multi) => {
-      // Remove all lobby data stored in retrieval hashes
       multi.lrem(REDIS_KEYS.LOBBY_LIST, 0, this.id);
       multi.srem(REDIS_KEYS.LOBBY_NAMES, this.get("lobbyName").toLowerCase());
       multi.del(this.getRedisKey());
-
     });
   }
 

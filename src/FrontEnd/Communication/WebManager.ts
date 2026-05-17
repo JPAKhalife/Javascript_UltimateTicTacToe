@@ -315,9 +315,16 @@ export default class WebManager {
         const response = await this.sendRequest<{
           success: boolean;
           playerID: string;
+          gameState?: any;
         }>(message, "reconnect");
 
         if (response && response.success === true) {
+          if (response.gameState) {
+            localStorage.setItem("gameState", JSON.stringify(response.gameState));
+            console.info(`[Reconnect] Active game detected, storing gameState for rejoin`);
+          } else {
+            localStorage.removeItem("gameState");
+          }
           console.info(`[Reconnect] Reconnection successful`);
           return true;
         } else {

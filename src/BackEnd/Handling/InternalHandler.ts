@@ -10,6 +10,7 @@
 
 import { Lobby } from "../Database/Lobby/Lobby";
 import { handleGameCancel } from "./GameHandler";
+import { REDIS_KEYS } from "../Contants";
 
 /**
  * NOTE: All expiry events are now handled per-object to avoid bandwidth overhead:
@@ -56,4 +57,46 @@ export async function handleLobbyAckTimeout(expiredKey: string) {
  * - Lobby acknowledgment timeouts: handled per-lobby when ack set is created
  * - Connection expiry: no longer used (connections are cleaned up via session expiry)
  */
+/**
+ * @function handlePauseTimeout
+ * @description Called when the reconnect timer expires for a paused lobby.
+ * Cancels the game since the disconnected player did not return in time.
+ * @param expiredKey - The Redis key that expired (format: lobby_pause_timeout:lobbyID)
+ */
+export async function handlePauseTimeout(expiredKey: string): Promise<void> {
+  const prefix = REDIS_KEYS.LOBBY_PAUSE_TIMEOUT("");
+  const lobbyID = expiredKey.replace(prefix, "");
+
+  console.info(`[InternalHandler] Reconnect timeout expired for lobby ${lobbyID}`);
+
+  const lobby = await Lobby.getById(lobbyID);
+  if (!lobby) {
+    console.warn(`[InternalHandler] Lobby ${lobbyID} not found for pause timeout`);
+    return;
+  }
+
+  await handleGameCancel(lobby, "Player did not reconnect in time");
+}
+
+/**
+ * @function handleIdleTimeout
+ * @description Called when no move has been made for IDLE_TIMEOUT_SECONDS.
+ * Cancels the game due to inactivity.
+ * @param expiredKey - The Redis key that expired (format: lobby_idle_timeout:lobbyID)
+ */
+export async function handleIdleTimeout(expiredKey: string): Promise<void> {
+  const prefix = REDIS_KEYS.LOBBY_IDLE_TIMEOUT("");
+  const lobbyID = expiredKey.replace(prefix, "");
+
+  console.info(`[InternalHandler] Idle timeout expired for lobby ${lobbyID}`);
+
+  const lobby = await Lobby.getById(lobbyID);
+  if (!lobby) {
+    console.warn(`[InternalHandler] Lobby ${lobbyID} not found for idle timeout`);
+    return;
+  }
+
+  await handleGameCancel(lobby, "Game cancelled due to inactivity");
+}
+
 export async function registerInternalEventHandlers(): Promise<void> { }

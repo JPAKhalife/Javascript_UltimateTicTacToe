@@ -27,6 +27,7 @@ export default class GameScreen implements Menu {
   private gameType: GameType;
   private border: ScreenBorder;
   private winnerPopup: Popup | null = null;
+  private pausePopup: Popup | null = null;
 
   constructor(
     sketch: p5,
@@ -80,6 +81,12 @@ export default class GameScreen implements Menu {
     //Draw a border for the nice feel
     this.border.draw();
 
+    // Render pause popup on top if a player disconnected
+    if (this.pausePopup) {
+      this.pausePopup.draw();
+      return;
+    }
+
     // Render win popup on top if game is over
     if (this.winnerPopup) {
       this.winnerPopup.draw();
@@ -103,6 +110,24 @@ export default class GameScreen implements Menu {
     } else if (keyEvent == KEY_EVENTS.SELECT) {
       this.board.selectTicTac();
     }
+  }
+
+  /**
+   * Show the pause overlay when a player disconnects. Dismissed automatically via hidePause().
+   */
+  public showPause(message: string): void {
+    this.pausePopup = new Popup(this.sketch, 0.5, 0.5, {
+      title: "Game Paused",
+      message: message + "\n\nWaiting to reconnect...",
+    });
+    this.pausePopup.activateTransitionIn();
+  }
+
+  /**
+   * Hide the pause overlay when the disconnected player reconnects.
+   */
+  public hidePause(): void {
+    this.pausePopup = null;
   }
 
   /**

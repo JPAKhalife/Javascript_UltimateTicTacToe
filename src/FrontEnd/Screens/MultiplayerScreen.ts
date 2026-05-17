@@ -9,7 +9,7 @@
 import p5 from "p5";
 import Menu, { Screens } from "../Menu";
 import KeyListener, { KEY_EVENTS } from "../KeyListener";
-import { getCanvasSize, getRandomInt } from "../sketch";
+import { getCanvasSize, getRandomInt, fontmono } from "../sketch";
 import { MenuButton } from "../MenuObjects/MenuButton";
 import MenuNav from "../MenuObjects/MenuNav";
 import GuiManager from "../GuiManager";
@@ -477,6 +477,7 @@ export default class MultiplayerScreen implements Menu {
     // Set common text properties
     this.sketch.fill(255, this.elementsOpacity); // White text with opacity
     this.sketch.noStroke();
+    this.sketch.textFont(fontmono);
     this.sketch.textAlign(this.sketch.CENTER, this.sketch.TOP);
 
     // Display header

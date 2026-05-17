@@ -283,8 +283,7 @@ export class Game extends RedisHash<GameData> {
    * Delete the game and clean up all related data
    */
   public async delete(): Promise<void> {
-    //Remove the board, don't worry about the playerList, it gets removed by the Lobby object
-    this.board.delete();
+    await this.board.delete();
     await this.withTransaction((multi) => {
       multi.del(this.getRedisKey());
     });

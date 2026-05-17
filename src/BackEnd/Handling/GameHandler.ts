@@ -13,6 +13,8 @@ import { FROM_SERVER_MESSAGE_TYPES, GameStateUpdateMessage, GameUpdateMessage, A
 import { INTERNAL_MESSAGE_TYPES, LobbyStateChangedMessage } from '../../Shared/Contracts/ServerInternalMessageSchema';
 import { publishToLobby } from "./ServerRedisGameEventHandler";
 import { LobbyAcknowledgmentSet } from "../Database/Lobby/LobbyAcknowledgmentSet";
+import { LobbyPauseTimeout } from "../Database/Lobby/LobbyPauseTimeout";
+import { LobbyIdleTimeout } from "../Database/Lobby/LobbyIdleTimeout";
 import { DatabaseManager } from "../Database/DatabaseManager";
 import { ResponseBuilder } from "../Utils/ResponseBuilder";
 import { Player } from "../Database/Player";
@@ -113,6 +115,9 @@ export async function handleGameStart(lobby: Lobby) {
 
   // Call the handlePlayerChange method to notify the correct player of the turn change.
   await handlePlayerChange(lobby);
+
+  // Start the idle timer — cancelled on game end, reset on every move
+  await LobbyIdleTimeout.create(lobby.getId());
 }
 
 /**
@@ -178,6 +183,8 @@ export async function handleGameWon(lobby: Lobby) {
 
   const winnerName = winner?.get("username") ?? "Unknown";
 
+  await LobbyIdleTimeout.cancel(lobbyID);
+
   // 1. Notify all clients that the game is finished
   const clientMessage: GameStateUpdateMessage = {
     type: FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE,
@@ -198,6 +205,81 @@ export async function handleGameWon(lobby: Lobby) {
 }
 
 /**
+ * @function handlePlayerDisconnect
+ * @description Pauses the game and starts a reconnect timer when a player drops mid-game.
+ * If the lobby is already paused (edge case: second disconnect), resets the timer.
+ * @param lobby - The lobby the player was in
+ * @param playerID - The ID of the player who disconnected
+ */
+export async function handlePlayerDisconnect(lobby: Lobby, playerID: string): Promise<void> {
+  const lobbyID = lobby.getId();
+
+  let playerName = "A player";
+  try {
+    const player = await Player.getById(playerID);
+    if (player) {
+      playerName = player.get("username").substring(0, 20);
+    }
+  } catch (_) { /* fall through */ }
+
+  lobby.set("lobbyState", GAME_STATES.PAUSED);
+
+  const pauseMessage: GameStateUpdateMessage = {
+    type: FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE,
+    state: GAME_STATES.PAUSED,
+    message: playerName + " disconnected",
+  };
+  await publishToLobby(lobbyID, pauseMessage);
+
+  // Stop the idle timer while paused — the reconnect timer takes over
+  await LobbyIdleTimeout.cancel(lobbyID);
+  await LobbyPauseTimeout.create(lobbyID);
+
+  console.info(`[GameHandler] Lobby ${lobbyID} paused — player ${playerID} disconnected`);
+}
+
+/**
+ * @function handlePlayerReconnect
+ * @description Resumes a paused game when the disconnected player reconnects in time.
+ * Cancels the reconnect timer and broadcasts the RUNNING state to all clients.
+ * @param lobby - The paused lobby
+ * @param playerID - The ID of the player who reconnected
+ */
+export async function handlePlayerReconnect(lobby: Lobby, playerID: string): Promise<void> {
+  if (lobby.get("lobbyState") !== GAME_STATES.PAUSED) {
+    return;
+  }
+
+  const lobbyID = lobby.getId();
+
+  await LobbyPauseTimeout.cancel(lobbyID);
+
+  lobby.set("lobbyState", GAME_STATES.RUNNING);
+
+  let playerName = "A player";
+  try {
+    const player = await Player.getById(playerID);
+    if (player) {
+      playerName = player.get("username").substring(0, 20);
+    }
+  } catch (_) { /* fall through */ }
+
+  const resumeMessage: GameStateUpdateMessage = {
+    type: FROM_SERVER_MESSAGE_TYPES.GAME_STATE_UPDATE,
+    state: GAME_STATES.RUNNING,
+    message: playerName + " reconnected!",
+  };
+  await publishToLobby(lobbyID, resumeMessage);
+
+  await handlePlayerChange(lobby);
+
+  // Restart the idle timer now that the game is live again
+  await LobbyIdleTimeout.create(lobbyID);
+
+  console.info(`[GameHandler] Lobby ${lobbyID} resumed — player ${playerID} reconnected`);
+}
+
+/**
  * @function handleGameCancel
  * @description This function handles the game being cancelled and sends the event to all players
  * Sends two messages:
@@ -210,6 +292,8 @@ export async function handleGameCancel(lobby: Lobby, reason?: string) {
   const lobbyID = lobby.getId();
 
   console.info(`[GameHandler] Cancelling game in lobby ${lobbyID}${reason ? `: ${reason}` : ''}`);
+
+  await LobbyIdleTimeout.cancel(lobbyID);
 
   // Update lobby state to cancelled
   lobby.set("lobbyState", GAME_STATES.CANCELLED);
